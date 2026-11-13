@@ -1,5 +1,5 @@
 import { ItemView, setIcon, WorkspaceLeaf } from "obsidian";
-import type CalendarHubPlugin from "../main";
+import type OmniCalendarPlugin from "../main";
 import { CalendarOccurrence } from "../types";
 import {
 	addDays, addMonths, formatDate, formatTime, isoWeek, isSameDay, overlapsDay, startOfDay, startOfMonth,
@@ -8,7 +8,7 @@ import {
 import { EventModal } from "../modals/EventModal";
 import { occurrenceMenu, openOccurrence, tooltip } from "./shared";
 
-export const VIEW_TYPE_MINI = "calendar-hub-mini";
+export const VIEW_TYPE_MINI = "omni-calendar-mini";
 
 /** Compact month calendar + upcoming events, meant for the left/right sidebar. */
 export class MiniCalendarView extends ItemView {
@@ -17,7 +17,7 @@ export class MiniCalendarView extends ItemView {
 	private renderQueued = false;
 	private lastDay = startOfDay(new Date()).getTime();
 
-	constructor(leaf: WorkspaceLeaf, private plugin: CalendarHubPlugin) {
+	constructor(leaf: WorkspaceLeaf, private plugin: OmniCalendarPlugin) {
 		super(leaf);
 	}
 

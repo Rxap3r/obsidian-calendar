@@ -1,12 +1,12 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
-import type CalendarHubPlugin from "./main";
-import { CalendarHubSettings, CalendarSource, ViewMode } from "./types";
+import type OmniCalendarPlugin from "./main";
+import { OmniCalendarSettings, CalendarSource, ViewMode } from "./types";
 import { uid } from "./dateUtils";
 import { DEFAULT_NOTE_TEMPLATE } from "./notes";
 
 export const PALETTE = ["#7c5cff", "#2f9e44", "#e8590c", "#1c7ed6", "#d6336c", "#f59f00", "#0ca678", "#ae3ec9", "#495057"];
 
-export const DEFAULT_SETTINGS: CalendarHubSettings = {
+export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	firstDayOfWeek: 1,
 	use24h: true,
 	defaultView: "month",
@@ -44,8 +44,8 @@ const PROVIDER_HELP: { name: string; steps: string }[] = [
 	},
 ];
 
-export class CalendarHubSettingTab extends PluginSettingTab {
-	constructor(app: App, private plugin: CalendarHubPlugin) {
+export class OmniCalendarSettingTab extends PluginSettingTab {
+	constructor(app: App, private plugin: OmniCalendarPlugin) {
 		super(app, plugin);
 	}
 
@@ -155,7 +155,7 @@ export class CalendarHubSettingTab extends PluginSettingTab {
 		}
 		help.createDiv({
 			cls: "ch-provider ch-muted",
-			text: "Treat these links like passwords – anyone with the link can read the calendar. They are stored in this vault's plugin data (.obsidian/plugins/calendar-hub/data.json).",
+			text: "Treat these links like passwords – anyone with the link can read the calendar. They are stored in this vault's plugin data (.obsidian/plugins/omni-calendar/data.json).",
 		});
 
 		for (const src of s.sources.filter((x) => x.type === "ics")) this.icsRow(containerEl, src);

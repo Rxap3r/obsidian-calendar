@@ -78,7 +78,7 @@ export async function createEventNote(
 	try {
 		return await app.vault.create(path, body);
 	} catch (e) {
-		new Notice(`Calendar Hub: could not create note (${e instanceof Error ? e.message : e})`);
+		new Notice(`Omni Calendar: could not create note (${e instanceof Error ? e.message : e})`);
 		return null;
 	}
 }

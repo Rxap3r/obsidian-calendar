@@ -1,5 +1,5 @@
 import { Events, normalizePath, requestUrl, TFile } from "obsidian";
-import type CalendarHubPlugin from "./main";
+import type OmniCalendarPlugin from "./main";
 import { CalendarOccurrence, CalendarSource, LocalEvent, SourceStatus } from "./types";
 import { IcsCalendar, isRemoteUrl, normalizeIcsUrl } from "./ics";
 import {
@@ -16,7 +16,7 @@ export class CalendarStore extends Events {
 	private ics = new Map<string, IcsCalendar>();
 	readonly status = new Map<string, SourceStatus>();
 
-	constructor(private plugin: CalendarHubPlugin) {
+	constructor(private plugin: OmniCalendarPlugin) {
 		super();
 	}
 
@@ -203,7 +203,7 @@ export class CalendarStore extends Events {
 					this.status.set(s.id, { ...this.status.get(s.id), eventCount: this.ics.get(s.id)?.eventCount });
 				}
 			} catch (e) {
-				console.warn("Calendar Hub: failed to load cached calendar", s.name, e);
+				console.warn("Omni Calendar: failed to load cached calendar", s.name, e);
 			}
 		}
 		this.notify();
@@ -216,7 +216,7 @@ export class CalendarStore extends Events {
 			if (!(await adapter.exists(dir))) await adapter.mkdir(dir);
 			await adapter.write(this.cachePath(id), raw);
 		} catch (e) {
-			console.warn("Calendar Hub: could not write cache", e);
+			console.warn("Omni Calendar: could not write cache", e);
 		}
 	}
 
@@ -265,7 +265,7 @@ export class CalendarStore extends Events {
 			if (isRemoteUrl(source.url ?? "")) await this.saveCache(source.id, raw);
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
-			console.error(`Calendar Hub: failed to refresh "${source.name}"`, e);
+			console.error(`Omni Calendar: failed to refresh "${source.name}"`, e);
 			this.status.set(source.id, { ...this.status.get(source.id), loading: false, error: msg });
 		}
 		this.notify();

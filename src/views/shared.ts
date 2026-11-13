@@ -1,14 +1,14 @@
 import { Menu } from "obsidian";
-import type CalendarHubPlugin from "../main";
+import type OmniCalendarPlugin from "../main";
 import { CalendarOccurrence } from "../types";
 import { formatTime } from "../dateUtils";
 import { EventModal } from "../modals/EventModal";
 import { EventDetailsModal } from "../modals/EventDetailsModal";
 
-export const DRAG_MIME = "application/x-calendar-hub-event";
+export const DRAG_MIME = "application/x-omni-calendar-event";
 
 /** Open the editor for local events or the details view for external events. */
-export function openOccurrence(plugin: CalendarHubPlugin, occ: CalendarOccurrence) {
+export function openOccurrence(plugin: OmniCalendarPlugin, occ: CalendarOccurrence) {
 	if (!occ.readOnly && occ.eventId) {
 		const ev = plugin.store.getEvent(occ.eventId);
 		if (ev) {
@@ -19,7 +19,7 @@ export function openOccurrence(plugin: CalendarHubPlugin, occ: CalendarOccurrenc
 	new EventDetailsModal(plugin, occ).open();
 }
 
-export function occurrenceMenu(plugin: CalendarHubPlugin, occ: CalendarOccurrence, evt: MouseEvent) {
+export function occurrenceMenu(plugin: OmniCalendarPlugin, occ: CalendarOccurrence, evt: MouseEvent) {
 	const menu = new Menu();
 	menu.addItem((i) => i.setTitle(occ.readOnly ? "Show details" : "Edit").setIcon(occ.readOnly ? "info" : "pencil").onClick(() => openOccurrence(plugin, occ)));
 	menu.addItem((i) =>
@@ -58,7 +58,7 @@ export function occurrenceMenu(plugin: CalendarHubPlugin, occ: CalendarOccurrenc
 
 /** Build a compact event "chip" used in month cells, all-day rows, sidebar lists. */
 export function createChip(
-	plugin: CalendarHubPlugin,
+	plugin: OmniCalendarPlugin,
 	parent: HTMLElement,
 	occ: CalendarOccurrence,
 	opts: { showTime?: boolean; draggable?: boolean } = {}
@@ -96,7 +96,7 @@ export function createChip(
 	return chip;
 }
 
-export function tooltip(plugin: CalendarHubPlugin, occ: CalendarOccurrence): string {
+export function tooltip(plugin: OmniCalendarPlugin, occ: CalendarOccurrence): string {
 	const src = plugin.store.getSource(occ.sourceId);
 	const time = occ.allDay
 		? "All day"

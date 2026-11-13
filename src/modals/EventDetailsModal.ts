@@ -1,5 +1,5 @@
 import { Modal, Setting } from "obsidian";
-import type CalendarHubPlugin from "../main";
+import type OmniCalendarPlugin from "../main";
 import { CalendarOccurrence } from "../types";
 import { describeWhen } from "../notes";
 import { EventModal } from "./EventModal";
@@ -13,7 +13,7 @@ function plainText(s: string): string {
 
 /** Read-only details for events from subscribed (external) calendars. */
 export class EventDetailsModal extends Modal {
-	constructor(private plugin: CalendarHubPlugin, private occ: CalendarOccurrence) {
+	constructor(private plugin: OmniCalendarPlugin, private occ: CalendarOccurrence) {
 		super(plugin.app);
 	}
 
