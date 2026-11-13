@@ -8,6 +8,7 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 - 🗂 **Sidebar mini calendar** with event dots, the selected day's events and an "Upcoming" list
 - ✍️ **Create, edit, duplicate and delete events** inside Obsidian, including all-day, multi-day and recurring events (daily / weekly / monthly / yearly)
 - 🖱 **Drag to create** a time range in week/day view. **Drag and drop** events to move them
+- 🔄 **Two-way Google Calendar & Outlook / Microsoft 365**: connect your account to show its calendars and create, edit, move and delete events from Obsidian. The connection uses secure OAuth sign-in and your own app registration, and tokens stay in Obsidian's secure storage on each device
 - 🌐 **External calendars (read-only)**: subscribe to ICS / iCal links from Google, Outlook, Proton, iCloud, Fastmail, Nextcloud and others. Recurring events, exceptions and time zones are supported
 - 📝 **Notes for events**: create a note from any event using a template you can change. Local events stay linked to their note
 - 🎨 Several local calendars, each with its own colour, and a filter to show or hide calendars
@@ -110,7 +111,68 @@ The embedded agenda updates when events change. Click an entry to open it.
 
 ---
 
-## Connecting external calendars (Google, Outlook, Proton, …)
+## Two-way sync with Google Calendar and Outlook / Microsoft 365
+
+Connect an account in *Settings → Omni Calendar → **Google & Outlook accounts***. The account's calendars then appear in
+Omni Calendar. In calendars you can write to, you can **create, edit, move (drag & drop) and delete** events, and every change
+is saved straight to Google or Outlook. Calendars shared with you read-only (e.g. holidays) are shown but can't be edited.
+
+### One-time setup: your own app registration
+
+Omni Calendar has **no central server and no shared app**. You register a small app of your own with Google or
+Microsoft. It's free, takes about 10 minutes, and means only you and Google/Microsoft are involved. The steps are also shown in the
+sign-in dialog.
+
+**Google**
+
+1. Open [console.cloud.google.com](https://console.cloud.google.com) and create a project (any name).
+2. *APIs & Services → Library* → enable **Google Calendar API**.
+3. *OAuth consent screen* (Google Auth Platform): choose **External** and enter an app name and your e-mail address. Under *Audience*, add yourself
+   as a test user, then click **Publish app**. Otherwise Google ends the sign-in after 7 days. Because the app is yours and unverified, Google
+   shows a "Google hasn't verified this app" warning when you sign in. Click *Advanced → Go to (your app)*. That is expected, and safe
+   because you made the app.
+4. *Clients / Credentials* → **Create OAuth client** → type **Desktop app**.
+5. In Obsidian, click **Connect Google account**, paste the **Client ID** and **Client secret**, then click **Sign in with Google**.
+
+**Microsoft (Outlook.com, Hotmail, Microsoft 365)**
+
+1. Open [portal.azure.com](https://portal.azure.com) or [entra.microsoft.com](https://entra.microsoft.com) → *App registrations* → **New registration**.
+2. Supported account types: *Accounts in any organizational directory and personal Microsoft accounts* (or *Personal accounts only*).
+3. Redirect URI: platform **Public client/native (mobile & desktop)**, value `http://localhost`.
+4. *API permissions* → *Add a permission* → *Microsoft Graph* → *Delegated* → **Calendars.ReadWrite**.
+5. In Obsidian, click **Connect Outlook / Microsoft 365**, paste the **Application (client) ID**, choose the matching account type, then click **Sign in with Microsoft**.
+
+Your browser opens, you sign in there and approve access, and Obsidian picks up the result automatically. On mobile, or if the browser
+can't hand the result back, the browser shows a "can't connect to localhost" page. Copy that page's address and paste it into the dialog.
+
+After signing in, switch on the calendars you want to see. The primary calendar is on by default.
+
+### How editing works
+
+- **New events:** pick a Google or Outlook calendar in the event dialog's *Calendar* field. Repeating events are supported (daily, weekly, monthly or yearly).
+- **Edit or delete:** click an event. For repeating events, changes and *Delete this occurrence* apply to the clicked occurrence. *Delete series* removes all occurrences. To change the repeat rule itself, use Google or Outlook.
+- **Move:** drag single (non-repeating) events, or choose another calendar in the dialog. Moving between calendars creates the event in the new calendar, then deletes the original.
+- **Conflict protection:** each edit or delete only goes through if the event hasn't been changed elsewhere since it was loaded (ETag check). If it has, nothing is overwritten. The event is reloaded and you're asked to try again.
+- **Deletes** always ask for confirmation.
+- Events from 6 months back to 18 months ahead are loaded, at start-up, every refresh interval, and after each change you make.
+
+### Security
+
+| | |
+| --- | --- |
+| **Sign-in** | OAuth 2.0 authorization code flow with **PKCE** and a random `state` check (RFC 8252, recommended for desktop and mobile apps). You sign in on the real Google or Microsoft page in your own browser, so Omni Calendar never sees your password or 2FA. |
+| **Redirect** | The sign-in result comes back to a one-time web server that only accepts connections from your own computer (loopback `127.0.0.1` / `localhost`), not from the network. It accepts exactly one valid response, rejects anything with a wrong `state`, and shuts down straight away or after 5 minutes. |
+| **No middleman** | You use your own app registration. Requests go only to `accounts.google.com`, `oauth2.googleapis.com`, `www.googleapis.com`, `login.microsoftonline.com` and `graph.microsoft.com`, always over HTTPS. The plugin refuses to send a token to any other host. |
+| **Token storage** | The refresh token, and Google's client secret, are kept only in **Obsidian's secure storage** (SecretStorage, Obsidian 1.11.4+) **on this device**. They are never written to `data.json`, your vault or your sync, and never to logs or error messages. Access tokens are kept only in memory and expire after about an hour. Each device signs in separately. |
+| **Least privilege** | Google: `calendar.events` and `calendar.calendarlist.readonly`. Microsoft: `Calendars.ReadWrite` and `offline_access`. No access to e-mail, contacts, files or your profile. |
+| **Event data** | Events from connected accounts are kept in memory only, not cached to disk. |
+| **Sign out** | *Sign out* deletes the token from this device. For Google it also revokes access at Google. For Microsoft, you can also remove the app at [account.microsoft.com → Privacy → Apps and services](https://account.microsoft.com/privacy/app-access) (personal accounts) or [myapps.microsoft.com](https://myapps.microsoft.com) (work accounts). *Remove account* also deletes the stored client secret. |
+
+> Connecting accounts needs **Obsidian 1.11.4 or newer**. Older versions have no secure storage, and Omni Calendar won't store tokens anywhere else.
+
+---
+
+## Read-only subscriptions via ICS link (Proton, iCloud, Google, Outlook, …)
 
 Go to *Settings → Omni Calendar → External calendars → **Add external calendar***. Give it a name and colour, and paste the calendar's
 **ICS link**. The calendar is downloaded at startup, then every *N* minutes (default 30), and whenever you press ⟳.
@@ -127,17 +189,13 @@ The last download is stored in the plugin folder, so events still show when you 
 > 🔒 **Treat these links like passwords.** Anyone who has one can read that calendar. The links are stored in
 > `.obsidian/plugins/omni-calendar/data.json`. If your vault is synced or shared publicly, keep that in mind.
 
-### Why are external calendars read-only?
+### Why are ICS subscriptions read-only?
 
-ICS links can only be read. To write events back to Google or Outlook, the plugin would need an OAuth sign-in
-through Google Cloud or Azure app registrations. Proton Calendar has no public API at all.
-To keep the plugin simple and private, with no accounts, servers or tokens, events you create live in Obsidian's **local
-calendars**. You can still:
+ICS links can only be read. For Google and Outlook, use the two-way account connection described above.
+**Proton Calendar** is end-to-end encrypted and offers no API or CalDAV access, so no app can write to it. For Proton you can:
 
-- use **Copy to local calendar** on an external event to make an editable copy, and
-- run **Export local events to .ics file** and import that file into Google, Outlook or Proton.
-
-Two-way sync could be added later. See the roadmap below.
+- use **Copy to local calendar** on an event to make an editable copy in Obsidian, and
+- run **Export local events to .ics file** and import that file in Proton Calendar (Settings → Import).
 
 ---
 
@@ -155,6 +213,7 @@ Two-way sync could be added later. See the roadmap below.
 | Sidebar: upcoming days | Days listed under "Upcoming". `0` hides the list |
 | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
 | Local calendars | Add, rename, recolour, hide or delete calendars, and pick ★ the default one |
+| Google & Outlook accounts | Connect, reconnect, sign out or remove accounts. Show or hide each of an account's calendars and set its colour and display name |
 | External calendars | Name, colour, ICS URL, on/off, refresh and remove. Each shows its status (event count, last update or error) |
 | Refresh interval | How often external calendars are re-downloaded, in minutes. `0` means manual only |
 
@@ -171,10 +230,11 @@ Two-way sync could be added later. See the roadmap below.
 ## Where data is stored
 
 - **Local events and settings:** `.obsidian/plugins/omni-calendar/data.json`. Obsidian Sync and other sync tools carry them to your other devices. The plugin reloads automatically when Sync changes this file.
-- **Cached external calendars:** `.obsidian/plugins/omni-calendar/cache/*.ics`
+- **Cached ICS calendars:** `.obsidian/plugins/omni-calendar/cache/*.ics`
+- **Google / Outlook:** account settings (client ID, account label, chosen calendars) are in `data.json`. Sign-in tokens and the Google client secret are **only** in Obsidian's secure storage on each device. Events are kept in memory.
 - **Event notes:** ordinary Markdown files in your notes folder
 
-The plugin only makes network requests to the ICS URLs you configure.
+The plugin only makes network requests to the ICS URLs you configure and, for connected accounts, to Google or Microsoft.
 
 ---
 
@@ -218,7 +278,8 @@ release tag must exactly match `version` in `manifest.json` (for example `1.0.1`
 
 ## Roadmap ideas
 
-- Two-way sync with Google Calendar / Microsoft Graph (OAuth) and CalDAV servers
+- CalDAV write support (iCloud, Fastmail, Nextcloud, …)
+- Editing the repeat rule of Google / Outlook series
 - Resize events by dragging their edge
 - Daily-notes integration (open or create the daily note from a day)
 - Event reminders and notifications

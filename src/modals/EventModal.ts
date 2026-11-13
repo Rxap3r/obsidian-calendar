@@ -1,7 +1,8 @@
 import { Modal, Notice, Setting } from "obsidian";
 import type OmniCalendarPlugin from "../main";
 import { CalendarStore } from "../store";
-import { LocalEvent, Recurrence, RecurrenceFreq } from "../types";
+import { CalendarOccurrence, EventInput, LocalEvent, Recurrence, RecurrenceFreq } from "../types";
+import { confirmAction } from "./ConfirmModal";
 import { addDays, addMinutes, isValidDate, parseLocal, toDateKey, toTimeKey } from "../dateUtils";
 
 export interface EventModalInit {
@@ -19,6 +20,8 @@ export interface EventModalInit {
 	calendarId?: string;
 	/** Link a new event to an existing note. */
 	notePath?: string;
+	/** Existing Google / Outlook event occurrence to edit. */
+	remote?: CalendarOccurrence;
 }
 
 /** Create / edit a local event. */
@@ -40,12 +43,29 @@ export class EventModal extends Modal {
 
 	private timeEls: HTMLElement[] = [];
 	private recurEls: HTMLElement[] = [];
+	private busy = false;
 
 	constructor(private plugin: OmniCalendarPlugin, private init: EventModalInit = {}) {
 		super(plugin.app);
 		const ev = init.event;
 		const store = plugin.store;
-		if (ev) {
+		const occ = init.remote;
+		if (occ) {
+			this.title = occ.title;
+			this.calendarId = occ.sourceId;
+			this.allDay = occ.allDay;
+			this.startDate = toDateKey(occ.start);
+			this.startTime = toTimeKey(occ.start);
+			this.endDate = occ.allDay ? toDateKey(addDays(occ.end, -1)) : toDateKey(occ.end);
+			this.endTime = toTimeKey(occ.end);
+			this.location = occ.location ?? "";
+			this.description = occ.description ?? "";
+			this.freq = "none";
+			this.interval = 1;
+			this.until = "";
+			this.count = 10;
+			this.endsMode = "never";
+		} else if (ev) {
 			const { start, end } = CalendarStore.bounds(ev);
 			this.title = ev.title;
 			this.calendarId = ev.calendarId;
@@ -95,10 +115,21 @@ export class EventModal extends Modal {
 	onOpen() {
 		const { contentEl } = this;
 		this.modalEl.addClass("ch-event-modal");
-		this.setTitle(this.init.event ? "Edit event" : "New event");
+		const remote = this.init.remote;
+		this.setTitle(this.init.event || remote ? "Edit event" : "New event");
 
 		if (this.init.event?.recurrence) {
 			contentEl.createDiv({ cls: "ch-modal-hint", text: "This is a recurring event. Changes apply to all occurrences." });
+		}
+		if (remote) {
+			const src = this.plugin.store.getSource(remote.sourceId);
+			const provider = src?.type === "google" ? "Google Calendar" : "Outlook";
+			contentEl.createDiv({
+				cls: "ch-modal-hint",
+				text: remote.recurring
+					? `${provider} event. Changes apply to this occurrence only – edit the repeat rule in ${provider}.`
+					: `${provider} event. Changes are saved directly to ${provider}.`,
+			});
 		}
 
 		new Setting(contentEl).setName("Title").addText((t) => {
@@ -113,10 +144,25 @@ export class EventModal extends Modal {
 			window.setTimeout(() => t.inputEl.focus(), 10);
 		});
 
-		const locals = this.plugin.store.localSources();
+		const store = this.plugin.store;
+		const locals = store.localSources();
+		const remotes = store.writableRemoteSources();
 		new Setting(contentEl).setName("Calendar").addDropdown((d) => {
-			for (const s of locals) d.addOption(s.id, s.name);
-			d.setValue(this.calendarId || locals[0]?.id).onChange((v) => (this.calendarId = v));
+			for (const s of locals) d.addOption(s.id, `${s.name} (Obsidian)`);
+			for (const s of remotes) {
+				const acc = this.plugin.accounts.getAccount(s.accountId);
+				d.addOption(s.id, `${s.name} (${s.type === "google" ? "Google" : "Outlook"}${acc?.label ? ` · ${acc.label}` : ""})`);
+			}
+			if (!d.selectEl.querySelector(`option[value="${CSS.escape(this.calendarId)}"]`)) {
+				const cur = store.getSource(this.calendarId);
+				if (cur) d.addOption(cur.id, cur.name);
+			}
+			d.setValue(this.calendarId || locals[0]?.id).onChange((v) => {
+				this.calendarId = v;
+				this.refreshVisibility();
+			});
+			// Moving a single occurrence of a remote series to another calendar is not possible.
+			if (remote?.recurring) d.setDisabled(true);
 		});
 
 		new Setting(contentEl).setName("All day").addToggle((t) =>
@@ -129,7 +175,7 @@ export class EventModal extends Modal {
 		this.dateTimeRow(contentEl, "Starts", "start");
 		this.dateTimeRow(contentEl, "Ends", "end");
 
-		new Setting(contentEl).setName("Repeat").addDropdown((d) =>
+		const repeat = new Setting(contentEl).setName("Repeat").addDropdown((d) =>
 			d
 				.addOptions({ none: "Does not repeat", daily: "Daily", weekly: "Weekly", monthly: "Monthly", yearly: "Yearly" })
 				.setValue(this.freq)
@@ -138,6 +184,7 @@ export class EventModal extends Modal {
 					this.refreshVisibility();
 				})
 		);
+		repeat.settingEl.addClass("ch-repeat-row");
 		const every = new Setting(contentEl).setName("Repeat every").addText((t) => {
 			t.inputEl.type = "number";
 			t.inputEl.min = "1";
@@ -176,6 +223,22 @@ export class EventModal extends Modal {
 			});
 
 		const buttons = new Setting(contentEl).setClass("ch-modal-buttons");
+		if (remote) {
+			buttons.addButton((b) =>
+				b.setButtonText("Create note").onClick(async () => {
+					await this.plugin.openNoteForOccurrence(remote);
+					this.close();
+				})
+			);
+			if (remote.recurring) {
+				buttons.addButton((b) =>
+					b.setButtonText("Delete this occurrence").setWarning().onClick(() => void this.deleteRemote(false))
+				);
+			}
+			buttons.addButton((b) =>
+				b.setButtonText(remote.recurring ? "Delete series" : "Delete").setWarning().onClick(() => void this.deleteRemote(remote.recurring))
+			);
+		}
 		if (this.init.event) {
 			const ev = this.init.event;
 			buttons.addButton((b) =>
@@ -253,7 +316,10 @@ export class EventModal extends Modal {
 
 	private refreshVisibility() {
 		for (const el of this.timeEls) el.toggle(!this.allDay);
-		const recurring = this.freq !== "none";
+		// The repeat rule can be set for new events; existing remote events keep their rule.
+		const canRepeat = !this.init.remote;
+		this.contentEl.querySelector<HTMLElement>(".ch-repeat-row")?.toggle(canRepeat);
+		const recurring = canRepeat && this.freq !== "none";
 		for (const el of this.recurEls) el.toggle(recurring);
 		this.untilEl()?.toggle(this.endsMode === "until");
 		this.countEl()?.toggle(this.endsMode === "count");
@@ -298,15 +364,78 @@ export class EventModal extends Modal {
 			end,
 			location: this.location.trim() || undefined,
 			description: this.description.trim() || undefined,
-			recurrence,
+			recurrence: this.init.remote ? undefined : recurrence,
 		};
-		if (this.init.event) {
-			await this.plugin.store.updateEvent(this.init.event.id, data);
-		} else {
-			const ev = await this.plugin.store.addEvent({ ...data, exdates: [], notePath: this.init.notePath });
-			this.init.event = ev;
+		const store = this.plugin.store;
+		const target = store.getSource(data.calendarId);
+		const toRemote = !!target && store.isRemoteSource(target);
+		const s0 = parseLocal(start);
+		const input: EventInput = {
+			title: data.title,
+			allDay: data.allDay,
+			start: s0,
+			end: data.allDay ? addDays(parseLocal(end), 1) : parseLocal(end),
+			location: data.location,
+			description: data.description,
+			recurrence: data.recurrence,
+		};
+
+		if (this.busy) return;
+		this.busy = true;
+		this.modalEl.addClass("ch-busy");
+		try {
+			const remote = this.init.remote;
+			if (remote) {
+				if (target && target.id === remote.sourceId) {
+					await store.updateRemote(remote, input);
+				} else {
+					// Move to another calendar: create there first, then delete the original.
+					if (toRemote && target) await store.createRemote(target, input);
+					else await store.addEvent({ ...data, exdates: [] });
+					await store.deleteRemote(remote, false);
+				}
+			} else if (this.init.event) {
+				if (toRemote && target) {
+					await store.createRemote(target, input);
+					await store.deleteEvent(this.init.event.id);
+					new Notice(`Moved "${title}" to ${target.name}`);
+				} else {
+					await store.updateEvent(this.init.event.id, data);
+				}
+			} else if (toRemote && target) {
+				await store.createRemote(target, input);
+				new Notice(`Saved "${title}" to ${target.name}`);
+			} else {
+				const ev = await store.addEvent({ ...data, exdates: [], notePath: this.init.notePath });
+				this.init.event = ev;
+			}
+			if (close) this.close();
+		} catch (e) {
+			new Notice(`Could not save: ${e instanceof Error ? e.message : String(e)}`, 8000);
+		} finally {
+			this.busy = false;
+			this.modalEl.removeClass("ch-busy");
 		}
-		if (close) this.close();
+	}
+
+	private async deleteRemote(series: boolean) {
+		const occ = this.init.remote;
+		if (!occ || this.busy) return;
+		const src = this.plugin.store.getSource(occ.sourceId);
+		const where = src?.type === "google" ? "Google Calendar" : "Outlook";
+		const what = series ? "all occurrences of this event" : occ.recurring ? "this occurrence" : "this event";
+		const ok = await confirmAction(this.app, "Delete event?", `"${occ.title}" – ${what} will be permanently deleted from ${where}.`);
+		if (!ok) return;
+		this.busy = true;
+		try {
+			await this.plugin.store.deleteRemote(occ, series);
+			new Notice(`Deleted "${occ.title}" from ${where}`);
+			this.close();
+		} catch (e) {
+			new Notice(`Could not delete: ${e instanceof Error ? e.message : String(e)}`, 8000);
+		} finally {
+			this.busy = false;
+		}
 	}
 
 	onClose() {

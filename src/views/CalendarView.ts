@@ -7,8 +7,7 @@ import {
 	weekdayNames,
 } from "../dateUtils";
 import { EventModal } from "../modals/EventModal";
-import { createChip, DRAG_MIME, occurrenceMenu, openOccurrence, tooltip } from "./shared";
-import { CalendarStore } from "../store";
+import { canDrag, createChip, DRAG_MIME, occurrenceMenu, openOccurrence, tooltip } from "./shared";
 
 export const VIEW_TYPE_CALENDAR = "omni-calendar-view";
 
@@ -31,6 +30,8 @@ export class CalendarView extends ItemView {
 	private renderQueued = false;
 	private nowTimer: number | null = null;
 	private scrollTop: number | null = null;
+	/** Occurrences currently on screen, by key (used for drag & drop). */
+	private rendered = new Map<string, CalendarOccurrence>();
 
 	constructor(leaf: WorkspaceLeaf, private plugin: OmniCalendarPlugin) {
 		super(leaf);
@@ -198,6 +199,7 @@ export class CalendarView extends ItemView {
 		const gridStart = startOfWeek(monthStart, s.firstDayOfWeek);
 		const gridEnd = addDays(gridStart, 42);
 		const occs = this.plugin.store.getOccurrences(gridStart, gridEnd, this.hidden);
+		this.rendered = new Map(occs.map((o) => [o.key, o]));
 		const today = new Date();
 
 		const wrap = this.bodyEl.createDiv({ cls: "ch-month" });
@@ -262,26 +264,27 @@ export class CalendarView extends ItemView {
 		el.addEventListener("dragleave", () => el.removeClass("ch-drop-target"));
 		el.addEventListener("drop", async (e) => {
 			el.removeClass("ch-drop-target");
-			const id = e.dataTransfer?.getData(DRAG_MIME);
-			if (!id) return;
+			const key = e.dataTransfer?.getData(DRAG_MIME);
+			if (!key) return;
 			e.preventDefault();
-			const ev = this.plugin.store.getEvent(id);
-			if (!ev) return;
-			const { start, end } = CalendarStore.bounds(ev);
-			const dur = end.getTime() - start.getTime();
-			if (ev.allDay) {
-				const shift = dayDiff(start, day);
-				const lastDay = addDays(end, -1);
-				await this.plugin.store.updateEvent(id, { start: toDateKey(addDays(start, shift)), end: toDateKey(addDays(lastDay, shift)) });
-				return;
-			}
+			const occ = this.rendered.get(key);
+			if (!occ) return;
+			const dur = occ.end.getTime() - occ.start.getTime();
 			let ns: Date;
-			if (timeFromEvent) {
+			if (occ.allDay) {
+				ns = addDays(occ.start, dayDiff(occ.start, day));
+			} else if (timeFromEvent) {
 				ns = addMinutes(startOfDay(day), timeFromEvent(e));
 			} else {
-				ns = new Date(day.getFullYear(), day.getMonth(), day.getDate(), start.getHours(), start.getMinutes());
+				ns = new Date(day.getFullYear(), day.getMonth(), day.getDate(), occ.start.getHours(), occ.start.getMinutes());
 			}
-			await this.plugin.store.updateEvent(id, { start: toDateTimeKey(ns), end: toDateTimeKey(new Date(ns.getTime() + dur)) });
+			if (ns.getTime() === occ.start.getTime()) return;
+			const ne = occ.allDay ? addDays(ns, dayDiff(occ.start, occ.end)) : new Date(ns.getTime() + dur);
+			try {
+				await this.plugin.store.moveOccurrence(occ, ns, ne);
+			} catch (err) {
+				new Notice(`Could not move event: ${err instanceof Error ? err.message : String(err)}`, 8000);
+			}
 		});
 	}
 
@@ -298,6 +301,7 @@ export class CalendarView extends ItemView {
 			);
 		}
 		const occs = this.plugin.store.getOccurrences(first, addDays(first, days), this.hidden);
+		this.rendered = new Map(occs.map((o) => [o.key, o]));
 		const allDay = occs.filter((o) => o.allDay || o.end.getTime() - o.start.getTime() >= 24 * 60 * MS_MIN);
 		const timed = occs.filter((o) => !allDay.includes(o));
 		const today = new Date();
@@ -390,10 +394,10 @@ export class CalendarView extends ItemView {
 					e.stopPropagation();
 					occurrenceMenu(this.plugin, occ, e);
 				});
-				if (!occ.readOnly && !occ.recurring && occ.eventId) {
+				if (canDrag(occ)) {
 					el.draggable = true;
 					el.addEventListener("dragstart", (e) => {
-						e.dataTransfer?.setData(DRAG_MIME, occ.eventId as string);
+						e.dataTransfer?.setData(DRAG_MIME, occ.key);
 						el.addClass("ch-dragging");
 					});
 					el.addEventListener("dragend", () => el.removeClass("ch-dragging"));

@@ -33,7 +33,25 @@ export interface LocalEvent {
 	updated: number;
 }
 
-export type CalendarSourceType = "local" | "ics";
+export type CalendarSourceType = "local" | "ics" | "google" | "outlook";
+
+export type AccountProvider = "google" | "outlook";
+
+/**
+ * A connected Google / Microsoft account. Only non-secret configuration lives here
+ * (it is saved in data.json). Tokens and the Google client secret are kept in
+ * Obsidian's SecretStorage on each device and never written to the vault.
+ */
+export interface Account {
+	id: string;
+	provider: AccountProvider;
+	/** E-mail / display label, filled in after sign-in. */
+	label: string;
+	/** OAuth client ID of the user's own app registration. */
+	clientId: string;
+	/** Microsoft only: "common", "consumers", "organizations" or a tenant ID. */
+	tenant?: string;
+}
 
 export interface CalendarSource {
 	id: string;
@@ -43,6 +61,12 @@ export interface CalendarSource {
 	enabled: boolean;
 	/** ICS only: https://, webcal:// URL or a vault path to an .ics file. */
 	url?: string;
+	/** Google / Outlook only: the connected account. */
+	accountId?: string;
+	/** Google / Outlook only: the calendar ID at the provider. */
+	remoteId?: string;
+	/** Google / Outlook only: the account may not write to this calendar. */
+	readOnly?: boolean;
 }
 
 /** A concrete, rendered occurrence of an event in a date range. */
@@ -66,6 +90,43 @@ export interface CalendarOccurrence {
 	/** For local recurring events: start date of this occurrence (YYYY-MM-DD). */
 	occurrenceDate?: string;
 	notePath?: string;
+	/** Google / Outlook events: identifiers needed to edit or delete the event remotely. */
+	remote?: RemoteRef;
+}
+
+export interface RemoteRef {
+	/** Event (or occurrence / instance) ID at the provider. */
+	id: string;
+	/** ID of the recurring series this occurrence belongs to. */
+	seriesId?: string;
+	/** Version tag used to avoid overwriting newer remote changes. */
+	etag?: string;
+}
+
+/** Provider-neutral event data used to create / update remote events. */
+export interface EventInput {
+	title: string;
+	allDay: boolean;
+	start: Date;
+	/** Exclusive end (for all-day events: midnight after the last day). */
+	end: Date;
+	location?: string;
+	description?: string;
+	recurrence?: Recurrence;
+}
+
+/** An event as returned by a provider API. */
+export interface RemoteEvent {
+	id: string;
+	seriesId?: string;
+	etag?: string;
+	title: string;
+	start: Date;
+	end: Date;
+	allDay: boolean;
+	location?: string;
+	description?: string;
+	url?: string;
 }
 
 export interface SourceStatus {
@@ -89,6 +150,7 @@ export interface OmniCalendarSettings {
 	noteTemplate: string;
 	defaultCalendarId: string;
 	sources: CalendarSource[];
+	accounts: Account[];
 }
 
 export interface PluginData {

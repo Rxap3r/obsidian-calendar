@@ -259,3 +259,18 @@
 	.ch-tg-head, .ch-tg-allday, .ch-tg-inner { grid-template-columns: 40px 1fr; }
 	.ch-tg-head, .ch-tg-allday { grid-template-columns: 40px repeat(var(--ch-days), minmax(0, 1fr)); }
 }
+
+/* ---------------------------------------------------------------- accounts / sign-in */
+.ch-busy { pointer-events: none; opacity: 0.7; }
+.ch-wide-input { width: 100%; min-width: 260px; }
+.ch-signin-modal .setting-item-control { flex: 1; }
+.ch-signin-modal ol { margin: 6px 0 0; padding-left: 20px; }
+.ch-signin-modal li { margin-bottom: 4px; }
+.ch-signin-status { margin-top: 8px; font-size: 0.9em; }
+.ch-signin-manual { margin-top: 8px; font-size: 0.9em; }
+.ch-signin-manual summary { cursor: pointer; color: var(--text-accent); }
+.ch-signin-paste { display: flex; gap: 6px; margin: 6px 0; }
+.ch-settings .ch-account-box { padding-bottom: 4px; }
+.ch-settings .ch-account-cal { padding-left: 16px; border-top: 1px dashed var(--background-modifier-border); }
+.ch-modal-hint.ch-error { color: var(--text-error); }
+.ch-settings > .ch-modal-hint { margin-bottom: 10px; }
