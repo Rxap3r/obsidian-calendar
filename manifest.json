@@ -1,0 +1,10 @@
+{
+  "id": "calendar-hub",
+  "name": "Calendar Hub",
+  "version": "1.0.0",
+  "minAppVersion": "1.5.0",
+  "description": "Full-page and sidebar calendar with local events, notes for events, and read-only Google / Outlook / Proton calendar subscriptions via ICS links.",
+  "author": "rxap3r",
+  "authorUrl": "https://github.com/rxap3r",
+  "isDesktopOnly": false
+}
