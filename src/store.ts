@@ -235,6 +235,8 @@ export class CalendarStore extends Events {
 	private async fetchRaw(source: CalendarSource): Promise<string> {
 		const url = (source.url ?? "").trim();
 		if (!url) throw new Error("No URL configured");
+		const hint = wrongLinkHint(url);
+		if (hint) throw new Error(hint);
 		if (isRemoteUrl(url)) {
 			const res = await requestUrl({
 				url: normalizeIcsUrl(url),
@@ -242,7 +244,7 @@ export class CalendarStore extends Events {
 				headers: { Accept: "text/calendar, text/plain, */*" },
 				throw: false,
 			});
-			if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
+			if (res.status < 200 || res.status >= 300) throw new Error(httpErrorMessage(res.status, url));
 			return res.text;
 		}
 		const file = this.plugin.app.vault.getAbstractFileByPath(normalizePath(url));
@@ -282,4 +284,30 @@ export class CalendarStore extends Events {
 		const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, minute);
 		return { start, end: addMinutes(start, this.settings.defaultEventDuration) };
 	}
+}
+
+/** Detect links that point to a calendar web page instead of an ICS feed. */
+export function wrongLinkHint(url: string): string | null {
+	const u = url.toLowerCase();
+	if (u.includes("calendar.google.com") && !u.includes("/ical/")) {
+		return "This is a Google Calendar web page link, not the ICS feed. In Google Calendar settings open the calendar → \"Integrate calendar\" → copy \"Secret address in iCal format\" (it ends in .ics).";
+	}
+	if ((u.includes("outlook.live.com") || u.includes("outlook.office")) && !u.includes(".ics") && !u.includes("/owa/calendar/")) {
+		return "This looks like an Outlook web page link. Use Settings → Calendar → Shared calendars → \"Publish a calendar\" and copy the ICS link.";
+	}
+	return null;
+}
+
+function httpErrorMessage(status: number, url: string): string {
+	const u = url.toLowerCase();
+	if (status === 401 || status === 403 || status === 404) {
+		if (u.includes("calendar.google.com")) {
+			if (u.includes("/public/")) {
+				return `HTTP ${status}: the public address only works if the calendar is made public. Use \"Secret address in iCal format\" instead.`;
+			}
+			return `HTTP ${status}: Google rejected the link. Copy \"Secret address in iCal format\" again (Settings → your calendar → Integrate calendar); it changes if it was reset.`;
+		}
+		return `HTTP ${status}: access denied – the link is private, expired or not an ICS feed. Copy the calendar's ICS / iCal share link again.`;
+	}
+	return `HTTP ${status}`;
 }

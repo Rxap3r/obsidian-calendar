@@ -26,7 +26,7 @@ const PROVIDER_HELP: { name: string; steps: string }[] = [
 	{
 		name: "Google Calendar",
 		steps:
-			"calendar.google.com → ⚙ Settings → select the calendar under “Settings for my calendars” → “Integrate calendar” → copy “Secret address in iCal format”.",
+			"calendar.google.com → ⚙ Settings → select the calendar under “Settings for my calendars” → “Integrate calendar” → copy “Secret address in iCal format”. It looks like https://calendar.google.com/calendar/ical/…/private-…/basic.ics – the address in your browser bar will not work.",
 	},
 	{
 		name: "Outlook / Microsoft 365",
