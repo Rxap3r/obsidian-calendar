@@ -150,6 +150,8 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 			.setDesc("Connect an account to show its calendars and create, edit, move and delete events directly from Obsidian.")
 			.setHeading();
 
+		this.methodGuide(containerEl);
+
 		const accounts = this.plugin.accounts;
 		if (!accounts.secureStorageAvailable) {
 			containerEl.createDiv({
@@ -183,6 +185,10 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 
 		const help = containerEl.createEl("details", { cls: "ch-provider-help" });
 		help.createEl("summary", { text: "How do I get the ICS link?" });
+		help.createDiv({
+			cls: "ch-provider",
+			text: "What you need: access to the calendar's settings on the provider's website. No sign-in or app setup; works on every device. Read-only, and some providers update the feed with a delay of minutes to a few hours.",
+		});
 		for (const p of PROVIDER_HELP) {
 			const row = help.createDiv({ cls: "ch-provider" });
 			row.createEl("strong", { text: p.name + ": " });
@@ -216,6 +222,31 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 				this.plugin.scheduleRefresh();
 			}
 		);
+	}
+
+	/** Short overview of the connection methods and what each one needs. */
+	private methodGuide(el: HTMLElement) {
+		const det = el.createEl("details", { cls: "ch-provider-help ch-method-guide" });
+		det.createEl("summary", { text: "Which method should I use, and what do I need?" });
+		const rows: [string, string, string][] = [
+			["Local calendar", "Read & write in Obsidian only", "Nothing – works out of the box."],
+			["ICS link (below)", "Read-only · Google, Outlook, Proton, iCloud, …", "Only the calendar's private ICS link. 2 minutes, works on every device."],
+			["Google account", "Read & write · Google Calendar", "A Google account and a free Google Cloud project (no credit card). ≈10–15 minutes, once."],
+			["Microsoft work/school", "Read & write · Microsoft 365", "Permission to register an app in your organisation (or help from IT). ≈10 minutes."],
+			["Microsoft personal", "Read & write · Outlook.com, Hotmail, Live", "A free Azure account to get a directory for the app (asks for phone + credit card for verification, no cost). ≈20–30 minutes."],
+			["Proton Calendar", "Read-only (ICS link)", "Proton offers no write access for apps. Export local events to .ics and import them in Proton if needed."],
+		];
+		const table = det.createEl("table", { cls: "ch-method-table" });
+		const head = table.createEl("tr");
+		for (const h of ["Method", "Can do", "What you need"]) head.createEl("th", { text: h });
+		for (const r of rows) {
+			const tr = table.createEl("tr");
+			for (const c of r) tr.createEl("td", { text: c });
+		}
+		det.createDiv({
+			cls: "ch-provider",
+			text: "Tip: only want to see your events? Use an ICS link. Want to create or edit Google / Outlook events from Obsidian? Connect the account – the sign-in dialog shows the exact steps for your account type.",
+		});
 	}
 
 	private nextColor(): string {
