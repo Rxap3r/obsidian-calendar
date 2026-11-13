@@ -2,6 +2,7 @@ import { MarkdownRenderChild, Notice, Plugin, TFile, WorkspaceLeaf, normalizePat
 import { OmniCalendarSettings, CalendarOccurrence, LocalEvent, PluginData, ViewMode } from "./types";
 import { OmniCalendarSettingTab, DEFAULT_SETTINGS } from "./settings";
 import { CalendarStore } from "./store";
+import { AccountManager } from "./sync/accounts";
 import { CalendarView, VIEW_TYPE_CALENDAR } from "./views/CalendarView";
 import { MiniCalendarView, VIEW_TYPE_MINI } from "./views/MiniCalendarView";
 import { EventModal } from "./modals/EventModal";
@@ -13,6 +14,7 @@ import { openOccurrence } from "./views/shared";
 export default class OmniCalendarPlugin extends Plugin {
 	data!: PluginData;
 	store!: CalendarStore;
+	accounts!: AccountManager;
 	private refreshTimer: number | null = null;
 	private firstRun = false;
 
@@ -21,6 +23,7 @@ export default class OmniCalendarPlugin extends Plugin {
 
 	async onload() {
 		await this.loadPluginData();
+		this.accounts = new AccountManager(this);
 		this.store = new CalendarStore(this);
 
 		this.registerView(VIEW_TYPE_CALENDAR, (leaf) => new CalendarView(leaf, this));
@@ -91,6 +94,9 @@ export default class OmniCalendarPlugin extends Plugin {
 		const raw = loaded ?? {};
 		const settings: OmniCalendarSettings = Object.assign({}, DEFAULT_SETTINGS, raw.settings ?? {});
 		settings.sources = (raw.settings?.sources ?? DEFAULT_SETTINGS.sources).map((s) => ({ ...s }));
+		settings.accounts = (raw.settings?.accounts ?? []).map((a) => ({ ...a }));
+		// Drop calendars whose account no longer exists.
+		settings.sources = settings.sources.filter((s) => !s.accountId || settings.accounts.some((a) => a.id === s.accountId));
 		if (!settings.sources.some((s) => s.type === "local")) settings.sources.unshift({ ...DEFAULT_SETTINGS.sources[0] });
 		if (!settings.sources.some((s) => s.id === settings.defaultCalendarId && s.type === "local")) {
 			settings.defaultCalendarId = settings.sources.find((s) => s.type === "local")?.id ?? "personal";

@@ -1,6 +1,9 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type OmniCalendarPlugin from "./main";
-import { OmniCalendarSettings, CalendarSource, ViewMode } from "./types";
+import { Account, OmniCalendarSettings, CalendarSource, ViewMode } from "./types";
+import { SignInModal } from "./modals/SignInModal";
+import { confirmAction } from "./modals/ConfirmModal";
+import { providerFor } from "./sync/providers";
 import { uid } from "./dateUtils";
 import { DEFAULT_NOTE_TEMPLATE } from "./notes";
 
@@ -20,13 +23,14 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,
 	defaultCalendarId: "personal",
 	sources: [{ id: "personal", name: "Personal", color: PALETTE[0], type: "local", enabled: true }],
+	accounts: [],
 };
 
 const PROVIDER_HELP: { name: string; steps: string }[] = [
 	{
 		name: "Google Calendar",
 		steps:
-			"calendar.google.com → ⚙ Settings → select the calendar under “Settings for my calendars” → “Integrate calendar” → copy “Secret address in iCal format”.",
+			"calendar.google.com → ⚙ Settings → select the calendar under “Settings for my calendars” → “Integrate calendar” → copy “Secret address in iCal format”. It looks like https://calendar.google.com/calendar/ical/…/private-…/basic.ics – the address in your browser bar will not work.",
 	},
 	{
 		name: "Outlook / Microsoft 365",
@@ -140,6 +144,37 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 			})
 		);
 
+		// ---------------------------------------------------------------- Accounts (two-way)
+		new Setting(containerEl)
+			.setName("Google & Outlook accounts (two-way)")
+			.setDesc("Connect an account to show its calendars and create, edit, move and delete events directly from Obsidian.")
+			.setHeading();
+
+		const accounts = this.plugin.accounts;
+		if (!accounts.secureStorageAvailable) {
+			containerEl.createDiv({
+				cls: "ch-modal-hint ch-error",
+				text: "Requires Obsidian 1.11.4 or newer (secure secret storage). Please update Obsidian to connect accounts.",
+			});
+		} else {
+			containerEl.createDiv({
+				cls: "ch-modal-hint",
+				text: "🔒 You use your own Google / Microsoft app registration – no third-party server is involved. Sign-in tokens are kept only in Obsidian's secure storage on this device (never in your vault or sync), so each device signs in separately.",
+			});
+		}
+		for (const acc of s.accounts) this.accountBox(containerEl, acc);
+		new Setting(containerEl)
+			.addButton((b) =>
+				b.setButtonText("Connect Google account").setDisabled(!accounts.secureStorageAvailable).onClick(() =>
+					new SignInModal(this.plugin, "google", null, () => this.display()).open()
+				)
+			)
+			.addButton((b) =>
+				b.setButtonText("Connect Outlook / Microsoft 365").setDisabled(!accounts.secureStorageAvailable).onClick(() =>
+					new SignInModal(this.plugin, "outlook", null, () => this.display()).open()
+				)
+			);
+
 		// ---------------------------------------------------------------- External calendars
 		new Setting(containerEl)
 			.setName("External calendars (read-only)")
@@ -249,6 +284,88 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 				await this.save(true);
 			})
 		);
+	}
+
+	private accountBox(el: HTMLElement, acc: Account) {
+		const accounts = this.plugin.accounts;
+		const box = el.createDiv({ cls: "ch-ics-box ch-account-box" });
+		const signedIn = accounts.isSignedIn(acc);
+		const needsReauth = accounts.needsReauth.has(acc.id);
+		const providerName = providerFor(acc.provider).label;
+		const head = new Setting(box)
+			.setClass("ch-source-row")
+			.setName(`${providerName}: ${acc.label}`)
+			.setDesc(!signedIn ? "Not signed in on this device" : needsReauth ? "⚠ Access expired – sign in again" : "✓ Signed in on this device");
+		if (!signedIn || needsReauth) head.descEl.addClass("ch-error");
+
+		head.addButton((b) =>
+			b.setButtonText(signedIn && !needsReauth ? "Reconnect" : "Sign in").onClick(() =>
+				new SignInModal(this.plugin, acc.provider, acc, () => this.display()).open()
+			)
+		);
+		if (signedIn) {
+			head.addExtraButton((b) =>
+				b.setIcon("list-restart").setTooltip("Reload calendar list").onClick(async () => {
+					try {
+						const cals = await providerFor(acc.provider).listCalendars(accounts.tokenGetter(acc));
+						accounts.syncCalendarList(acc, cals, PALETTE);
+						await this.save(true);
+					} catch (e) {
+						new Notice(`Could not load calendars: ${e instanceof Error ? e.message : String(e)}`);
+					}
+				})
+			);
+			head.addExtraButton((b) =>
+				b.setIcon("log-out").setTooltip("Sign out on this device (revokes access)").onClick(async () => {
+					await accounts.signOut(acc);
+					for (const src of this.plugin.settings.sources) if (src.accountId === acc.id) this.plugin.store.forgetRemote(src.id);
+					new Notice(acc.provider === "outlook"
+						? "Signed out. To fully revoke access, also remove the app at account.microsoft.com → Privacy → Apps and services."
+						: "Signed out and access revoked.");
+					await this.save(true);
+				})
+			);
+		}
+		head.addExtraButton((b) =>
+			b.setIcon("trash").setTooltip("Remove account").onClick(async () => {
+				const ok = await confirmAction(this.app, "Remove account?", `Remove ${acc.label} and its calendars from Omni Calendar? Events in ${providerName} are not affected.`, "Remove");
+				if (!ok) return;
+				for (const src of this.plugin.settings.sources) if (src.accountId === acc.id) this.plugin.store.forgetRemote(src.id);
+				await accounts.removeAccount(acc);
+				await this.save(true);
+			})
+		);
+
+		const cals = this.plugin.settings.sources.filter((x) => x.accountId === acc.id);
+		for (const src of cals) {
+			const status = this.plugin.store.status.get(src.id);
+			let desc = src.readOnly ? "Read-only" : "Read & write";
+			if (status?.loading) desc += " · loading…";
+			else if (status?.error) desc += ` · ⚠ ${status.error}`;
+			else if (status?.lastFetched) desc += ` · ${status.eventCount ?? 0} events`;
+			const row = new Setting(box).setClass("ch-source-row").setClass("ch-account-cal").setDesc(desc);
+			if (status?.error) row.descEl.addClass("ch-error");
+			row.addColorPicker((c) =>
+				c.setValue(src.color).onChange(async (v) => {
+					src.color = v;
+					await this.save();
+				})
+			);
+			row.addText((t) =>
+				t.setValue(src.name).onChange(async (v) => {
+					src.name = v || "Untitled";
+					await this.save();
+				})
+			);
+			row.addToggle((t) =>
+				t.setTooltip("Show this calendar").setValue(src.enabled).onChange(async (v) => {
+					src.enabled = v;
+					await this.save();
+					if (v) await this.plugin.store.refreshSource(src);
+					else this.plugin.store.forgetRemote(src.id);
+				})
+			);
+		}
 	}
 
 	private icsRow(el: HTMLElement, src: CalendarSource) {

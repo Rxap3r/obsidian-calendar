@@ -1,6 +1,8 @@
 import { Events, normalizePath, requestUrl, TFile } from "obsidian";
 import type OmniCalendarPlugin from "./main";
-import { CalendarOccurrence, CalendarSource, LocalEvent, SourceStatus } from "./types";
+import { CalendarOccurrence, CalendarSource, EventInput, LocalEvent, RemoteEvent, SourceStatus } from "./types";
+import { providerFor } from "./sync/providers";
+import { ApiError } from "./sync/http";
 import { IcsCalendar, isRemoteUrl, normalizeIcsUrl } from "./ics";
 import {
 	addDays, addMonths, addMinutes, dayDiff, isValidDate, parseLocal, startOfDay, toDateKey, uid,
@@ -14,6 +16,8 @@ const MAX_LOCAL_OCCURRENCES = 5000;
  */
 export class CalendarStore extends Events {
 	private ics = new Map<string, IcsCalendar>();
+	/** Events of connected Google / Outlook calendars, kept in memory only. */
+	private remote = new Map<string, RemoteEvent[]>();
 	readonly status = new Map<string, SourceStatus>();
 
 	constructor(private plugin: OmniCalendarPlugin) {
@@ -163,6 +167,28 @@ export class CalendarStore extends Events {
 			this.expandLocal(ev, rangeStart, rangeEnd, out);
 		}
 		for (const source of this.settings.sources) {
+			if (!this.isRemoteSource(source) || !source.enabled || hidden?.has(source.id)) continue;
+			for (const e of this.remote.get(source.id) ?? []) {
+				if (e.start >= rangeEnd) continue;
+				if (e.end < rangeStart || (e.end.getTime() === rangeStart.getTime() && e.end.getTime() !== e.start.getTime())) continue;
+				out.push({
+					key: `${source.id}:${e.id}`,
+					sourceId: source.id,
+					title: e.title,
+					start: e.start,
+					end: e.end,
+					allDay: e.allDay,
+					location: e.location,
+					description: e.description,
+					url: e.url,
+					color: source.color,
+					readOnly: !!source.readOnly || !this.plugin.accounts.getAccount(source.accountId),
+					recurring: !!e.seriesId,
+					remote: { id: e.id, seriesId: e.seriesId, etag: e.etag },
+				});
+			}
+		}
+		for (const source of this.settings.sources) {
 			if (source.type !== "ics" || !source.enabled || hidden?.has(source.id)) continue;
 			const cal = this.ics.get(source.id);
 			if (cal) {
@@ -235,6 +261,8 @@ export class CalendarStore extends Events {
 	private async fetchRaw(source: CalendarSource): Promise<string> {
 		const url = (source.url ?? "").trim();
 		if (!url) throw new Error("No URL configured");
+		const hint = wrongLinkHint(url);
+		if (hint) throw new Error(hint);
 		if (isRemoteUrl(url)) {
 			const res = await requestUrl({
 				url: normalizeIcsUrl(url),
@@ -242,7 +270,7 @@ export class CalendarStore extends Events {
 				headers: { Accept: "text/calendar, text/plain, */*" },
 				throw: false,
 			});
-			if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
+			if (res.status < 200 || res.status >= 300) throw new Error(httpErrorMessage(res.status, url));
 			return res.text;
 		}
 		const file = this.plugin.app.vault.getAbstractFileByPath(normalizePath(url));
@@ -250,7 +278,125 @@ export class CalendarStore extends Events {
 		return this.plugin.app.vault.read(file);
 	}
 
+	isRemoteSource(source: CalendarSource): boolean {
+		return source.type === "google" || source.type === "outlook";
+	}
+
+	/** Writable Google / Outlook calendars whose account is signed in on this device. */
+	writableRemoteSources(): CalendarSource[] {
+		return this.settings.sources.filter((s) => {
+			if (!this.isRemoteSource(s) || s.readOnly || !s.enabled) return false;
+			const acc = this.plugin.accounts.getAccount(s.accountId);
+			return !!acc && this.plugin.accounts.isSignedIn(acc);
+		});
+	}
+
+	/** Remote fetch window: 6 months back, 18 months ahead. */
+	private remoteWindow(): { from: Date; to: Date } {
+		const today = startOfDay(new Date());
+		return { from: addMonths(today, -6), to: addMonths(today, 18) };
+	}
+
+	private async refreshRemote(source: CalendarSource): Promise<void> {
+		const account = this.plugin.accounts.getAccount(source.accountId);
+		if (!account) throw new Error("The account for this calendar was removed.");
+		if (!this.plugin.accounts.isSignedIn(account)) throw new Error("Not signed in on this device – open settings and sign in.");
+		const { from, to } = this.remoteWindow();
+		const events = await providerFor(account.provider).listEvents(this.plugin.accounts.tokenGetter(account), source.remoteId as string, from, to);
+		this.remote.set(source.id, events);
+		this.status.set(source.id, { lastFetched: Date.now(), eventCount: events.length, loading: false });
+	}
+
+	forgetRemote(sourceId: string) {
+		this.remote.delete(sourceId);
+		this.status.delete(sourceId);
+	}
+
+	// ---------------------------------------------------------------- remote writes
+
+	private remoteContext(source: CalendarSource) {
+		const account = this.plugin.accounts.getAccount(source.accountId);
+		if (!account || !source.remoteId) throw new Error("This calendar is not connected.");
+		if (source.readOnly) throw new Error("You only have read access to this calendar.");
+		return { account, provider: providerFor(account.provider), token: this.plugin.accounts.tokenGetter(account), calId: source.remoteId };
+	}
+
+	private async afterWrite(source: CalendarSource, err?: unknown) {
+		await this.refreshSource(source);
+		if (err) throw err;
+	}
+
+	async createRemote(source: CalendarSource, input: EventInput): Promise<void> {
+		const c = this.remoteContext(source);
+		let err: unknown;
+		try {
+			await c.provider.createEvent(c.token, c.calId, input);
+		} catch (e) {
+			err = e;
+		}
+		await this.afterWrite(source, err);
+	}
+
+	async updateRemote(occ: CalendarOccurrence, input: EventInput): Promise<void> {
+		const source = this.getSource(occ.sourceId);
+		if (!source || !occ.remote) throw new Error("Event not found.");
+		const c = this.remoteContext(source);
+		let err: unknown;
+		try {
+			await c.provider.updateEvent(c.token, c.calId, occ.remote.id, { ...input, recurrence: undefined }, occ.remote.etag);
+		} catch (e) {
+			err = e;
+		}
+		await this.afterWrite(source, err);
+	}
+
+	/** Delete one occurrence, or the whole series when `series` is true. */
+	async deleteRemote(occ: CalendarOccurrence, series = false): Promise<void> {
+		const source = this.getSource(occ.sourceId);
+		if (!source || !occ.remote) throw new Error("Event not found.");
+		const c = this.remoteContext(source);
+		const target = series && occ.remote.seriesId ? occ.remote.seriesId : occ.remote.id;
+		let err: unknown;
+		try {
+			await c.provider.deleteEvent(c.token, c.calId, target, target === occ.remote.id ? occ.remote.etag : undefined);
+		} catch (e) {
+			// Already gone remotely – treat as success.
+			if (!(e instanceof ApiError && (e.status === 404 || e.status === 410))) err = e;
+		}
+		await this.afterWrite(source, err);
+	}
+
+	/** Move an event (drag & drop). Works for local events and writable remote events. */
+	async moveOccurrence(occ: CalendarOccurrence, start: Date, end: Date): Promise<void> {
+		if (occ.remote) {
+			await this.updateRemote(occ, {
+				title: occ.title, allDay: occ.allDay, start, end, location: occ.location, description: occ.description,
+			});
+			return;
+		}
+		if (!occ.eventId) return;
+		if (occ.allDay) {
+			await this.updateEvent(occ.eventId, { start: toDateKey(start), end: toDateKey(addDays(end, -1)) });
+		} else {
+			const k = (d: Date) => `${toDateKey(d)}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+			await this.updateEvent(occ.eventId, { start: k(start), end: k(end) });
+		}
+	}
+
 	async refreshSource(source: CalendarSource): Promise<void> {
+		if (this.isRemoteSource(source)) {
+			this.status.set(source.id, { ...this.status.get(source.id), loading: true, error: undefined });
+			this.notify();
+			try {
+				await this.refreshRemote(source);
+			} catch (e) {
+				const msg = e instanceof Error ? e.message : String(e);
+				console.error(`Omni Calendar: failed to refresh "${source.name}": ${msg}`);
+				this.status.set(source.id, { ...this.status.get(source.id), loading: false, error: msg });
+			}
+			this.notify();
+			return;
+		}
 		if (source.type !== "ics") return;
 		this.status.set(source.id, { ...this.status.get(source.id), loading: true, error: undefined });
 		this.notify();
@@ -272,7 +418,7 @@ export class CalendarStore extends Events {
 	}
 
 	async refreshAll(): Promise<void> {
-		await Promise.all(this.settings.sources.filter((s) => s.type === "ics" && s.enabled).map((s) => this.refreshSource(s)));
+		await Promise.all(this.settings.sources.filter((s) => s.type !== "local" && s.enabled).map((s) => this.refreshSource(s)));
 	}
 
 	/** Default start/end for a new event on a given day / time. */
@@ -282,4 +428,30 @@ export class CalendarStore extends Events {
 		const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, minute);
 		return { start, end: addMinutes(start, this.settings.defaultEventDuration) };
 	}
+}
+
+/** Detect links that point to a calendar web page instead of an ICS feed. */
+export function wrongLinkHint(url: string): string | null {
+	const u = url.toLowerCase();
+	if (u.includes("calendar.google.com") && !u.includes("/ical/")) {
+		return "This is a Google Calendar web page link, not the ICS feed. In Google Calendar settings open the calendar → \"Integrate calendar\" → copy \"Secret address in iCal format\" (it ends in .ics).";
+	}
+	if ((u.includes("outlook.live.com") || u.includes("outlook.office")) && !u.includes(".ics") && !u.includes("/owa/calendar/")) {
+		return "This looks like an Outlook web page link. Use Settings → Calendar → Shared calendars → \"Publish a calendar\" and copy the ICS link.";
+	}
+	return null;
+}
+
+function httpErrorMessage(status: number, url: string): string {
+	const u = url.toLowerCase();
+	if (status === 401 || status === 403 || status === 404) {
+		if (u.includes("calendar.google.com")) {
+			if (u.includes("/public/")) {
+				return `HTTP ${status}: the public address only works if the calendar is made public. Use \"Secret address in iCal format\" instead.`;
+			}
+			return `HTTP ${status}: Google rejected the link. Copy \"Secret address in iCal format\" again (Settings → your calendar → Integrate calendar); it changes if it was reset.`;
+		}
+		return `HTTP ${status}: access denied – the link is private, expired or not an ICS feed. Copy the calendar's ICS / iCal share link again.`;
+	}
+	return `HTTP ${status}`;
 }
