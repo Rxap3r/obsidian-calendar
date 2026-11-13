@@ -1,5 +1,5 @@
 import { ItemView, Menu, Notice, setIcon, ViewStateResult, WorkspaceLeaf } from "obsidian";
-import type CalendarHubPlugin from "../main";
+import type OmniCalendarPlugin from "../main";
 import { CalendarOccurrence, ViewMode } from "../types";
 import {
 	addDays, addMinutes, addMonths, dayDiff, formatDate, formatHour, formatTime, isoWeek, isSameDay,
@@ -10,7 +10,7 @@ import { EventModal } from "../modals/EventModal";
 import { createChip, DRAG_MIME, occurrenceMenu, openOccurrence, tooltip } from "./shared";
 import { CalendarStore } from "../store";
 
-export const VIEW_TYPE_CALENDAR = "calendar-hub-view";
+export const VIEW_TYPE_CALENDAR = "omni-calendar-view";
 
 const HOUR_HEIGHT = 48;
 const SNAP_MIN = 15;
@@ -32,7 +32,7 @@ export class CalendarView extends ItemView {
 	private nowTimer: number | null = null;
 	private scrollTop: number | null = null;
 
-	constructor(leaf: WorkspaceLeaf, private plugin: CalendarHubPlugin) {
+	constructor(leaf: WorkspaceLeaf, private plugin: OmniCalendarPlugin) {
 		super(leaf);
 		this.mode = plugin.settings.defaultView;
 	}

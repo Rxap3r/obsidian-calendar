@@ -1,6 +1,6 @@
 import { MarkdownRenderChild, Notice, Plugin, TFile, WorkspaceLeaf, normalizePath } from "obsidian";
-import { CalendarHubSettings, CalendarOccurrence, LocalEvent, PluginData, ViewMode } from "./types";
-import { CalendarHubSettingTab, DEFAULT_SETTINGS } from "./settings";
+import { OmniCalendarSettings, CalendarOccurrence, LocalEvent, PluginData, ViewMode } from "./types";
+import { OmniCalendarSettingTab, DEFAULT_SETTINGS } from "./settings";
 import { CalendarStore } from "./store";
 import { CalendarView, VIEW_TYPE_CALENDAR } from "./views/CalendarView";
 import { MiniCalendarView, VIEW_TYPE_MINI } from "./views/MiniCalendarView";
@@ -10,14 +10,14 @@ import { buildIcs } from "./ics";
 import { addDays, formatDate, formatTime, isSameDay, overlapsDay, parseLocal, startOfDay, toDateKey } from "./dateUtils";
 import { openOccurrence } from "./views/shared";
 
-export default class CalendarHubPlugin extends Plugin {
+export default class OmniCalendarPlugin extends Plugin {
 	data!: PluginData;
 	store!: CalendarStore;
 	private refreshTimer: number | null = null;
 	private firstRun = false;
 
 	/** Same object as `data.settings`. */
-	settings!: CalendarHubSettings;
+	settings!: OmniCalendarSettings;
 
 	async onload() {
 		await this.loadPluginData();
@@ -25,7 +25,7 @@ export default class CalendarHubPlugin extends Plugin {
 
 		this.registerView(VIEW_TYPE_CALENDAR, (leaf) => new CalendarView(leaf, this));
 		this.registerView(VIEW_TYPE_MINI, (leaf) => new MiniCalendarView(leaf, this));
-		this.addSettingTab(new CalendarHubSettingTab(this.app, this));
+		this.addSettingTab(new OmniCalendarSettingTab(this.app, this));
 
 		this.addRibbonIcon("calendar-days", "Open calendar", () => void this.openCalendar());
 
@@ -51,7 +51,7 @@ export default class CalendarHubPlugin extends Plugin {
 			},
 		});
 
-		this.registerMarkdownCodeBlockProcessor("calendar-hub", (source, el, ctx) => {
+		this.registerMarkdownCodeBlockProcessor("omni-calendar", (source, el, ctx) => {
 			const child = new AgendaBlock(this, el, source);
 			ctx.addChild(child);
 		});
@@ -89,7 +89,7 @@ export default class CalendarHubPlugin extends Plugin {
 		const loaded = (await this.loadData()) as Partial<PluginData> | null;
 		this.firstRun = !loaded;
 		const raw = loaded ?? {};
-		const settings: CalendarHubSettings = Object.assign({}, DEFAULT_SETTINGS, raw.settings ?? {});
+		const settings: OmniCalendarSettings = Object.assign({}, DEFAULT_SETTINGS, raw.settings ?? {});
 		settings.sources = (raw.settings?.sources ?? DEFAULT_SETTINGS.sources).map((s) => ({ ...s }));
 		if (!settings.sources.some((s) => s.type === "local")) settings.sources.unshift({ ...DEFAULT_SETTINGS.sources[0] });
 		if (!settings.sources.some((s) => s.id === settings.defaultCalendarId && s.type === "local")) {
@@ -205,9 +205,9 @@ export default class CalendarHubPlugin extends Plugin {
 			});
 			return { uid: ev.id, title: ev.title, start, end, allDay: ev.allDay, location: ev.location, description: ev.description, rrule, exdates };
 		});
-		const ics = buildIcs(events, "Obsidian Calendar Hub");
+		const ics = buildIcs(events, "Obsidian Omni Calendar");
 		const folder = this.settings.notesFolder || "";
-		const path = normalizePath(`${folder ? folder + "/" : ""}calendar-hub-export-${toDateKey(new Date())}.ics`);
+		const path = normalizePath(`${folder ? folder + "/" : ""}omni-calendar-export-${toDateKey(new Date())}.ics`);
 		try {
 			if (folder && !this.app.vault.getAbstractFileByPath(normalizePath(folder))) await this.app.vault.createFolder(normalizePath(folder));
 			const existing = this.app.vault.getAbstractFileByPath(path);
@@ -221,14 +221,14 @@ export default class CalendarHubPlugin extends Plugin {
 }
 
 /**
- * ```calendar-hub
+ * ```omni-calendar
  * days: 7
  * calendars: Personal, Work
  * ```
  * Renders an agenda of upcoming events inside a note.
  */
 class AgendaBlock extends MarkdownRenderChild {
-	constructor(private plugin: CalendarHubPlugin, containerEl: HTMLElement, private source: string) {
+	constructor(private plugin: OmniCalendarPlugin, containerEl: HTMLElement, private source: string) {
 		super(containerEl);
 	}
 

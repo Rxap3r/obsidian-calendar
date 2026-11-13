@@ -1,7 +1,7 @@
 {
-  "id": "calendar-hub",
-  "name": "Calendar Hub",
-  "version": "1.0.0",
+  "id": "omni-calendar",
+  "name": "Omni Calendar",
+  "version": "1.0.1",
   "minAppVersion": "1.5.0",
   "description": "Full-page and sidebar calendar with local events, notes for events, and read-only Google / Outlook / Proton calendar subscriptions via ICS links.",
   "author": "rxap3r",

@@ -75,7 +75,7 @@ export interface SourceStatus {
 	loading?: boolean;
 }
 
-export interface CalendarHubSettings {
+export interface OmniCalendarSettings {
 	firstDayOfWeek: number; // 0 = Sunday, 1 = Monday, ... 6 = Saturday
 	use24h: boolean;
 	defaultView: ViewMode;
@@ -92,6 +92,6 @@ export interface CalendarHubSettings {
 }
 
 export interface PluginData {
-	settings: CalendarHubSettings;
+	settings: OmniCalendarSettings;
 	events: LocalEvent[];
 }

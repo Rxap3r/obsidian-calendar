@@ -1,5 +1,5 @@
 import { Modal, Notice, Setting } from "obsidian";
-import type CalendarHubPlugin from "../main";
+import type OmniCalendarPlugin from "../main";
 import { CalendarStore } from "../store";
 import { LocalEvent, Recurrence, RecurrenceFreq } from "../types";
 import { addDays, addMinutes, isValidDate, parseLocal, toDateKey, toTimeKey } from "../dateUtils";
@@ -41,7 +41,7 @@ export class EventModal extends Modal {
 	private timeEls: HTMLElement[] = [];
 	private recurEls: HTMLElement[] = [];
 
-	constructor(private plugin: CalendarHubPlugin, private init: EventModalInit = {}) {
+	constructor(private plugin: OmniCalendarPlugin, private init: EventModalInit = {}) {
 		super(plugin.app);
 		const ev = init.event;
 		const store = plugin.store;

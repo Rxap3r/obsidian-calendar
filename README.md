@@ -1,4 +1,4 @@
-# Calendar Hub for Obsidian
+# Omni Calendar for Obsidian
 
 A calendar for Obsidian that you can open as a full page or keep in the sidebar. You can create events
 directly in Obsidian, and you can show events from **Google Calendar, Outlook / Microsoft 365, Proton
@@ -11,7 +11,7 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 - 🌐 **External calendars (read-only)**: subscribe to ICS / iCal links from Google, Outlook, Proton, iCloud, Fastmail, Nextcloud and others. Recurring events, exceptions and time zones are supported
 - 📝 **Notes for events**: create a note from any event using a template you can change. Local events stay linked to their note
 - 🎨 Several local calendars, each with its own colour, and a filter to show or hide calendars
-- 📋 **Embed an agenda in any note** with a `calendar-hub` code block
+- 📋 **Embed an agenda in any note** with a `omni-calendar` code block
 - 📤 **Export** your local events to an `.ics` file, which you can import into Google, Outlook or Proton
 - 📱 Works on desktop and mobile. It follows your light/dark theme
 
@@ -23,15 +23,20 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 2. Open *Settings → BRAT → "Add Beta plugin"* (or run the command **BRAT: Add a beta plugin for testing**).
 3. Enter the repository: `rxap3r/obsidian-calendar`
 4. Click **Add Plugin**. BRAT downloads the latest release.
-5. Enable **Calendar Hub** under *Settings → Community plugins*.
+5. Enable **Omni Calendar** under *Settings → Community plugins*.
 
 BRAT checks for updates automatically. You can also run **BRAT: Check for updates to all beta plugins**.
+
+> **Renamed in 1.0.1:** this plugin was first released as "Calendar Hub" (ID `calendar-hub`). That ID already belongs to a
+> different plugin in the community store, so Obsidian confused the two. If you installed 1.0.0, uninstall it, delete
+> `.obsidian/plugins/calendar-hub/`, and add the plugin through BRAT again. Before deleting, copy `data.json` from the old folder to
+> `.obsidian/plugins/omni-calendar/` if you want to keep events you already created.
 
 ### Manual installation
 
 Download `main.js`, `manifest.json` and `styles.css` from the
 [latest release](https://github.com/rxap3r/obsidian-calendar/releases) and put them in
-`<your vault>/.obsidian/plugins/calendar-hub/`. Then reload Obsidian and enable the plugin.
+`<your vault>/.obsidian/plugins/omni-calendar/`. Then reload Obsidian and enable the plugin.
 
 ---
 
@@ -42,8 +47,8 @@ Download `main.js`, `manifest.json` and `styles.css` from the
 | How | What it opens |
 | --- | --- |
 | Ribbon icon 📅 (left bar) | Full-page calendar in a new tab |
-| Command **Calendar Hub: Open calendar (full page)** | Full-page calendar |
-| Command **Calendar Hub: Show calendar in sidebar** | Mini calendar in the right sidebar. You can drag it to the left sidebar if you prefer |
+| Command **Omni Calendar: Open calendar (full page)** | Full-page calendar |
+| Command **Omni Calendar: Show calendar in sidebar** | Mini calendar in the right sidebar. You can drag it to the left sidebar if you prefer |
 | Commands **Open month / week / day / agenda view** | The full calendar in that view |
 
 On first install the mini calendar is added to the right sidebar automatically.
@@ -89,7 +94,7 @@ filename contains a date (e.g. `2026-11-20 Kickoff`), that date is used.
 ### Agenda inside a note
 
 ````markdown
-```calendar-hub
+```omni-calendar
 days: 7
 calendars: Personal, Work
 ```
@@ -107,7 +112,7 @@ The embedded agenda updates when events change. Click an entry to open it.
 
 ## Connecting external calendars (Google, Outlook, Proton, …)
 
-Go to *Settings → Calendar Hub → External calendars → **Add external calendar***. Give it a name and colour, and paste the calendar's
+Go to *Settings → Omni Calendar → External calendars → **Add external calendar***. Give it a name and colour, and paste the calendar's
 **ICS link**. The calendar is downloaded at startup, then every *N* minutes (default 30), and whenever you press ⟳.
 The last download is stored in the plugin folder, so events still show when you are offline.
 
@@ -120,7 +125,7 @@ The last download is stored in the plugin folder, so events still show when you 
 | Anything else | Any `https://` or `webcal://` link that returns an `.ics` file. You can also use a path to an `.ics` file in your vault, such as `Attachments/holidays.ics` |
 
 > 🔒 **Treat these links like passwords.** Anyone who has one can read that calendar. The links are stored in
-> `.obsidian/plugins/calendar-hub/data.json`. If your vault is synced or shared publicly, keep that in mind.
+> `.obsidian/plugins/omni-calendar/data.json`. If your vault is synced or shared publicly, keep that in mind.
 
 ### Why are external calendars read-only?
 
@@ -165,8 +170,8 @@ Two-way sync could be added later. See the roadmap below.
 
 ## Where data is stored
 
-- **Local events and settings:** `.obsidian/plugins/calendar-hub/data.json`. Obsidian Sync and other sync tools carry them to your other devices. The plugin reloads automatically when Sync changes this file.
-- **Cached external calendars:** `.obsidian/plugins/calendar-hub/cache/*.ics`
+- **Local events and settings:** `.obsidian/plugins/omni-calendar/data.json`. Obsidian Sync and other sync tools carry them to your other devices. The plugin reloads automatically when Sync changes this file.
+- **Cached external calendars:** `.obsidian/plugins/omni-calendar/cache/*.ics`
 - **Event notes:** ordinary Markdown files in your notes folder
 
 The plugin only makes network requests to the ICS URLs you configure.
@@ -182,7 +187,7 @@ npm run build   # type-check + production build
 ```
 
 To try it in a vault, symlink or copy the repository folder (or just `main.js`, `manifest.json`, `styles.css`) into
-`<vault>/.obsidian/plugins/calendar-hub/`.
+`<vault>/.obsidian/plugins/omni-calendar/`.
 
 Project layout:
 

@@ -79,7 +79,7 @@ export class IcsCalendar {
 				try {
 					ICAL.TimezoneService.register(tz);
 				} catch (e) {
-					console.warn("Calendar Hub: could not register time zone", e);
+					console.warn("Omni Calendar: could not register time zone", e);
 				}
 			}
 		}
@@ -94,7 +94,7 @@ export class IcsCalendar {
 					if (ev.isRecurrenceException()) exceptions.push(ev);
 					else masters.set(ev.uid ?? Math.random().toString(36), ev);
 				} catch (e) {
-					console.warn("Calendar Hub: skipping malformed event", e);
+					console.warn("Omni Calendar: skipping malformed event", e);
 				}
 			}
 		}
@@ -119,7 +119,7 @@ export class IcsCalendar {
 			try {
 				this.expand(ev, rangeStart, rangeEnd, out);
 			} catch (e) {
-				console.warn("Calendar Hub: failed to expand event", ev.summary, e);
+				console.warn("Omni Calendar: failed to expand event", ev.summary, e);
 			}
 		}
 		if (this.cache.size > 30) this.cache.clear();
@@ -210,13 +210,13 @@ export function buildIcs(
 	const lines = [
 		"BEGIN:VCALENDAR",
 		"VERSION:2.0",
-		"PRODID:-//Calendar Hub//Obsidian//EN",
+		"PRODID:-//Omni Calendar//Obsidian//EN",
 		"CALSCALE:GREGORIAN",
 		`X-WR-CALNAME:${esc(calName)}`,
 	];
 	const stamp = utcVal(new Date());
 	for (const e of events) {
-		lines.push("BEGIN:VEVENT", `UID:${e.uid}@calendar-hub`, `DTSTAMP:${stamp}`);
+		lines.push("BEGIN:VEVENT", `UID:${e.uid}@omni-calendar`, `DTSTAMP:${stamp}`);
 		if (e.allDay) {
 			lines.push(`DTSTART;VALUE=DATE:${dateVal(e.start)}`, `DTEND;VALUE=DATE:${dateVal(e.end)}`);
 		} else {
