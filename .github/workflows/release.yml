@@ -1,0 +1,55 @@
+name: Release Obsidian plugin
+
+# Creates a GitHub release with main.js, manifest.json and styles.css –
+# exactly what BRAT (and the official plugin store) download.
+# Trigger: push a tag that equals the version in manifest.json, e.g. `git tag 1.0.0 && git push origin 1.0.0`,
+# or run it manually from the Actions tab (it then tags the current manifest version).
+
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: npm
+
+      - name: Install & build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Determine version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./manifest.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "$VERSION" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match manifest.json version $VERSION"
+            exit 1
+          fi
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            gh release upload "$VERSION" main.js manifest.json styles.css --clobber
+          else
+            gh release create "$VERSION" main.js manifest.json styles.css \
+              --target "$GITHUB_SHA" \
+              --title "$VERSION" \
+              --generate-notes
+          fi
