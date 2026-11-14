@@ -1,6 +1,6 @@
 {
   "name": "obsidian-omni-calendar",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Full-page and sidebar calendar for Obsidian with local events and Google / Outlook / Proton (ICS) calendar subscriptions.",
   "main": "main.js",
   "scripts": {
