@@ -593,9 +593,36 @@ export class CalendarView extends ItemView {
 
 		if (hscroll) {
 			// Header and all-day row follow the horizontal scroll of the hour grid.
+			// Scroll indicators: arrows on the day header, a week bar showing the visible days,
+			// and edge shadows on the grid.
+			const bar = wrap.createDiv({ cls: "ch-week-bar" });
+			head.after(bar);
+			const prevBtn = bar.createEl("button", { cls: "ch-hs-arrow ch-hs-prev", attr: { "aria-label": "Previous day" } });
+			setIcon(prevBtn, "chevron-left");
+			const track = bar.createDiv({ cls: "ch-week-bar-track", attr: { "aria-hidden": "true" } });
+			const segs = Array.from({ length: days }, () => track.createSpan({ cls: "ch-week-bar-seg" }));
+			const nextBtn = bar.createEl("button", { cls: "ch-hs-arrow ch-hs-next", attr: { "aria-label": "Next day" } });
+			setIcon(nextBtn, "chevron-right");
+			const scrollByDay = (dir: number) => scroll.scrollBy({ left: dir * this.dayWidth(wrap), behavior: "smooth" });
+			prevBtn.onclick = () => scrollByDay(-1);
+			nextBtn.onclick = () => scrollByDay(1);
+			const indicators = () => {
+				const dayW = this.dayWidth(wrap);
+				const max = scroll.scrollWidth - scroll.clientWidth;
+				const sl = scroll.scrollLeft;
+				prevBtn.toggleClass("is-hidden", sl <= 2);
+				nextBtn.toggleClass("is-hidden", sl >= max - 2);
+				wrap.toggleClass("ch-more-left", sl > 2);
+				wrap.toggleClass("ch-more-right", sl < max - 2);
+				if (dayW > 0) {
+					const firstIdx = Math.round(sl / dayW);
+					segs.forEach((seg, i) => seg.toggleClass("is-visible", i >= firstIdx && i < firstIdx + visible));
+				}
+			};
 			const sync = () => {
-				head.scrollLeft = scroll.scrollLeft;
-				adRow.scrollLeft = scroll.scrollLeft;
+				// Shift header / all-day cells by the exact scroll offset (works during overscroll too).
+				wrap.style.setProperty("--ch-sx", `${scroll.scrollLeft}px`);
+				indicators();
 			};
 			let settle: number | null = null;
 			scroll.addEventListener("scroll", () => {

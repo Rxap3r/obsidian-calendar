@@ -76,7 +76,8 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 			["display", "layout-panel-left", "Display"],
 			["notes", "file-text", "Notes"],
 		];
-		const bar = containerEl.createDiv({ cls: "ch-settings-tabs", attr: { role: "tablist" } });
+		const barWrap = containerEl.createDiv({ cls: "ch-settings-tabs-wrap" });
+		const bar = barWrap.createDiv({ cls: "ch-settings-tabs", attr: { role: "tablist" } });
 		for (const [id, icon, label] of tabs) {
 			const active = OmniCalendarSettingTab.tab === id;
 			const btn = bar.createEl("button", { cls: `ch-settings-tab${active ? " is-active" : ""}`, attr: { role: "tab", "aria-selected": String(active) } });
@@ -87,6 +88,27 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 				this.display();
 			};
 		}
+
+		// When the tabs do not fit: fade the edge with more tabs and show an arrow button there.
+		const prev = barWrap.createEl("button", { cls: "ch-tabs-arrow ch-tabs-prev", attr: { "aria-label": "More tabs" } });
+		setIcon(prev, "chevron-left");
+		const next = barWrap.createEl("button", { cls: "ch-tabs-arrow ch-tabs-next", attr: { "aria-label": "More tabs" } });
+		setIcon(next, "chevron-right");
+		prev.onclick = () => bar.scrollBy({ left: -160, behavior: "smooth" });
+		next.onclick = () => bar.scrollBy({ left: 160, behavior: "smooth" });
+		const updateFade = () => {
+			const left = bar.scrollLeft > 2;
+			const right = bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 2;
+			bar.toggleClass("ch-more-left", left);
+			bar.toggleClass("ch-more-right", right);
+			prev.toggleClass("is-hidden", !left);
+			next.toggleClass("is-hidden", !right);
+		};
+		bar.addEventListener("scroll", updateFade, { passive: true });
+		window.requestAnimationFrame(() => {
+			bar.querySelector<HTMLElement>(".ch-settings-tab.is-active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+			updateFade();
+		});
 
 		const body = containerEl.createDiv({ cls: "ch-settings-body" });
 		switch (OmniCalendarSettingTab.tab) {
