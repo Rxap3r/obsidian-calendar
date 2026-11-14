@@ -275,6 +275,11 @@ export class CalendarView extends ItemView {
 		return Math.max(1, Math.min(4, Math.floor(w / MONTH_CARD_MIN)));
 	}
 
+	/** ISO week number of the (configured) week containing this day – same numbering as the month grid. */
+	private weekNumber(d: Date): number {
+		return isoWeek(addDays(startOfWeek(d, this.plugin.settings.firstDayOfWeek), 3));
+	}
+
 	/** How many days fit side by side in the week view (1–7). */
 	private weekDayCount(): number {
 		const w = this.width;
@@ -292,8 +297,13 @@ export class CalendarView extends ItemView {
 		const today = new Date();
 		const wrap = this.bodyEl.createDiv({ cls: "ch-month-cards" });
 		wrap.style.setProperty("--ch-cols", String(cols));
+		const showWeeks = this.plugin.settings.showWeekNumbers;
 		for (let day = monthStart; day < monthEnd; day = addDays(day, 1)) {
 			const d = day;
+			// Week number divider at the start of each week (and on the 1st of the month).
+			if (showWeeks && (isSameDay(d, monthStart) || d.getDay() === this.plugin.settings.firstDayOfWeek)) {
+				wrap.createDiv({ cls: "ch-week-divider", text: `Week ${this.weekNumber(d)}` });
+			}
 			const card = wrap.createDiv({ cls: "ch-day-card" });
 			if (isSameDay(d, today)) card.addClass("ch-today");
 			if (d.getDay() === 0 || d.getDay() === 6) card.addClass("ch-weekend");
@@ -432,12 +442,14 @@ export class CalendarView extends ItemView {
 		const s = this.plugin.settings;
 		const last = addDays(first, days - 1);
 		if (days === 1) {
-			this.titleEl.setText(formatDate(first, { weekday: "long", day: "numeric", month: "long", year: "numeric" }));
+			this.titleEl.setText(`${formatDate(first, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · W${this.weekNumber(first)}`);
 		} else if (days < 7) {
-			// Shortened week (narrow view): show the exact date range.
-			this.titleEl.setText(
-				`${formatDate(first, { day: "numeric", month: "short" })} – ${formatDate(last, { day: "numeric", month: "short", year: "numeric" })}`
-			);
+			// Shortened week (narrow view): exact date range plus the week number(s).
+			const weeks = Array.from(new Set(Array.from({ length: days }, (_, i) => this.weekNumber(addDays(first, i)))));
+			const range = first.getMonth() === last.getMonth()
+				? `${formatDate(first, { day: "numeric", month: "short" })} – ${formatDate(last, { day: "numeric" })}, ${last.getFullYear()}`
+				: `${formatDate(first, { day: "numeric", month: "short" })} – ${formatDate(last, { day: "numeric", month: "short", year: "numeric" })}`;
+			this.titleEl.setText(`${range} · W${weeks.length > 1 ? `${weeks[0]}–${weeks[weeks.length - 1]}` : weeks[0]}`);
 		} else if (first.getMonth() === last.getMonth()) {
 			this.titleEl.setText(`${formatDate(first, { month: "long", year: "numeric" })} · W${isoWeek(addDays(first, 3))}`);
 		} else {
