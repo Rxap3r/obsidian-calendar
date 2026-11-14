@@ -379,9 +379,6 @@
 }
 .ch-week-divider:first-child { padding-top: 0; }
 
-/* Long-press on the ribbon icon: no text selection / iOS callout. */
-.ch-ribbon-icon { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-
 /* ---------------------------------------------------------------- week view that scrolls sideways (narrow / mobile) */
 .ch-tg-hscroll { --ch-gutter: 44px; }
 .ch-tg-hscroll .ch-tg-head,
@@ -396,9 +393,16 @@
 	overflow-x: auto;
 	scroll-snap-type: x mandatory;
 	scroll-padding-left: var(--ch-gutter);
-	overscroll-behavior-x: contain;
+	/* No bounce / stretch past the first or last day (it pulled the grid out of line with the header). */
+	overscroll-behavior-x: none;
 	scrollbar-width: none;
 }
+/* Header and all-day row do not scroll themselves: their day cells are shifted by exactly the
+   grid's scroll offset (--ch-sx), which also follows any remaining overscroll bounce. */
+.ch-tg-hscroll .ch-tg-dayhead,
+.ch-tg-hscroll .ch-tg-allday-cell { transform: translateX(calc(-1 * var(--ch-sx, 0px))); }
+.ch-tg-hscroll .ch-tg-head > .ch-tg-gutter,
+.ch-tg-hscroll .ch-tg-allday > .ch-tg-gutter { position: relative; z-index: 3; }
 .ch-tg-hscroll .ch-grid-scroll::-webkit-scrollbar { height: 0; }
 .ch-tg-hscroll .ch-tg-col { scroll-snap-align: start; touch-action: pan-x pan-y; }
 .ch-tg-hscroll .ch-tg-col.ch-selecting { touch-action: none; }

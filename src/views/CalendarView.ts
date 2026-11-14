@@ -594,8 +594,8 @@ export class CalendarView extends ItemView {
 		if (hscroll) {
 			// Header and all-day row follow the horizontal scroll of the hour grid.
 			const sync = () => {
-				head.scrollLeft = scroll.scrollLeft;
-				adRow.scrollLeft = scroll.scrollLeft;
+				// Shift header / all-day cells by the exact scroll offset (works during overscroll too).
+				wrap.style.setProperty("--ch-sx", `${scroll.scrollLeft}px`);
 			};
 			let settle: number | null = null;
 			scroll.addEventListener("scroll", () => {

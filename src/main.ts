@@ -34,47 +34,25 @@ export default class OmniCalendarPlugin extends Plugin {
 		this.registerView(VIEW_TYPE_MINI, (leaf) => new MiniCalendarView(leaf, this));
 		this.addSettingTab(new OmniCalendarSettingTab(this.app, this));
 
-		const ribbon = this.addRibbonIcon(
-			"calendar-days",
-			Platform.isMobile ? "Open calendar (hold for more)" : "Open calendar (right-click for more)",
-			() => {
-				// A long press that opened the menu must not also open the calendar.
-				if (Date.now() - this.ribbonMenuShownAt < 1000) return;
-				void this.openCalendar();
+		// One fixed label on every device: Obsidian identifies ribbon buttons by their label,
+		// so a changing label leaves a duplicate button behind (e.g. on mobile).
+		const ribbon = this.addRibbonIcon("calendar-days", "Omni Calendar", (evt: MouseEvent) => {
+			if (Platform.isMobile) {
+				// Mobile ribbon buttons only receive taps (no long press / right-click):
+				// a tap opens the menu, whose first entry opens the calendar.
+				const x = evt?.clientX || window.innerWidth / 2;
+				const y = evt?.clientY || window.innerHeight / 3;
+				this.showCalendarMenu({ x, y });
+				return;
 			}
-		);
-		ribbon.addClass("ch-ribbon-icon");
-		// Desktop: right-click. (Some mobile browsers also send this on long press.)
+			void this.openCalendar();
+		});
+		ribbon.setAttr("aria-label", Platform.isMobile ? "Omni Calendar" : "Open calendar (right-click for more)");
+		// Desktop: right-click opens the menu.
 		ribbon.addEventListener("contextmenu", (e) => {
 			e.preventDefault();
 			this.showCalendarMenu({ x: e.clientX, y: e.clientY });
 		});
-		// Touch: press and hold.
-		let holdTimer: number | null = null;
-		let holdStart = { x: 0, y: 0 };
-		const clearHold = () => {
-			if (holdTimer !== null) window.clearTimeout(holdTimer);
-			holdTimer = null;
-		};
-		ribbon.addEventListener("pointerdown", (e) => {
-			if (e.pointerType === "mouse") return;
-			holdStart = { x: e.clientX, y: e.clientY };
-			clearHold();
-			holdTimer = window.setTimeout(() => {
-				holdTimer = null;
-				try {
-					navigator.vibrate?.(15);
-				} catch {
-					/* not supported */
-				}
-				this.showCalendarMenu(holdStart);
-			}, 500);
-		});
-		ribbon.addEventListener("pointermove", (e) => {
-			if (holdTimer !== null && Math.hypot(e.clientX - holdStart.x, e.clientY - holdStart.y) > 10) clearHold();
-		});
-		for (const ev of ["pointerup", "pointercancel", "pointerleave"]) ribbon.addEventListener(ev, clearHold);
-		this.register(clearHold);
 
 		this.addCommand({ id: "open-calendar", name: "Open calendar (full page)", callback: () => void this.openCalendar() });
 		this.addCommand({
