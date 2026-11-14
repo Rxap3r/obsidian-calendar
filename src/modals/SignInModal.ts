@@ -3,22 +3,86 @@ import type OmniCalendarPlugin from "../main";
 import { Account, AccountProvider } from "../types";
 import { AuthSession } from "../sync/oauth";
 import { PALETTE } from "../settings";
+import { BUILTIN_MICROSOFT_CLIENT_ID, BUILTIN_MICROSOFT_TENANT, isBuiltinMicrosoftClient } from "../sync/builtin";
 
-const GOOGLE_STEPS = [
-	"Open console.cloud.google.com and create a project (any name).",
-	"APIs & Services → Library → enable “Google Calendar API”.",
-	"APIs & Services → OAuth consent screen (Google Auth Platform): choose “External”, fill in an app name and your e-mail. Under Audience add yourself as a test user, then click “Publish app” so sign-ins do not expire after 7 days.",
-	"Clients (Credentials) → Create OAuth client → Application type “Desktop app” → Create.",
-	"Copy the Client ID and Client secret into the fields below.",
-];
+interface SetupGuide {
+	title: string;
+	needs: string[];
+	steps: string[];
+	problems: string[];
+}
 
-const MS_STEPS = [
-	"Open portal.azure.com (or entra.microsoft.com) → App registrations → New registration.",
-	"Name: anything. Supported account types: “Accounts in any organizational directory and personal Microsoft accounts” (or “Personal Microsoft accounts only” for outlook.com).",
-	"Redirect URI: platform “Public client/native (mobile & desktop)”, value http://localhost → Register.",
-	"API permissions → Add → Microsoft Graph → Delegated → Calendars.ReadWrite (offline_access is added automatically).",
-	"Copy the “Application (client) ID” from the Overview page into the field below. No client secret is needed.",
-];
+const GOOGLE_GUIDE: SetupGuide = {
+	title: "One-time setup: your own Google app (≈10–15 minutes, free)",
+	needs: [
+		"A Google account (personal Gmail works; Google Workspace only if your admin allows self-made apps).",
+		"A free Google Cloud project – no credit card or billing account needed.",
+		"A desktop computer for this setup (signing in later also works on mobile).",
+	],
+	steps: [
+		"Open console.cloud.google.com → project picker → New project (any name).",
+		"APIs & Services → Library → search “Google Calendar API” → Enable.",
+		"Google Auth Platform (OAuth consent screen) → Get started: app name of your choice, your e-mail, Audience “External”.",
+		"Audience → “Publish app” (In production). Without this Google signs you out every 7 days. No verification needed.",
+		"Clients → Create client → Application type “Desktop app” → Create.",
+		"Copy the Client ID (….apps.googleusercontent.com) and Client secret (GOCSPX-…) into the fields below and click “Sign in with Google”.",
+		"Google will warn “Google hasn’t verified this app” – expected, because it is your own app: click Advanced → Go to (your app) → Allow.",
+	],
+	problems: [
+		"“Access blocked / has not completed verification” → publish the app (step 4).",
+		"Signed out after a week → the app is still in Testing; publish it.",
+		"“org_internal” or blocked by admin → your Workspace admin does not allow it; use an ICS link instead.",
+	],
+};
+
+const MS_WORK_GUIDE: SetupGuide = {
+	title: "One-time setup: Microsoft app for a work/school account (≈10 minutes, free)",
+	needs: [
+		"A work or school Microsoft 365 account.",
+		"Permission to register apps in your organisation (usually allowed; otherwise ask IT to create it with the steps below).",
+		"No client secret and no cost.",
+	],
+	steps: [
+		"Open entra.microsoft.com (or portal.azure.com) with your work account → App registrations → New registration.",
+		"Name: anything. Supported account types: “Accounts in this organizational directory only” or “Accounts in any organizational directory”.",
+		"Redirect URI: platform “Public client/native (mobile & desktop)”, value http://localhost → Register.",
+		"API permissions → Add a permission → Microsoft Graph → Delegated → Calendars.ReadWrite → Add permissions.",
+		"Overview → copy the Application (client) ID into the field below. For a single-organisation app choose “Single organisation” above and also copy the Directory (tenant) ID.",
+	],
+	problems: [
+		"“Need admin approval” → ask IT to “Grant admin consent” for Calendars.ReadWrite on your app.",
+		"AADSTS50194 “not configured as multi-tenant” → choose “Single organisation” and enter the tenant ID.",
+	],
+};
+
+const MS_PERSONAL_GUIDE: SetupGuide = {
+	title: "One-time setup: Microsoft app for a personal account (≈20–30 minutes, free)",
+	needs: [
+		"Your Outlook.com / Hotmail / Live account.",
+		"A free Azure account (azure.microsoft.com/free). Microsoft only allows app registrations inside a “directory”, and personal accounts get one through this sign-up. Microsoft asks for a phone number and a credit card to verify your identity; the app registration itself costs nothing.",
+		"A desktop computer for this setup.",
+	],
+	steps: [
+		"Sign up at azure.microsoft.com/free with your Outlook.com account (skip if you already have Azure).",
+		"Open portal.azure.com → search “App registrations” → New registration.",
+		"Name: anything. Supported account types: “Personal Microsoft accounts only” (or “… organizational directory and personal Microsoft accounts”).",
+		"Redirect URI: platform “Public client/native (mobile & desktop)”, value http://localhost → Register.",
+		"API permissions → Add a permission → Microsoft Graph → Delegated → Calendars.ReadWrite → Add permissions.",
+		"Overview → copy the Application (client) ID into the field below and click “Sign in with Microsoft”.",
+	],
+	problems: [
+		"No directory / cannot create app registrations → finish the Azure sign-up (step 1).",
+		"AADSTS50020 “account does not exist in tenant” → the app does not allow personal accounts; change Supported account types under Authentication.",
+		"“unauthorized_client” → the redirect URI must be platform “Public client/native” with value exactly http://localhost.",
+	],
+};
+
+const TENANT_OPTIONS: Record<string, string> = {
+	consumers: "Personal – Outlook.com, Hotmail, Live",
+	organizations: "Work or school – Microsoft 365",
+	other: "Work or school – single organisation (tenant ID)",
+	common: "Both personal and work/school",
+};
 
 /** Connect (or reconnect) a Google / Microsoft account. */
 export class SignInModal extends Modal {
@@ -26,6 +90,8 @@ export class SignInModal extends Modal {
 	private clientId: string;
 	private clientSecret = "";
 	private tenant: string;
+	/** Microsoft only: use the built-in Omni Calendar app registration. */
+	private useBuiltin: boolean;
 	private statusEl!: HTMLElement;
 	private manualEl!: HTMLElement;
 	private signInBtn!: HTMLButtonElement;
@@ -38,7 +104,12 @@ export class SignInModal extends Modal {
 	) {
 		super(plugin.app);
 		this.clientId = existing?.clientId ?? "";
-		this.tenant = existing?.tenant ?? "common";
+		this.tenant = existing?.tenant ?? "consumers";
+		this.useBuiltin = provider === "outlook" && (!existing || isBuiltinMicrosoftClient(existing.clientId));
+		if (this.useBuiltin && existing) {
+			this.clientId = "";
+			this.tenant = "consumers";
+		}
 	}
 
 	private get name() {
@@ -60,61 +131,121 @@ export class SignInModal extends Modal {
 		}
 
 		const intro = contentEl.createDiv({ cls: "ch-modal-hint" });
-		intro.appendText(
-			`You connect with your own ${this.name} app registration, so no third party is involved: Obsidian talks directly to ${this.name}. ` +
-				"Sign-in happens in your browser – Omni Calendar never sees your password. The access token is stored only on this device in Obsidian's secure storage, never in your vault."
-		);
-
-		const help = contentEl.createEl("details", { cls: "ch-provider-help" });
-		help.open = !this.existing;
-		help.createEl("summary", { text: `One-time setup: create your ${this.name} app (≈10 minutes)` });
-		const ol = help.createEl("ol");
-		for (const step of this.provider === "google" ? GOOGLE_STEPS : MS_STEPS) ol.createEl("li", { text: step });
-
-		new Setting(contentEl)
-			.setName("Client ID")
-			.addText((t) => {
-				t.setPlaceholder(this.provider === "google" ? "….apps.googleusercontent.com" : "00000000-0000-0000-0000-000000000000")
-					.setValue(this.clientId)
-					.onChange((v) => (this.clientId = v.trim()));
-				t.inputEl.addClass("ch-wide-input");
-				t.inputEl.autocomplete = "off";
-				t.inputEl.spellcheck = false;
-			});
-
-		if (this.provider === "google") {
-			const hasSecret = this.existing ? accounts.hasClientSecret(this.existing) : false;
+		if (this.provider === "outlook") {
 			new Setting(contentEl)
-				.setName("Client secret")
-				.setDesc(hasSecret ? "Stored securely on this device. Leave empty to keep it." : "Stored only in Obsidian's secure storage on this device.")
-				.addText((t) => {
-					t.inputEl.type = "password";
-					t.inputEl.autocomplete = "off";
-					t.inputEl.addClass("ch-wide-input");
-					t.setPlaceholder(hasSecret ? "••••••••" : "GOCSPX-…").onChange((v) => (this.clientSecret = v.trim()));
-				});
-		} else {
-			new Setting(contentEl)
-				.setName("Account type")
-				.setDesc("Must match “Supported account types” of your app registration. For a single company tenant, choose Other and enter its tenant ID.")
-				.addDropdown((d) => {
-					d.addOptions({
-						common: "Work/school and personal",
-						consumers: "Personal (outlook.com / hotmail)",
-						organizations: "Work or school only",
-						other: "Other (tenant ID)",
-					});
-					const known = ["common", "consumers", "organizations"].includes(this.tenant);
-					d.setValue(known ? this.tenant : "other").onChange((v) => {
-						if (v !== "other") this.tenant = v;
-						tenantRow.settingEl.toggle(v === "other");
-					});
-				});
-			const tenantRow = new Setting(contentEl).setName("Tenant ID").addText((t) =>
-				t.setValue(["common", "consumers", "organizations"].includes(this.tenant) ? "" : this.tenant).onChange((v) => (this.tenant = v.trim()))
-			);
-			tenantRow.settingEl.toggle(!["common", "consumers", "organizations"].includes(this.tenant));
+				.setName("How do you want to connect?")
+				.addDropdown((d) =>
+					d
+						.addOptions({ builtin: "Quick sign-in (recommended)", own: "Use my own app registration (advanced)" })
+						.setValue(this.useBuiltin ? "builtin" : "own")
+						.onChange((v) => {
+							this.useBuiltin = v === "builtin";
+							renderBody();
+						})
+				);
 		}
+		const body = contentEl.createDiv();
+		const renderBody = () => {
+			body.empty();
+			intro.empty();
+			if (this.provider === "outlook" && this.useBuiltin) {
+				intro.appendText(
+					"Sign in with your Microsoft account – personal (Outlook.com, Hotmail, Live) or work/school. No setup needed. " +
+						"Sign-in happens in your browser, so Omni Calendar never sees your password. The access token is stored only on this device in Obsidian's secure storage, never in your vault, and no Omni Calendar server is involved."
+				);
+				const det = body.createEl("details", { cls: "ch-provider-help ch-setup-guide" });
+				det.createEl("summary", { text: "What will I see when signing in?" });
+				const ul = det.createEl("ul");
+				for (const t of [
+					"Microsoft asks you to allow “Omni Calendar” to read and write your calendars and to keep access (so you stay signed in). Nothing else – no e-mail, contacts or files.",
+					"The app may be labelled “unverified”. That only means the publisher has not completed Microsoft's paid partner verification; the sign-in itself is the standard, secure Microsoft sign-in.",
+					"Work or school accounts: your organisation may require an administrator to approve the app first (“Need admin approval”). Ask IT, or choose “Use my own app registration”.",
+					"You can remove the access anytime: Omni Calendar → Sign out, and account.microsoft.com → Privacy → Apps and services.",
+				]) ul.createEl("li", { text: t });
+				return;
+			}
+			intro.appendText(
+				`You connect with your own ${this.name} app registration, so no third party is involved: Obsidian talks directly to ${this.name}. ` +
+					"Sign-in happens in your browser – Omni Calendar never sees your password. The access token is stored only on this device in Obsidian's secure storage, never in your vault."
+			);
+			const isKnownTenant = (t: string) => ["common", "consumers", "organizations"].includes(t);
+			let tenantRow: Setting | null = null;
+			if (this.provider === "outlook") {
+				new Setting(body)
+					.setName("Which Microsoft account?")
+					.setDesc("Choose the kind of account you want to connect. This changes the setup steps below and must match “Supported account types” in your app registration.")
+					.addDropdown((d) => {
+						d.addOptions(TENANT_OPTIONS);
+						d.setValue(isKnownTenant(this.tenant) ? this.tenant : "other").onChange((v) => {
+							if (v !== "other") this.tenant = v;
+							else if (isKnownTenant(this.tenant)) this.tenant = "";
+							tenantRow?.settingEl.toggle(v === "other");
+							renderGuide();
+						});
+					});
+			}
+
+			const guideEl = body.createDiv();
+			const renderGuide = () => {
+				guideEl.empty();
+				const guide =
+					this.provider === "google"
+						? GOOGLE_GUIDE
+						: this.tenant === "consumers" || this.tenant === "common"
+							? MS_PERSONAL_GUIDE
+							: MS_WORK_GUIDE;
+				const det = guideEl.createEl("details", { cls: "ch-provider-help ch-setup-guide" });
+				det.open = !this.existing;
+				det.createEl("summary", { text: guide.title });
+				det.createEl("div", { cls: "ch-guide-label", text: "What you need" });
+				const needs = det.createEl("ul");
+				for (const n of guide.needs) needs.createEl("li", { text: n });
+				det.createEl("div", { cls: "ch-guide-label", text: "Steps" });
+				const ol = det.createEl("ol");
+				for (const st of guide.steps) ol.createEl("li", { text: st });
+				det.createEl("div", { cls: "ch-guide-label", text: "If something goes wrong" });
+				const pr = det.createEl("ul");
+				for (const p of guide.problems) pr.createEl("li", { text: p });
+				det.createEl("div", {
+					cls: "ch-muted",
+					text: "Only want to see events, not edit them? An ICS link (External calendars below) needs no setup at all.",
+				});
+			};
+			renderGuide();
+
+			new Setting(body)
+				.setName(this.provider === "google" ? "Client ID" : "Application (client) ID")
+				.addText((t) => {
+					t.setPlaceholder(this.provider === "google" ? "….apps.googleusercontent.com" : "00000000-0000-0000-0000-000000000000")
+						.setValue(this.clientId)
+						.onChange((v) => (this.clientId = v.trim()));
+					t.inputEl.addClass("ch-wide-input");
+					t.inputEl.autocomplete = "off";
+					t.inputEl.spellcheck = false;
+				});
+
+			if (this.provider === "google") {
+				const hasSecret = this.existing ? accounts.hasClientSecret(this.existing) : false;
+				new Setting(body)
+					.setName("Client secret")
+					.setDesc(hasSecret ? "Stored securely on this device. Leave empty to keep it." : "Stored only in Obsidian's secure storage on this device.")
+					.addText((t) => {
+						t.inputEl.type = "password";
+						t.inputEl.autocomplete = "off";
+						t.inputEl.addClass("ch-wide-input");
+						t.setPlaceholder(hasSecret ? "••••••••" : "GOCSPX-…").onChange((v) => (this.clientSecret = v.trim()));
+					});
+			} else {
+				tenantRow = new Setting(body)
+					.setName("Directory (tenant) ID")
+					.setDesc("From the Overview page of your app registration.")
+					.addText((t) =>
+						t.setPlaceholder("00000000-0000-0000-0000-000000000000").setValue(isKnownTenant(this.tenant) ? "" : this.tenant).onChange((v) => (this.tenant = v.trim()))
+					);
+				tenantRow.settingEl.toggle(!isKnownTenant(this.tenant));
+			}
+		};
+		renderBody();
 
 		const actions = new Setting(contentEl).setClass("ch-modal-buttons");
 		actions.addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()));
@@ -130,6 +261,7 @@ export class SignInModal extends Modal {
 	}
 
 	private validate(): string | null {
+		if (this.provider === "outlook" && this.useBuiltin) return null;
 		if (!this.clientId) return "Enter the Client ID.";
 		if (this.provider === "google") {
 			if (!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(this.clientId)) return "The Google Client ID should end with .apps.googleusercontent.com";
@@ -137,7 +269,7 @@ export class SignInModal extends Modal {
 			if (!this.clientSecret && !hasSecret) return "Enter the Client secret.";
 		} else {
 			if (!/^[0-9a-f-]{36}$/i.test(this.clientId)) return "The Application (client) ID should look like 00000000-0000-0000-0000-000000000000";
-			if (!/^[a-z0-9.-]+$/i.test(this.tenant)) return "Invalid tenant ID.";
+			if (!/^[a-z0-9.-]+$/i.test(this.tenant)) return "Enter a valid Directory (tenant) ID.";
 		}
 		return null;
 	}
@@ -150,9 +282,12 @@ export class SignInModal extends Modal {
 		}
 		const accounts = this.plugin.accounts;
 		const isNew = !this.existing;
-		const account: Account = this.existing ?? accounts.newAccount(this.provider, this.clientId, this.provider === "outlook" ? this.tenant : undefined);
-		account.clientId = this.clientId;
-		if (this.provider === "outlook") account.tenant = this.tenant;
+		const builtin = this.provider === "outlook" && this.useBuiltin;
+		const clientId = builtin ? BUILTIN_MICROSOFT_CLIENT_ID : this.clientId;
+		const tenant = builtin ? BUILTIN_MICROSOFT_TENANT : this.tenant;
+		const account: Account = this.existing ?? accounts.newAccount(this.provider, clientId, this.provider === "outlook" ? tenant : undefined);
+		account.clientId = clientId;
+		if (this.provider === "outlook") account.tenant = tenant;
 
 		this.session?.cancel();
 		this.signInBtn.disabled = true;

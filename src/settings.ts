@@ -150,6 +150,8 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 			.setDesc("Connect an account to show its calendars and create, edit, move and delete events directly from Obsidian.")
 			.setHeading();
 
+		this.methodGuide(containerEl);
+
 		const accounts = this.plugin.accounts;
 		if (!accounts.secureStorageAvailable) {
 			containerEl.createDiv({
@@ -159,7 +161,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		} else {
 			containerEl.createDiv({
 				cls: "ch-modal-hint",
-				text: "🔒 You use your own Google / Microsoft app registration – no third-party server is involved. Sign-in tokens are kept only in Obsidian's secure storage on this device (never in your vault or sync), so each device signs in separately.",
+				text: "🔒 No Omni Calendar server is involved – Obsidian talks directly to Google / Microsoft. Microsoft: just sign in. Google: uses your own app registration. Sign-in tokens are kept only in Obsidian's secure storage on this device (never in your vault or sync), so each device signs in separately.",
 			});
 		}
 		for (const acc of s.accounts) this.accountBox(containerEl, acc);
@@ -183,6 +185,10 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 
 		const help = containerEl.createEl("details", { cls: "ch-provider-help" });
 		help.createEl("summary", { text: "How do I get the ICS link?" });
+		help.createDiv({
+			cls: "ch-provider",
+			text: "What you need: access to the calendar's settings on the provider's website. No sign-in or app setup; works on every device. Read-only, and some providers update the feed with a delay of minutes to a few hours.",
+		});
 		for (const p of PROVIDER_HELP) {
 			const row = help.createDiv({ cls: "ch-provider" });
 			row.createEl("strong", { text: p.name + ": " });
@@ -216,6 +222,30 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 				this.plugin.scheduleRefresh();
 			}
 		);
+	}
+
+	/** Short overview of the connection methods and what each one needs. */
+	private methodGuide(el: HTMLElement) {
+		const det = el.createEl("details", { cls: "ch-provider-help ch-method-guide" });
+		det.createEl("summary", { text: "Which method should I use, and what do I need?" });
+		const rows: [string, string, string][] = [
+			["Local calendar", "Read & write in Obsidian only", "Nothing – works out of the box."],
+			["ICS link (below)", "Read-only · Google, Outlook, Proton, iCloud, …", "Only the calendar's private ICS link. 2 minutes, works on every device."],
+			["Google account", "Read & write · Google Calendar", "A Google account and a free Google Cloud project (no credit card). ≈10–15 minutes, once."],
+			["Microsoft account", "Read & write · Outlook.com, Hotmail, Live, Microsoft 365", "Nothing – just sign in (built-in app). Work/school accounts may need approval from IT. 1 minute."],
+			["Proton Calendar", "Read-only (ICS link)", "Proton offers no write access for apps. Export local events to .ics and import them in Proton if needed."],
+		];
+		const table = det.createEl("table", { cls: "ch-method-table" });
+		const head = table.createEl("tr");
+		for (const h of ["Method", "Can do", "What you need"]) head.createEl("th", { text: h });
+		for (const r of rows) {
+			const tr = table.createEl("tr");
+			for (const c of r) tr.createEl("td", { text: c });
+		}
+		det.createDiv({
+			cls: "ch-provider",
+			text: "Tip: only want to see your events? Use an ICS link. Want to create or edit Google / Outlook events from Obsidian? Connect the account – Microsoft needs no setup; for Google the sign-in dialog shows the steps.",
+		});
 	}
 
 	private nextColor(): string {
