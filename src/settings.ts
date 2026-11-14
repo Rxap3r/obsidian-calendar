@@ -104,11 +104,13 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		this.numberSetting(containerEl, "Agenda length (days)", "", s.agendaDays, 1, 365, (v) => (s.agendaDays = v));
 		new Setting(containerEl)
 			.setName("Sidebar")
-			.setDesc("Which sidebar “Toggle calendar in sidebar” uses.")
+			.setDesc("Which sidebar the calendar lives in. Changing this moves an open sidebar calendar over immediately (and on the next start).")
 			.addDropdown((d) =>
 				d.addOptions({ right: "Right sidebar", left: "Left sidebar" }).setValue(s.sidebarSide).onChange(async (v) => {
 					s.sidebarSide = v as "left" | "right";
 					await this.save();
+					// Move an open sidebar calendar over right away.
+					await this.plugin.enforceSidebarSide();
 				})
 			);
 		new Setting(containerEl)
