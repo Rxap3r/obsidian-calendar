@@ -306,3 +306,19 @@
 .ch-target-hint { font-size: 0.85em; margin: -4px 0 6px; }
 .ch-settings .ch-source-row .setting-item-name .ch-dot { margin-right: 8px; vertical-align: middle; }
 .ch-small-hint { font-size: 0.85em; margin: 4px 0 12px; }
+
+/* ---------------------------------------------------------------- full calendar inside a sidebar */
+.ch-in-sidebar .ch-toolbar { padding: 6px; gap: 4px; }
+.ch-in-sidebar .ch-title { font-size: 1em; order: 5; width: 100%; margin-left: 0; }
+.ch-in-sidebar .ch-toolbar-right { margin-left: 0; }
+.ch-in-sidebar .ch-segmented button { padding: 3px 6px; font-size: 0.85em; }
+.ch-in-sidebar .ch-new-label { display: none; }
+.ch-in-sidebar .ch-month { min-height: 320px; }
+.ch-in-sidebar .ch-month-cell { min-height: 48px; padding: 1px; }
+.ch-in-sidebar .ch-chip { font-size: 0.7em; }
+.ch-in-sidebar .ch-chip-time { display: none; }
+.ch-in-sidebar .ch-agenda { padding: 4px 6px 16px; }
+.ch-in-sidebar .ch-agenda-item { grid-template-columns: 78px 12px 1fr; padding-left: 4px; gap: 6px; }
+.ch-in-sidebar .ch-agenda-daynum { width: 28px; font-size: 1.2em; }
+.ch-in-sidebar .ch-tg-head, .ch-in-sidebar .ch-tg-allday, .ch-in-sidebar .ch-tg-inner { grid-template-columns: 40px 1fr; }
+.ch-in-sidebar .ch-tg-head, .ch-in-sidebar .ch-tg-allday { grid-template-columns: 40px repeat(var(--ch-days), minmax(0, 1fr)); }

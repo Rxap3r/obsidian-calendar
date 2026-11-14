@@ -30,6 +30,7 @@ export class CalendarView extends ItemView {
 	private renderQueued = false;
 	private nowTimer: number | null = null;
 	private scrollTop: number | null = null;
+	private locationBtn: HTMLElement | null = null;
 	/** Occurrences currently on screen, by key (used for drag & drop). */
 	private rendered = new Map<string, CalendarOccurrence>();
 
@@ -68,6 +69,8 @@ export class CalendarView extends ItemView {
 		this.buildToolbar();
 		this.bodyEl = this.contentEl.createDiv({ cls: "ch-body" });
 		this.registerEvent(this.plugin.store.on("changed", () => this.queueRender()));
+		// The view can be dragged between sidebar and main area – keep the button in sync.
+		this.registerEvent(this.app.workspace.on("layout-change", () => this.updateLocationButton()));
 		this.nowTimer = window.setInterval(() => this.updateNowLine(), 60 * 1000);
 		this.registerInterval(this.nowTimer);
 		this.render();
@@ -123,6 +126,10 @@ export class CalendarView extends ItemView {
 			this.modeButtons[m] = b;
 		});
 
+		this.locationBtn = right.createEl("button", { cls: "ch-icon-btn" });
+		this.locationBtn.onclick = () => void this.toggleLocation();
+		this.updateLocationButton();
+
 		const filter = right.createEl("button", { cls: "ch-icon-btn", attr: { "aria-label": "Show / hide calendars" } });
 		setIcon(filter, "filter");
 		filter.onclick = (e) => this.showFilterMenu(e);
@@ -141,6 +148,26 @@ export class CalendarView extends ItemView {
 		setIcon(add.createSpan(), "plus");
 		add.createSpan({ text: "New", cls: "ch-new-label" });
 		add.onclick = () => new EventModal(this.plugin, { start: this.cursor }).open();
+	}
+
+	private updateLocationButton() {
+		const btn = this.locationBtn;
+		if (!btn) return;
+		const inSidebar = this.plugin.isInSidebar(this.leaf);
+		btn.empty();
+		setIcon(btn, inSidebar ? "maximize-2" : "panel-right-open");
+		btn.setAttr("aria-label", inSidebar ? "Open full page (keeps this sidebar calendar)" : "Move to sidebar");
+		this.contentEl.toggleClass("ch-in-sidebar", inSidebar);
+	}
+
+	/** Sidebar → open the full page in the main area. Main area → move this calendar into the sidebar. */
+	private async toggleLocation() {
+		if (this.plugin.isInSidebar(this.leaf)) {
+			await this.plugin.openCalendar(this.cursor, this.mode);
+			return;
+		}
+		await this.plugin.showInSidebar("full", true, { mode: this.mode, date: toDateKey(this.cursor) });
+		this.leaf.detach();
 	}
 
 	private showFilterMenu(e: MouseEvent) {
