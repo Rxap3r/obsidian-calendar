@@ -1,5 +1,5 @@
 import { MarkdownRenderChild, Menu, Notice, Plugin, TFile, WorkspaceLeaf, WorkspaceSidedock, normalizePath } from "obsidian";
-import { OmniCalendarSettings, CalendarOccurrence, LocalEvent, PluginData, ViewMode } from "./types";
+import { OmniCalendarSettings, CalendarOccurrence, LocalEvent, PluginData, SidebarView, ViewMode } from "./types";
 import { OmniCalendarSettingTab, DEFAULT_SETTINGS } from "./settings";
 import { CalendarStore } from "./store";
 import { AccountManager } from "./sync/accounts";
@@ -17,6 +17,9 @@ export default class OmniCalendarPlugin extends Plugin {
 	accounts!: AccountManager;
 	private refreshTimer: number | null = null;
 	private firstRun = false;
+	private sidebarViewUnset = false;
+	/** True while the plugin itself changes the sidebar (ignore those layout changes). */
+	private applyingSidebar = false;
 
 	/** Same object as `data.settings`. */
 	settings!: OmniCalendarSettings;
@@ -36,11 +39,11 @@ export default class OmniCalendarPlugin extends Plugin {
 			const menu = new Menu();
 			menu.addItem((i) => i.setTitle("Open full calendar").setIcon("calendar-days").onClick(() => void this.openCalendar()));
 			menu.addItem((i) =>
-				i.setTitle(this.sidebarLeaves(VIEW_TYPE_MINI).length ? "Hide mini calendar in sidebar" : "Show mini calendar in sidebar")
+				i.setTitle(this.settings.sidebarView === "mini" ? "Hide mini calendar in sidebar" : "Show mini calendar in sidebar")
 					.setIcon("panel-right").onClick(() => void this.toggleSidebar("mini"))
 			);
 			menu.addItem((i) =>
-				i.setTitle(this.sidebarLeaves(VIEW_TYPE_CALENDAR).length ? "Hide full calendar in sidebar" : "Show full calendar in sidebar")
+				i.setTitle(this.settings.sidebarView === "full" ? "Hide full calendar in sidebar" : "Show full calendar in sidebar")
 					.setIcon("panel-right-open").onClick(() => void this.toggleSidebar("full"))
 			);
 			menu.addSeparator();
@@ -92,13 +95,15 @@ export default class OmniCalendarPlugin extends Plugin {
 		this.app.workspace.onLayoutReady(async () => {
 			await this.store.loadCached();
 			if (this.firstRun) {
-				await this.openSidebar(false);
-				await this.persist();
-			} else {
-				// A calendar may have been left in the other sidebar (e.g. after changing the setting).
-				await this.enforceSidebarSide();
-				if (this.settings.sidebarOnStartup !== "none") await this.showInSidebar(this.settings.sidebarOnStartup, false);
+				this.settings.sidebarView = "mini";
+			} else if (this.sidebarViewUnset) {
+				// Upgrading from an older version: adopt whatever is in the sidebar now.
+				this.settings.sidebarView = this.actualSidebarView();
 			}
+			await this.persist();
+			await this.applySidebar(false);
+			// From now on keep the setting in sync when the user closes or drags the sidebar calendar.
+			this.registerEvent(this.app.workspace.on("layout-change", () => this.syncSidebarSetting()));
 			void this.store.refreshAll();
 			this.scheduleRefresh();
 		});
@@ -126,6 +131,13 @@ export default class OmniCalendarPlugin extends Plugin {
 		const targets = Array.isArray(raw.settings?.defaultTargets) ? raw.settings.defaultTargets : [settings.defaultCalendarId];
 		settings.defaultTargets = targets.filter((id) => settings.sources.some((s) => s.id === id));
 		if (!settings.defaultTargets.length) settings.defaultTargets = [settings.defaultCalendarId];
+		// sidebarOnStartup (≤ 1.5.1) → sidebarView
+		this.sidebarViewUnset = !raw.settings?.sidebarView;
+		if (this.sidebarViewUnset && raw.settings?.sidebarOnStartup && raw.settings.sidebarOnStartup !== "none") {
+			settings.sidebarView = raw.settings.sidebarOnStartup;
+			this.sidebarViewUnset = false;
+		}
+		delete settings.sidebarOnStartup;
 		this.data = { settings, events: Array.isArray(raw.events) ? raw.events : [] };
 		this.settings = settings;
 	}
@@ -227,19 +239,76 @@ export default class OmniCalendarPlugin extends Plugin {
 		if (reveal) await this.app.workspace.revealLeaf(leaf);
 	}
 
-	/** Show the calendar in the sidebar, or close it there if it is already shown. */
-	async toggleSidebar(kind: "mini" | "full") {
-		const existing = this.sidebarLeaves(kind === "mini" ? VIEW_TYPE_MINI : VIEW_TYPE_CALENDAR);
-		if (existing.length) {
-			for (const l of existing) l.detach();
-			return;
-		}
-		await this.showInSidebar(kind, true);
+	/** What is actually in the sidebar right now. */
+	actualSidebarView(): SidebarView {
+		if (this.sidebarLeaves(VIEW_TYPE_MINI).length) return "mini";
+		if (this.sidebarLeaves(VIEW_TYPE_CALENDAR).length) return "full";
+		return "none";
 	}
 
-	/** Mini calendar in the sidebar (kept for the "Show mini calendar in sidebar" command). */
+	/**
+	 * Make the sidebar match the settings: right kind of calendar, on the right side, nothing else.
+	 * Called on startup and whenever the sidebar settings change.
+	 */
+	async applySidebar(reveal: boolean) {
+		this.applyingSidebar = true;
+		try {
+			await this.enforceSidebarSide();
+			const want = this.settings.sidebarView;
+			for (const type of [VIEW_TYPE_MINI, VIEW_TYPE_CALENDAR]) {
+				const wanted = (want === "mini" && type === VIEW_TYPE_MINI) || (want === "full" && type === VIEW_TYPE_CALENDAR);
+				if (!wanted) for (const leaf of this.sidebarLeaves(type)) leaf.detach();
+			}
+			if (want !== "none") await this.showInSidebar(want, reveal);
+		} finally {
+			// layout-change fires asynchronously; ignore it until things settled.
+			window.setTimeout(() => (this.applyingSidebar = false), 300);
+		}
+	}
+
+	/** The user closed or dragged the sidebar calendar: update the setting to match. */
+	private syncSidebarSetting() {
+		if (this.applyingSidebar) return;
+		const actual = this.actualSidebarView();
+		let changed = false;
+		if (actual !== this.settings.sidebarView) {
+			this.settings.sidebarView = actual;
+			changed = true;
+		}
+		if (actual !== "none") {
+			const leaf = this.sidebarLeaves(actual === "mini" ? VIEW_TYPE_MINI : VIEW_TYPE_CALENDAR)[0];
+			const side = leaf && leaf.getRoot() === this.app.workspace.leftSplit ? "left" : "right";
+			if (leaf && side !== this.settings.sidebarSide) {
+				this.settings.sidebarSide = side;
+				changed = true;
+			}
+		}
+		if (changed) void this.persist();
+	}
+
+	/** "Move to sidebar" button of the full calendar: the sidebar now holds the full calendar. */
+	async moveToSidebar(state: Record<string, unknown>) {
+		this.settings.sidebarView = "full";
+		await this.persist();
+		this.applyingSidebar = true;
+		for (const leaf of this.sidebarLeaves(VIEW_TYPE_MINI)) leaf.detach();
+		for (const leaf of this.sidebarLeaves(VIEW_TYPE_CALENDAR)) leaf.detach();
+		await this.showInSidebar("full", true, state);
+		window.setTimeout(() => (this.applyingSidebar = false), 300);
+	}
+
+	/** Show the mini / full calendar in the sidebar, or hide it if it is already shown. */
+	async toggleSidebar(kind: "mini" | "full") {
+		this.settings.sidebarView = this.settings.sidebarView === kind ? "none" : kind;
+		await this.persist();
+		await this.applySidebar(true);
+	}
+
+	/** Show the mini calendar in the sidebar (command "Show mini calendar in sidebar"). */
 	async openSidebar(reveal: boolean) {
-		await this.showInSidebar("mini", reveal);
+		this.settings.sidebarView = "mini";
+		await this.persist();
+		await this.applySidebar(reveal);
 	}
 
 	openSettings() {

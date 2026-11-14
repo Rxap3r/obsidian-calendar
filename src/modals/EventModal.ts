@@ -26,6 +26,9 @@ export interface EventModalInit {
 
 /** Create / edit a local event. */
 export class EventModal extends Modal {
+	/** Number of event dialogs currently open (used to never open two at once from gestures). */
+	static openCount = 0;
+
 	private title: string;
 	private calendarId: string;
 	/** New events: every calendar the event will be created in. */
@@ -116,6 +119,7 @@ export class EventModal extends Modal {
 	}
 
 	onOpen() {
+		EventModal.openCount++;
 		const { contentEl } = this;
 		this.modalEl.addClass("ch-event-modal");
 		const remote = this.init.remote;
@@ -513,6 +517,7 @@ export class EventModal extends Modal {
 	}
 
 	onClose() {
+		EventModal.openCount = Math.max(0, EventModal.openCount - 1);
 		this.contentEl.empty();
 	}
 }

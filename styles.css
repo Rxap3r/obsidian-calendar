@@ -363,3 +363,7 @@
 .ch-day-card-dow { color: var(--text-muted); font-size: 0.8em; text-transform: uppercase; }
 .ch-day-card-head .ch-cell-add { margin-left: auto; }
 .ch-day-card:hover .ch-cell-add { opacity: 1; }
+
+/* Touch: no text selection / callout menu while long-pressing time slots. */
+.ch-tg-col { -webkit-user-select: none; -webkit-touch-callout: none; }
+.ch-tg-col.ch-selecting { touch-action: none; }

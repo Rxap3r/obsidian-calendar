@@ -21,6 +21,10 @@ const MONTH_CARD_MIN = 120;
 /** Minimum width of a day column in the week view; fewer days are shown below it. */
 const WEEK_MIN_COL = 74;
 const GUTTER = 56;
+/** Touch: hold this long before dragging selects a time range. */
+const LONG_PRESS_MS = 400;
+/** Touch: movement (px) that counts as scrolling instead of a tap / long press. */
+const TOUCH_SLOP = 8;
 
 interface ViewState {
 	mode?: ViewMode;
@@ -40,6 +44,8 @@ export class CalendarView extends ItemView {
 	private locationBtn: HTMLElement | null = null;
 	/** Current width of the view body, used for responsive layouts. */
 	private width = 0;
+	/** The time-slot selection in progress (at most one). */
+	private selection: { cancel: () => void } | null = null;
 	private layoutKey = "";
 	/** Occurrences currently on screen, by key (used for drag & drop). */
 	private rendered = new Map<string, CalendarOccurrence>();
@@ -180,7 +186,7 @@ export class CalendarView extends ItemView {
 			await this.plugin.openCalendar(this.cursor, this.mode);
 			return;
 		}
-		await this.plugin.showInSidebar("full", true, { mode: this.mode, date: toDateKey(this.cursor) });
+		await this.plugin.moveToSidebar({ mode: this.mode, date: toDateKey(this.cursor) });
 		this.leaf.detach();
 	}
 
@@ -225,6 +231,7 @@ export class CalendarView extends ItemView {
 		for (const [m, b] of Object.entries(this.modeButtons)) b?.toggleClass("is-active", m === this.mode);
 		this.bodyEl.empty();
 		this.bodyEl.className = `ch-body ch-mode-${this.mode}`;
+		this.selection?.cancel();
 		if (!this.width) this.width = Math.round(this.bodyEl.clientWidth);
 		this.layoutKey = this.computeLayoutKey();
 		switch (this.mode) {
@@ -559,22 +566,65 @@ export class CalendarView extends ItemView {
 		scroll.addEventListener("scroll", () => (this.scrollTop = scroll.scrollTop));
 	}
 
-	/** Click or drag on an empty time slot to create an event. */
+	/**
+	 * Create events from empty time slots.
+	 * Mouse / pen: press and drag to select a range, or click for a default-length event.
+	 * Touch: swipe scrolls as usual; tap opens "new event" at that time; press and hold
+	 * (~0.4 s), then drag to select a range. Only one selection can be active and only
+	 * one event dialog is opened; cancelled gestures (e.g. the browser starting to scroll)
+	 * are always cleaned up.
+	 */
 	private enableSlotSelection(col: HTMLElement, day: Date, minutesFromY: (y: number) => number) {
+		let blockScroll = false;
+		// Must be non-passive so scrolling can be stopped while a range is being selected.
+		col.addEventListener("touchmove", (e) => {
+			if (blockScroll && e.cancelable) e.preventDefault();
+		}, { passive: false });
+		col.addEventListener("contextmenu", (e) => {
+			if (this.selection) e.preventDefault();
+		});
+
 		col.addEventListener("pointerdown", (down) => {
-			if (down.button !== 0) return;
+			if (down.button !== 0 || !down.isPrimary) return;
+			if (this.selection || EventModal.openCount > 0) return;
+			const touch = down.pointerType === "touch";
+			const startX = down.clientX;
+			const startY = down.clientY;
 			const startMin = minutesFromY(down.clientY);
 			let endMin = startMin + SNAP_MIN;
 			let moved = false;
-			const ghost = col.createDiv({ cls: "ch-tg-selection" });
+			let active = !touch; // touch becomes active after a long press
+			let ghost: HTMLElement | null = null;
+			let timer: number | null = null;
+
 			const draw = () => {
+				if (!ghost) ghost = col.createDiv({ cls: "ch-tg-selection" });
 				const a = Math.min(startMin, endMin);
 				const b = Math.max(startMin + SNAP_MIN, endMin);
 				ghost.style.top = `${(a / 60) * HOUR_HEIGHT}px`;
 				ghost.style.height = `${((b - a) / 60) * HOUR_HEIGHT}px`;
 			};
-			draw();
+			const cleanup = () => {
+				window.removeEventListener("pointermove", move);
+				window.removeEventListener("pointerup", up);
+				window.removeEventListener("pointercancel", cancel);
+				if (timer !== null) window.clearTimeout(timer);
+				timer = null;
+				ghost?.remove();
+				ghost = null;
+				blockScroll = false;
+				col.removeClass("ch-selecting");
+				if (this.selection === handle) this.selection = null;
+			};
+			const handle = { cancel: cleanup };
+
 			const move = (e: PointerEvent) => {
+				if (e.pointerId !== down.pointerId) return;
+				if (!active) {
+					// Finger moved before the long press: this is a scroll, not a selection.
+					if (Math.hypot(e.clientX - startX, e.clientY - startY) > TOUCH_SLOP) cleanup();
+					return;
+				}
 				const m = minutesFromY(e.clientY) + SNAP_MIN;
 				if (m !== endMin) {
 					endMin = m;
@@ -582,19 +632,41 @@ export class CalendarView extends ItemView {
 					draw();
 				}
 			};
-			const up = () => {
-				window.removeEventListener("pointermove", move);
-				window.removeEventListener("pointerup", up);
-				ghost.remove();
-				const a = Math.min(startMin, endMin - SNAP_MIN);
+			const up = (e: PointerEvent) => {
+				if (e.pointerId !== down.pointerId) return;
+				cleanup();
+				if (EventModal.openCount > 0) return;
+				const a = moved ? Math.min(startMin, endMin - SNAP_MIN) : startMin;
 				const start = addMinutes(startOfDay(day), a);
 				const end = moved
 					? addMinutes(startOfDay(day), Math.max(startMin + SNAP_MIN, endMin))
 					: addMinutes(start, this.plugin.settings.defaultEventDuration);
 				new EventModal(this.plugin, { start, end }).open();
 			};
+			const cancel = (e: PointerEvent) => {
+				if (e.pointerId === down.pointerId) cleanup();
+			};
+
+			this.selection = handle;
 			window.addEventListener("pointermove", move);
 			window.addEventListener("pointerup", up);
+			window.addEventListener("pointercancel", cancel);
+			if (touch) {
+				timer = window.setTimeout(() => {
+					timer = null;
+					active = true;
+					blockScroll = true;
+					col.addClass("ch-selecting");
+					try {
+						navigator.vibrate?.(15);
+					} catch {
+						/* not supported */
+					}
+					draw();
+				}, LONG_PRESS_MS);
+			} else {
+				draw();
+			}
 		});
 	}
 

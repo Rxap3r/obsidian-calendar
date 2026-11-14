@@ -1,3 +1,5 @@
+export type SidebarView = "none" | "mini" | "full";
+
 export type ViewMode = "month" | "week" | "day" | "agenda";
 
 export type RecurrenceFreq = "daily" | "weekly" | "monthly" | "yearly";
@@ -150,8 +152,14 @@ export interface OmniCalendarSettings {
 	sidebarUpcomingDays: number;
 	/** Which sidebar the calendar is placed in by the toggle commands. */
 	sidebarSide: "left" | "right";
-	/** What to show in the sidebar when Obsidian starts. */
-	sidebarOnStartup: "none" | "mini" | "full";
+	/**
+	 * What lives in the sidebar: nothing, the mini calendar or the full calendar.
+	 * Applied immediately when changed and restored on startup; kept in sync when the
+	 * user closes or drags the sidebar calendar themselves.
+	 */
+	sidebarView: SidebarView;
+	/** @deprecated replaced by sidebarView (migrated on load). */
+	sidebarOnStartup?: SidebarView;
 	notesFolder: string;
 	noteTemplate: string;
 	defaultCalendarId: string;
