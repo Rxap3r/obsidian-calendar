@@ -69,6 +69,10 @@ On first install the mini calendar is added to the right sidebar automatically.
 - **Drag and drop:** drag a local, non-recurring event to another day (month view) or another time (week/day view) to move it.
 - **Click an event** to edit it. For an external event this shows its details instead. **Right-click an event** for a menu with *Edit*, *Create/Open note*, *Duplicate*, *Delete this occurrence* and *Delete*.
 
+**Adapts to its width** (handy in a sidebar):
+- In a narrow view, *Month* switches from the 7-column grid to **day cards** in one or more columns, and *Week* shows **fewer days side by side** (e.g. 3 days). The arrows then move by that many days.
+- In a very wide sidebar the calendar stops growing at a comfortable width and stays centred, instead of stretching the days apart.
+
 ### Sidebar mini calendar
 
 - Coloured dots show which days have events.

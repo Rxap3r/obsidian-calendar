@@ -180,8 +180,9 @@
 .ch-mini-title:hover { color: var(--interactive-accent); }
 .ch-mini-nav { display: flex; gap: 0; flex: none; }
 .ch-mini-nav .ch-icon-btn { padding: 2px 4px; background: transparent; box-shadow: none; }
-.ch-mini-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; text-align: center; }
-.ch-mini-grid.ch-with-weeknums { grid-template-columns: 22px repeat(7, 1fr); }
+/* Day cells grow up to a maximum size, then the grid stays centred instead of spreading out. */
+.ch-mini-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 42px)); justify-content: center; gap: 1px; text-align: center; }
+.ch-mini-grid.ch-with-weeknums { grid-template-columns: 22px repeat(7, minmax(0, 42px)); }
 .ch-mini-wd { font-size: 0.7em; color: var(--text-muted); padding: 2px 0; text-transform: uppercase; }
 .ch-mini-wn { font-size: 0.65em; color: var(--text-faint); display: flex; align-items: center; justify-content: center; }
 .ch-mini-day {
@@ -322,3 +323,43 @@
 .ch-in-sidebar .ch-agenda-daynum { width: 28px; font-size: 1.2em; }
 .ch-in-sidebar .ch-tg-head, .ch-in-sidebar .ch-tg-allday, .ch-in-sidebar .ch-tg-inner { grid-template-columns: 40px 1fr; }
 .ch-in-sidebar .ch-tg-head, .ch-in-sidebar .ch-tg-allday { grid-template-columns: 40px repeat(var(--ch-days), minmax(0, 1fr)); }
+
+/* ---------------------------------------------------------------- responsive limits */
+/* Mini calendar: keep header, grid and lists to a pleasant width in wide sidebars. */
+.ch-mini > * { max-width: 380px; margin-left: auto; margin-right: auto; }
+.ch-mini-head { max-width: 320px; }
+
+/* Full calendar in a sidebar: stop stretching beyond a comfortable width. */
+.ch-in-sidebar .ch-month { width: 100%; max-width: 640px; margin: 0 auto; }
+.ch-in-sidebar .ch-timegrid { width: 100%; max-width: calc(56px + var(--ch-days) * 190px); margin: 0 auto; }
+.ch-in-sidebar .ch-agenda { max-width: 560px; }
+.ch-in-sidebar .ch-month-cell { max-height: 140px; }
+
+/* Narrow month layout: day cards in a few columns. */
+.ch-month-cards {
+	display: grid;
+	grid-template-columns: repeat(var(--ch-cols, 2), minmax(0, 1fr));
+	gap: 6px;
+	padding: 6px;
+	width: 100%;
+	max-width: 640px;
+	margin: 0 auto;
+	align-content: start;
+}
+.ch-day-card {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: 3px 5px 4px;
+	min-height: 56px;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+.ch-day-card.ch-weekend { background: var(--background-secondary); }
+.ch-day-card.ch-today { background: var(--ch-today-bg); border-color: var(--interactive-accent); }
+.ch-day-card-empty { min-height: 34px; }
+.ch-day-card-empty .ch-cell-events { display: none; }
+.ch-day-card-head { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.ch-day-card-dow { color: var(--text-muted); font-size: 0.8em; text-transform: uppercase; }
+.ch-day-card-head .ch-cell-add { margin-left: auto; }
+.ch-day-card:hover .ch-cell-add { opacity: 1; }

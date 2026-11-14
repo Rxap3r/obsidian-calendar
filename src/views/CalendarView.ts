@@ -14,6 +14,13 @@ export const VIEW_TYPE_CALENDAR = "omni-calendar-view";
 const HOUR_HEIGHT = 48;
 const SNAP_MIN = 15;
 const MONTH_MAX_CHIPS = 4;
+/** Below this width per day the month grid becomes a list of day cards. */
+const MONTH_MIN_CELL = 62;
+/** Minimum width of a day card in the narrow month layout. */
+const MONTH_CARD_MIN = 120;
+/** Minimum width of a day column in the week view; fewer days are shown below it. */
+const WEEK_MIN_COL = 74;
+const GUTTER = 56;
 
 interface ViewState {
 	mode?: ViewMode;
@@ -31,6 +38,9 @@ export class CalendarView extends ItemView {
 	private nowTimer: number | null = null;
 	private scrollTop: number | null = null;
 	private locationBtn: HTMLElement | null = null;
+	/** Current width of the view body, used for responsive layouts. */
+	private width = 0;
+	private layoutKey = "";
 	/** Occurrences currently on screen, by key (used for drag & drop). */
 	private rendered = new Map<string, CalendarOccurrence>();
 
@@ -71,6 +81,10 @@ export class CalendarView extends ItemView {
 		this.registerEvent(this.plugin.store.on("changed", () => this.queueRender()));
 		// The view can be dragged between sidebar and main area – keep the button in sync.
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.updateLocationButton()));
+		// Re-layout when the view is resized (e.g. dragging the sidebar edge).
+		const ro = new ResizeObserver(() => this.handleResize());
+		ro.observe(this.contentEl);
+		this.register(() => ro.disconnect());
 		this.nowTimer = window.setInterval(() => this.updateNowLine(), 60 * 1000);
 		this.registerInterval(this.nowTimer);
 		this.render();
@@ -193,7 +207,7 @@ export class CalendarView extends ItemView {
 	private step(dir: number) {
 		switch (this.mode) {
 			case "month": this.cursor = addMonths(startOfMonth(this.cursor), dir); break;
-			case "week": this.cursor = addDays(this.cursor, 7 * dir); break;
+			case "week": this.cursor = addDays(this.cursor, this.weekDayCount() * dir); break;
 			case "day": this.cursor = addDays(this.cursor, dir); break;
 			case "agenda": this.cursor = addDays(this.cursor, this.plugin.settings.agendaDays * dir); break;
 		}
@@ -211,15 +225,107 @@ export class CalendarView extends ItemView {
 		for (const [m, b] of Object.entries(this.modeButtons)) b?.toggleClass("is-active", m === this.mode);
 		this.bodyEl.empty();
 		this.bodyEl.className = `ch-body ch-mode-${this.mode}`;
+		if (!this.width) this.width = Math.round(this.bodyEl.clientWidth);
+		this.layoutKey = this.computeLayoutKey();
 		switch (this.mode) {
 			case "month": this.renderMonth(); break;
-			case "week": this.renderTimeGrid(startOfWeek(this.cursor, this.plugin.settings.firstDayOfWeek), 7); break;
+			case "week": {
+				const n = this.weekDayCount();
+				// Full week: start on the configured first weekday. Fewer days: start at the cursor.
+				this.renderTimeGrid(n === 7 ? startOfWeek(this.cursor, this.plugin.settings.firstDayOfWeek) : startOfDay(this.cursor), n);
+				break;
+			}
 			case "day": this.renderTimeGrid(this.cursor, 1); break;
 			case "agenda": this.renderAgenda(); break;
 		}
 	}
 
+	// ------------------------------------------------------------------ responsive layout
+
+	/** Called by Obsidian when the view is resized. */
+	onResize() {
+		this.handleResize();
+	}
+
+	private handleResize() {
+		const w = Math.round(this.bodyEl?.clientWidth ?? 0);
+		if (!w || w === this.width) return;
+		this.width = w;
+		const key = this.computeLayoutKey();
+		if (key !== this.layoutKey) this.queueRender();
+	}
+
+	private computeLayoutKey(): string {
+		return `${this.monthColumns()}|${this.weekDayCount()}`;
+	}
+
+	/** 7 = normal month grid; fewer = day-card layout with that many columns. */
+	private monthColumns(): number {
+		const w = this.width;
+		if (!w) return 7;
+		const weekNums = this.plugin.settings.showWeekNumbers ? 32 : 0;
+		if (w - weekNums >= 7 * MONTH_MIN_CELL) return 7;
+		return Math.max(1, Math.min(4, Math.floor(w / MONTH_CARD_MIN)));
+	}
+
+	/** How many days fit side by side in the week view (1–7). */
+	private weekDayCount(): number {
+		const w = this.width;
+		if (!w) return 7;
+		return Math.max(1, Math.min(7, Math.floor((w - GUTTER) / WEEK_MIN_COL)));
+	}
+
+	/** Narrow month layout: the days of the month as cards in a few columns. */
+	private renderMonthCards(cols: number) {
+		const monthStart = startOfMonth(this.cursor);
+		this.titleEl.setText(formatDate(monthStart, { month: "long", year: "numeric" }));
+		const monthEnd = addMonths(monthStart, 1);
+		const occs = this.plugin.store.getOccurrences(monthStart, monthEnd, this.hidden);
+		this.rendered = new Map(occs.map((o) => [o.key, o]));
+		const today = new Date();
+		const wrap = this.bodyEl.createDiv({ cls: "ch-month-cards" });
+		wrap.style.setProperty("--ch-cols", String(cols));
+		for (let day = monthStart; day < monthEnd; day = addDays(day, 1)) {
+			const d = day;
+			const card = wrap.createDiv({ cls: "ch-day-card" });
+			if (isSameDay(d, today)) card.addClass("ch-today");
+			if (d.getDay() === 0 || d.getDay() === 6) card.addClass("ch-weekend");
+			const head = card.createDiv({ cls: "ch-day-card-head" });
+			head.createSpan({ cls: "ch-day-num", text: String(d.getDate()) });
+			head.createSpan({ cls: "ch-day-card-dow", text: formatDate(d, { weekday: "short" }) });
+			head.onclick = (e) => {
+				e.stopPropagation();
+				this.goTo(d, "day");
+			};
+			const plus = head.createSpan({ cls: "ch-cell-add", attr: { "aria-label": "New event" } });
+			setIcon(plus, "plus");
+			plus.onclick = (e) => {
+				e.stopPropagation();
+				new EventModal(this.plugin, { start: d }).open();
+			};
+			const dayOccs = occs.filter((o) => overlapsDay(o.start, o.end, d));
+			if (!dayOccs.length) card.addClass("ch-day-card-empty");
+			const list = card.createDiv({ cls: "ch-cell-events" });
+			const shown = dayOccs.length > MONTH_MAX_CHIPS ? MONTH_MAX_CHIPS - 1 : MONTH_MAX_CHIPS;
+			for (const o of dayOccs.slice(0, shown)) createChip(this.plugin, list, o, { showTime: true, draggable: true });
+			if (dayOccs.length > shown) {
+				const more = list.createDiv({ cls: "ch-more", text: `+${dayOccs.length - shown} more` });
+				more.onclick = (e) => {
+					e.stopPropagation();
+					this.goTo(d, "day");
+				};
+			}
+			card.addEventListener("dblclick", () => new EventModal(this.plugin, { start: d }).open());
+			this.makeDayDropTarget(card, d, null);
+		}
+	}
+
 	private renderMonth() {
+		const cols = this.monthColumns();
+		if (cols < 7) {
+			this.renderMonthCards(cols);
+			return;
+		}
 		const s = this.plugin.settings;
 		const monthStart = startOfMonth(this.cursor);
 		this.titleEl.setText(formatDate(monthStart, { month: "long", year: "numeric" }));
@@ -320,6 +426,11 @@ export class CalendarView extends ItemView {
 		const last = addDays(first, days - 1);
 		if (days === 1) {
 			this.titleEl.setText(formatDate(first, { weekday: "long", day: "numeric", month: "long", year: "numeric" }));
+		} else if (days < 7) {
+			// Shortened week (narrow view): show the exact date range.
+			this.titleEl.setText(
+				`${formatDate(first, { day: "numeric", month: "short" })} – ${formatDate(last, { day: "numeric", month: "short", year: "numeric" })}`
+			);
 		} else if (first.getMonth() === last.getMonth()) {
 			this.titleEl.setText(`${formatDate(first, { month: "long", year: "numeric" })} · W${isoWeek(addDays(first, 3))}`);
 		} else {
