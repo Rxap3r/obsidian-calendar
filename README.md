@@ -64,7 +64,7 @@ Download `main.js`, `manifest.json` and `styles.css` from the
 | How | What it opens |
 | --- | --- |
 | Ribbon icon 📅 (left bar), **click** | Full-page calendar in the main area |
-| Ribbon icon 📅, **right-click** (desktop) or **press and hold** (mobile) | Menu: open full calendar, show/hide the mini or full calendar in the sidebar, new event |
+| Ribbon icon 📅, **right-click** (desktop) or **press and hold** (mobile) | Menu: open full calendar, show/hide the mini or full calendar in the sidebar, new event, settings |
 | Command **Calendar menu** | The same menu. Handy for the mobile toolbar (*Settings → Mobile → Manage toolbar options*) or a hotkey |
 | Command **Omni Calendar: Open calendar (full page)** | Full-page calendar in the main area |
 | Command **Toggle mini calendar in sidebar** | Shows the mini calendar in the sidebar, or hides it if it's already there |
@@ -389,7 +389,7 @@ The settings are split into four tabs. Longer explanations sit in collapsible **
 ## Commands
 
 - Open calendar (full page)
-- Calendar menu (open, sidebar, new event)
+- Calendar menu (open, sidebar, new event, settings)
 - Toggle mini calendar in sidebar / Toggle full calendar in sidebar
 - Show mini calendar in sidebar
 - Open month / week / day / agenda view
