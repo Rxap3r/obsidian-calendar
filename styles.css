@@ -341,6 +341,7 @@
 	grid-template-columns: repeat(var(--ch-cols, 2), minmax(0, 1fr));
 	gap: 6px;
 	padding: 6px;
+	box-sizing: border-box;
 	width: 100%;
 	max-width: 640px;
 	margin: 0 auto;
@@ -367,3 +368,13 @@
 /* Touch: no text selection / callout menu while long-pressing time slots. */
 .ch-tg-col { -webkit-user-select: none; -webkit-touch-callout: none; }
 .ch-tg-col.ch-selecting { touch-action: none; }
+
+/* Week number divider in the narrow month (day-card) layout. */
+.ch-week-divider {
+	grid-column: 1 / -1;
+	font-size: 0.75em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+	color: var(--text-muted);
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding: 6px 2px 2px;
+}
+.ch-week-divider:first-child { padding-top: 0; }
