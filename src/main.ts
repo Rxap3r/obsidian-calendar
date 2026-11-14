@@ -1,4 +1,4 @@
-import { MarkdownRenderChild, Menu, Notice, Plugin, TFile, WorkspaceLeaf, normalizePath } from "obsidian";
+import { MarkdownRenderChild, Menu, Notice, Plugin, TFile, WorkspaceLeaf, WorkspaceSidedock, normalizePath } from "obsidian";
 import { OmniCalendarSettings, CalendarOccurrence, LocalEvent, PluginData, ViewMode } from "./types";
 import { OmniCalendarSettingTab, DEFAULT_SETTINGS } from "./settings";
 import { CalendarStore } from "./store";
@@ -94,8 +94,10 @@ export default class OmniCalendarPlugin extends Plugin {
 			if (this.firstRun) {
 				await this.openSidebar(false);
 				await this.persist();
-			} else if (this.settings.sidebarOnStartup !== "none") {
-				await this.showInSidebar(this.settings.sidebarOnStartup, false);
+			} else {
+				// A calendar may have been left in the other sidebar (e.g. after changing the setting).
+				await this.enforceSidebarSide();
+				if (this.settings.sidebarOnStartup !== "none") await this.showInSidebar(this.settings.sidebarOnStartup, false);
 			}
 			void this.store.refreshAll();
 			this.scheduleRefresh();
@@ -161,6 +163,35 @@ export default class OmniCalendarPlugin extends Plugin {
 		return this.app.workspace.getLeavesOfType(type).filter((l) => this.isInSidebar(l));
 	}
 
+	/** The sidebar chosen in settings. */
+	private configuredSidebar() {
+		const { workspace } = this.app;
+		return this.settings.sidebarSide === "left" ? workspace.leftSplit : workspace.rightSplit;
+	}
+
+	/**
+	 * Move calendar views that sit in the other sidebar into the configured one.
+	 * Runs on startup and whenever the "Sidebar" setting changes.
+	 */
+	async enforceSidebarSide() {
+		const target = this.configuredSidebar();
+		for (const type of [VIEW_TYPE_MINI, VIEW_TYPE_CALENDAR]) {
+			const leaves = this.sidebarLeaves(type);
+			const alreadyThere = leaves.some((l) => l.getRoot() === target);
+			for (const leaf of leaves) {
+				if (leaf.getRoot() === target) continue;
+				const state = leaf.getViewState();
+				const sourceOpen = !(leaf.getRoot() as WorkspaceSidedock).collapsed;
+				leaf.detach();
+				if (alreadyThere) continue; // never create a duplicate
+				const moved = this.newSidebarLeaf();
+				if (!moved) continue;
+				await moved.setViewState({ ...state, active: false });
+				if (sourceOpen) await this.app.workspace.revealLeaf(moved);
+			}
+		}
+	}
+
 	/** Open the full calendar in the main area (never takes over a calendar that sits in a sidebar). */
 	async openCalendar(date?: Date, mode?: ViewMode) {
 		const { workspace } = this.app;
@@ -185,7 +216,8 @@ export default class OmniCalendarPlugin extends Plugin {
 	/** Put the mini or full calendar into the sidebar (or reveal it if it is already there). */
 	async showInSidebar(kind: "mini" | "full", reveal: boolean, state?: Record<string, unknown>) {
 		const type = kind === "mini" ? VIEW_TYPE_MINI : VIEW_TYPE_CALENDAR;
-		let leaf = this.sidebarLeaves(type)[0];
+		const target = this.configuredSidebar();
+		let leaf = this.sidebarLeaves(type).find((l) => l.getRoot() === target);
 		if (!leaf) {
 			const created = this.newSidebarLeaf();
 			if (!created) return;
