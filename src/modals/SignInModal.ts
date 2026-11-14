@@ -227,7 +227,7 @@ export class SignInModal extends Modal {
 				for (const p of guide.problems) pr.createEl("li", { text: p });
 				det.createEl("div", {
 					cls: "ch-muted",
-					text: "Only want to see events, not edit them? An ICS link (External calendars below) needs no setup at all.",
+					text: "Only want to see events, not edit them? An ICS subscription (Settings → Calendars) needs no setup at all.",
 				});
 			};
 			renderGuide();

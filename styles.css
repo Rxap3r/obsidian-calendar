@@ -405,3 +405,24 @@
 /* The hour labels / corner cells stay put while the days scroll. */
 .ch-tg-hscroll .ch-tg-gutter { position: sticky; left: 0; z-index: 3; background: var(--background-primary); }
 .ch-tg-hscroll .ch-tg-allday-label { font-size: 0.6em; }
+
+/* ---------------------------------------------------------------- settings tabs */
+.ch-settings-tabs {
+	display: flex; flex-wrap: wrap; gap: 4px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	margin-bottom: 12px; padding-bottom: 6px;
+	position: sticky; top: 0; z-index: 2; background: var(--background-primary);
+}
+.ch-settings-tab {
+	display: inline-flex; align-items: center; gap: 6px;
+	background: transparent; box-shadow: none; border: none;
+	padding: 6px 12px; border-radius: var(--radius-s); color: var(--text-muted); cursor: pointer;
+}
+.ch-settings-tab:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.ch-settings-tab.is-active { background: var(--interactive-accent); color: var(--text-on-accent); }
+.ch-settings-tab-icon { display: inline-flex; }
+.ch-settings-tab-icon svg { width: 16px; height: 16px; }
+.ch-settings .ch-info { margin: 4px 0 10px; }
+.ch-settings .ch-info > summary { color: var(--text-muted); }
+.ch-settings .ch-info[open] > summary { color: var(--text-accent); }
+.ch-settings .ch-empty { text-align: left; padding: 6px 0; }

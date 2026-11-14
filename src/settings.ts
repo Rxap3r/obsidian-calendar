@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting, setIcon } from "obsidian";
 import type OmniCalendarPlugin from "./main";
 import { Account, OmniCalendarSettings, CalendarSource, SidebarView, ViewMode } from "./types";
 import { SignInModal } from "./modals/SignInModal";
@@ -62,29 +62,151 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		if (rerender) this.display();
 	}
 
+	/** Last opened settings tab (kept while Obsidian runs). */
+	private static tab: "calendars" | "accounts" | "display" | "notes" = "calendars";
+
 	display(): void {
 		const { containerEl } = this;
-		const s = this.plugin.settings;
 		containerEl.empty();
 		containerEl.addClass("ch-settings");
 
-		// ---------------------------------------------------------------- General
-		new Setting(containerEl).setName("General").setHeading();
+		const tabs: [typeof OmniCalendarSettingTab.tab, string, string][] = [
+			["calendars", "calendar-days", "Calendars"],
+			["accounts", "refresh-cw", "Google & Outlook"],
+			["display", "layout-panel-left", "Display"],
+			["notes", "file-text", "Notes"],
+		];
+		const bar = containerEl.createDiv({ cls: "ch-settings-tabs", attr: { role: "tablist" } });
+		for (const [id, icon, label] of tabs) {
+			const active = OmniCalendarSettingTab.tab === id;
+			const btn = bar.createEl("button", { cls: `ch-settings-tab${active ? " is-active" : ""}`, attr: { role: "tab", "aria-selected": String(active) } });
+			setIcon(btn.createSpan({ cls: "ch-settings-tab-icon" }), icon);
+			btn.createSpan({ text: label });
+			btn.onclick = () => {
+				OmniCalendarSettingTab.tab = id;
+				this.display();
+			};
+		}
 
-		new Setting(containerEl).setName("First day of the week").addDropdown((d) => {
-			["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].forEach((n, i) => d.addOption(String(i), n));
-			d.setValue(String(s.firstDayOfWeek)).onChange(async (v) => {
-				s.firstDayOfWeek = parseInt(v);
-				await this.save();
-			});
-		});
-		new Setting(containerEl).setName("24-hour clock").addToggle((t) =>
-			t.setValue(s.use24h).onChange(async (v) => {
-				s.use24h = v;
-				await this.save();
+		const body = containerEl.createDiv({ cls: "ch-settings-body" });
+		switch (OmniCalendarSettingTab.tab) {
+			case "calendars": this.calendarsTab(body); break;
+			case "accounts": this.accountsTab(body); break;
+			case "display": this.displayTab(body); break;
+			case "notes": this.notesTab(body); break;
+		}
+	}
+
+	/** Collapsible "more info" block, used to keep long explanations out of the way. */
+	private info(el: HTMLElement, summary: string, fill: (box: HTMLElement) => void, cls = "") {
+		const det = el.createEl("details", { cls: `ch-provider-help ch-info ${cls}`.trim() });
+		det.createEl("summary", { text: summary });
+		fill(det);
+		return det;
+	}
+
+	// ------------------------------------------------------------------ tab: Calendars
+
+	private calendarsTab(el: HTMLElement) {
+		const s = this.plugin.settings;
+
+		new Setting(el).setName("New events").setDesc("Calendars new events are saved to by default. You can change it for each event.").setHeading();
+		this.defaultTargetsSection(el);
+
+		new Setting(el).setName("Local calendars").setDesc("Created in Obsidian, stored in this vault.").setHeading();
+		for (const src of s.sources.filter((x) => x.type === "local")) this.localRow(el, src);
+		new Setting(el).addButton((b) =>
+			b.setButtonText("Add local calendar").onClick(async () => {
+				s.sources.push({ id: uid(), name: "New calendar", color: this.nextColor(), type: "local", enabled: true });
+				await this.save(true);
 			})
 		);
-		new Setting(containerEl).setName("Default view").setDesc("View used when the calendar page is opened.").addDropdown((d) =>
+
+		new Setting(el).setName("Subscriptions (read-only)").setDesc("ICS links from Google, Outlook, Proton, iCloud … or an .ics file in your vault.").setHeading();
+		this.info(el, "ℹ How do I get the ICS link?", (help) => {
+			help.createDiv({
+				cls: "ch-provider",
+				text: "What you need: access to the calendar's settings on the provider's website. No sign-in or app setup; works on every device. Read-only, and some providers update the feed with a delay of minutes to a few hours.",
+			});
+			for (const p of PROVIDER_HELP) {
+				const row = help.createDiv({ cls: "ch-provider" });
+				row.createEl("strong", { text: p.name + ": " });
+				row.appendText(p.steps);
+			}
+			help.createDiv({
+				cls: "ch-provider ch-muted",
+				text: "Treat these links like passwords – anyone with the link can read the calendar. They are stored in this vault's plugin data (.obsidian/plugins/omni-calendar/data.json).",
+			});
+		});
+		for (const src of s.sources.filter((x) => x.type === "ics")) this.icsRow(el, src);
+		new Setting(el)
+			.addButton((b) =>
+				b.setButtonText("Add subscription").setCta().onClick(async () => {
+					s.sources.push({ id: uid(), name: "External calendar", color: this.nextColor(), type: "ics", enabled: true, url: "" });
+					await this.save(true);
+				})
+			)
+			.addButton((b) =>
+				b.setButtonText("Refresh all").onClick(async () => {
+					await this.plugin.store.refreshAll();
+					this.display();
+				})
+			);
+		this.numberSetting(
+			el, "Refresh every (minutes)", "Re-download subscriptions and connected accounts. 0 = only at start-up or manually.",
+			s.refreshIntervalMinutes, 0, 1440, (v) => {
+				s.refreshIntervalMinutes = v;
+				this.plugin.scheduleRefresh();
+			}
+		);
+	}
+
+	// ------------------------------------------------------------------ tab: Google & Outlook
+
+	private accountsTab(el: HTMLElement) {
+		const s = this.plugin.settings;
+		const accounts = this.plugin.accounts;
+		new Setting(el).setName("Google & Outlook accounts").setDesc("Show, create, edit, move and delete events directly from Obsidian.").setHeading();
+
+		if (!accounts.secureStorageAvailable) {
+			el.createDiv({
+				cls: "ch-modal-hint ch-error",
+				text: "Requires Obsidian 1.11.4 or newer (secure secret storage). Please update Obsidian to connect accounts.",
+			});
+		}
+		this.methodGuide(el);
+		this.info(el, "🔒 How is my account kept safe?", (box) => {
+			box.createDiv({
+				cls: "ch-provider",
+				text: "No Omni Calendar server is involved – Obsidian talks directly to Google / Microsoft. You sign in on their own page in your browser, so the plugin never sees your password.",
+			});
+			box.createDiv({
+				cls: "ch-provider",
+				text: "Sign-in tokens are kept only in Obsidian's secure storage on this device (never in your vault or sync), so each device signs in separately. Only calendar access is requested – no e-mail, contacts or files.",
+			});
+		});
+
+		for (const acc of s.accounts) this.accountBox(el, acc);
+		if (!s.accounts.length) el.createDiv({ cls: "ch-empty", text: "No accounts connected yet." });
+		new Setting(el)
+			.addButton((b) =>
+				b.setButtonText("Connect Google").setCta().setDisabled(!accounts.secureStorageAvailable).onClick(() =>
+					new SignInModal(this.plugin, "google", null, () => this.display()).open()
+				)
+			)
+			.addButton((b) =>
+				b.setButtonText("Connect Outlook / Microsoft 365").setCta().setDisabled(!accounts.secureStorageAvailable).onClick(() =>
+					new SignInModal(this.plugin, "outlook", null, () => this.display()).open()
+				)
+			);
+	}
+
+	// ------------------------------------------------------------------ tab: Display
+
+	private displayTab(el: HTMLElement) {
+		const s = this.plugin.settings;
+		new Setting(el).setName("Calendar").setHeading();
+		new Setting(el).setName("Default view").setDesc("Used when the calendar page opens.").addDropdown((d) =>
 			d
 				.addOptions({ month: "Month", week: "Week", day: "Day", agenda: "Agenda" })
 				.setValue(s.defaultView)
@@ -93,18 +215,33 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 					await this.save();
 				})
 		);
-		new Setting(containerEl).setName("Show week numbers").addToggle((t) =>
+		new Setting(el).setName("First day of the week").addDropdown((d) => {
+			["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].forEach((n, i) => d.addOption(String(i), n));
+			d.setValue(String(s.firstDayOfWeek)).onChange(async (v) => {
+				s.firstDayOfWeek = parseInt(v);
+				await this.save();
+			});
+		});
+		new Setting(el).setName("24-hour clock").addToggle((t) =>
+			t.setValue(s.use24h).onChange(async (v) => {
+				s.use24h = v;
+				await this.save();
+			})
+		);
+		new Setting(el).setName("Show week numbers").addToggle((t) =>
 			t.setValue(s.showWeekNumbers).onChange(async (v) => {
 				s.showWeekNumbers = v;
 				await this.save();
 			})
 		);
-		this.numberSetting(containerEl, "Scroll to hour", "Week/day views start scrolled to this hour (0–23).", s.scrollToHour, 0, 23, (v) => (s.scrollToHour = v));
-		this.numberSetting(containerEl, "Default event duration (minutes)", "", s.defaultEventDuration, 5, 1440, (v) => (s.defaultEventDuration = v));
-		this.numberSetting(containerEl, "Agenda length (days)", "", s.agendaDays, 1, 365, (v) => (s.agendaDays = v));
-		new Setting(containerEl)
+		this.numberSetting(el, "Scroll to hour", "Where week and day views start (0–23).", s.scrollToHour, 0, 23, (v) => (s.scrollToHour = v));
+		this.numberSetting(el, "Default event length (minutes)", "", s.defaultEventDuration, 5, 1440, (v) => (s.defaultEventDuration = v));
+		this.numberSetting(el, "Agenda length (days)", "", s.agendaDays, 1, 365, (v) => (s.agendaDays = v));
+
+		new Setting(el).setName("Sidebar").setHeading();
+		new Setting(el)
 			.setName("Calendar in sidebar")
-			.setDesc("Shows it right away and keeps it there after restarts. Closing it yourself sets this back to Off.")
+			.setDesc("Applies right away and after restarts. Closing it yourself sets this to Off.")
 			.addDropdown((d) =>
 				d
 					.addOptions({ none: "Off", mini: "Mini calendar", full: "Full calendar" })
@@ -125,20 +262,23 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 						await this.plugin.applySidebar(s.sidebarView !== "none");
 					})
 			);
-		this.numberSetting(containerEl, "Sidebar: upcoming days", "How many days of upcoming events the sidebar calendar lists (0 hides the list).", s.sidebarUpcomingDays, 0, 60, (v) => (s.sidebarUpcomingDays = v));
+		this.numberSetting(el, "Upcoming days", "Days listed under “Upcoming” in the mini calendar (0 hides the list).", s.sidebarUpcomingDays, 0, 60, (v) => (s.sidebarUpcomingDays = v));
+	}
 
-		// ---------------------------------------------------------------- Notes
-		new Setting(containerEl).setName("Event notes").setHeading();
-		new Setting(containerEl)
+	// ------------------------------------------------------------------ tab: Notes
+
+	private notesTab(el: HTMLElement) {
+		const s = this.plugin.settings;
+		new Setting(el).setName("Event notes").setDesc("“Create note” on an event makes a note from this template.").setHeading();
+		new Setting(el)
 			.setName("Notes folder")
-			.setDesc("Where “Create note” puts notes for events.")
 			.addText((t) =>
 				t.setPlaceholder("Calendar").setValue(s.notesFolder).onChange(async (v) => {
 					s.notesFolder = v.trim();
 					await this.save();
 				})
 			);
-		new Setting(containerEl)
+		new Setting(el)
 			.setName("Note template")
 			.setDesc("Placeholders: {{title}} {{date}} {{start}} {{end}} {{when}} {{location}} {{calendar}} {{description}}")
 			.setClass("ch-template-setting")
@@ -147,7 +287,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 					s.noteTemplate = v;
 					await this.save();
 				});
-				t.inputEl.rows = 10;
+				t.inputEl.rows = 12;
 			})
 			.addExtraButton((b) =>
 				b.setIcon("rotate-ccw").setTooltip("Reset to default").onClick(async () => {
@@ -155,115 +295,15 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 					await this.save(true);
 				})
 			);
-
-		// ---------------------------------------------------------------- New events
-		new Setting(containerEl)
-			.setName("New events")
-			.setDesc("Which calendars new events are saved to by default – one, several or all. You can still change it for each event in the event dialog.")
-			.setHeading();
-		this.defaultTargetsSection(containerEl);
-
-		// ---------------------------------------------------------------- Local calendars
-		new Setting(containerEl)
-			.setName("Local calendars")
-			.setDesc("Events in these calendars are created in Obsidian and stored in this vault (plugin data).")
-			.setHeading();
-
-		for (const src of s.sources.filter((x) => x.type === "local")) this.localRow(containerEl, src);
-		new Setting(containerEl).addButton((b) =>
-			b.setButtonText("Add local calendar").onClick(async () => {
-				s.sources.push({ id: uid(), name: "New calendar", color: this.nextColor(), type: "local", enabled: true });
-				await this.save(true);
-			})
-		);
-
-		// ---------------------------------------------------------------- Accounts (two-way)
-		new Setting(containerEl)
-			.setName("Google & Outlook accounts (two-way)")
-			.setDesc("Connect an account to show its calendars and create, edit, move and delete events directly from Obsidian.")
-			.setHeading();
-
-		this.methodGuide(containerEl);
-
-		const accounts = this.plugin.accounts;
-		if (!accounts.secureStorageAvailable) {
-			containerEl.createDiv({
-				cls: "ch-modal-hint ch-error",
-				text: "Requires Obsidian 1.11.4 or newer (secure secret storage). Please update Obsidian to connect accounts.",
-			});
-		} else {
-			containerEl.createDiv({
-				cls: "ch-modal-hint",
-				text: "🔒 No Omni Calendar server is involved – Obsidian talks directly to Google / Microsoft. Just sign in – no setup needed. Sign-in tokens are kept only in Obsidian's secure storage on this device (never in your vault or sync), so each device signs in separately.",
-			});
-		}
-		for (const acc of s.accounts) this.accountBox(containerEl, acc);
-		new Setting(containerEl)
-			.addButton((b) =>
-				b.setButtonText("Connect Google account").setDisabled(!accounts.secureStorageAvailable).onClick(() =>
-					new SignInModal(this.plugin, "google", null, () => this.display()).open()
-				)
-			)
-			.addButton((b) =>
-				b.setButtonText("Connect Outlook / Microsoft 365").setDisabled(!accounts.secureStorageAvailable).onClick(() =>
-					new SignInModal(this.plugin, "outlook", null, () => this.display()).open()
-				)
-			);
-
-		// ---------------------------------------------------------------- External calendars
-		new Setting(containerEl)
-			.setName("External calendars (read-only)")
-			.setDesc("Subscribe to Google, Outlook, Proton, iCloud or any other calendar that offers an ICS / iCal link. A vault path to an .ics file also works.")
-			.setHeading();
-
-		const help = containerEl.createEl("details", { cls: "ch-provider-help" });
-		help.createEl("summary", { text: "How do I get the ICS link?" });
-		help.createDiv({
-			cls: "ch-provider",
-			text: "What you need: access to the calendar's settings on the provider's website. No sign-in or app setup; works on every device. Read-only, and some providers update the feed with a delay of minutes to a few hours.",
-		});
-		for (const p of PROVIDER_HELP) {
-			const row = help.createDiv({ cls: "ch-provider" });
-			row.createEl("strong", { text: p.name + ": " });
-			row.appendText(p.steps);
-		}
-		help.createDiv({
-			cls: "ch-provider ch-muted",
-			text: "Treat these links like passwords – anyone with the link can read the calendar. They are stored in this vault's plugin data (.obsidian/plugins/omni-calendar/data.json).",
-		});
-
-		for (const src of s.sources.filter((x) => x.type === "ics")) this.icsRow(containerEl, src);
-
-		new Setting(containerEl)
-			.addButton((b) =>
-				b.setButtonText("Add external calendar").setCta().onClick(async () => {
-					s.sources.push({ id: uid(), name: "External calendar", color: this.nextColor(), type: "ics", enabled: true, url: "" });
-					await this.save(true);
-				})
-			)
-			.addButton((b) =>
-				b.setButtonText("Refresh all").onClick(async () => {
-					await this.plugin.store.refreshAll();
-					this.display();
-				})
-			);
-
-		this.numberSetting(
-			containerEl, "Refresh interval (minutes)", "How often external calendars are re-downloaded (0 = only on start-up / manually).",
-			s.refreshIntervalMinutes, 0, 1440, (v) => {
-				s.refreshIntervalMinutes = v;
-				this.plugin.scheduleRefresh();
-			}
-		);
 	}
 
 	/** Short overview of the connection methods and what each one needs. */
 	private methodGuide(el: HTMLElement) {
-		const det = el.createEl("details", { cls: "ch-provider-help ch-method-guide" });
-		det.createEl("summary", { text: "Which method should I use, and what do I need?" });
+		const det = el.createEl("details", { cls: "ch-provider-help ch-info ch-method-guide" });
+		det.createEl("summary", { text: "ℹ Which method should I use, and what do I need?" });
 		const rows: [string, string, string][] = [
 			["Local calendar", "Read & write in Obsidian only", "Nothing – works out of the box."],
-			["ICS link (below)", "Read-only · Google, Outlook, Proton, iCloud, …", "Only the calendar's private ICS link. 2 minutes, works on every device."],
+			["ICS link (tab “Calendars”)", "Read-only · Google, Outlook, Proton, iCloud, …", "Only the calendar's private ICS link. 2 minutes, works on every device."],
 			["Google account", "Read & write · Google Calendar", "Nothing – just sign in (built-in app). Google shows an “unverified app” warning for now; Workspace admins may block it. 1 minute."],
 			["Microsoft account", "Read & write · Outlook.com, Hotmail, Live, Microsoft 365", "Nothing – just sign in (built-in app). Work/school accounts may need approval from IT. 1 minute."],
 			["Proton Calendar", "Read-only (ICS link)", "Proton offers no write access for apps. Export local events to .ics and import them in Proton if needed."],
@@ -311,8 +351,8 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		}
 		const hint = el.createDiv({ cls: "ch-provider ch-muted ch-small-hint" });
 		hint.setText(
-			"Only calendars you can write to are listed: your local calendars and the Google / Outlook calendars that are switched on below and signed in on this device. " +
-				"With several calendars selected, each one gets its own copy of the event."
+			"Lists your local calendars and the Google / Outlook calendars that are switched on (tab “Google & Outlook”). " +
+				"With several selected, each gets its own copy of the event."
 		);
 	}
 
