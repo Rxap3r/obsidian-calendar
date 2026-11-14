@@ -324,9 +324,17 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		const providerName = providerFor(acc.provider).label;
 		const head = new Setting(box)
 			.setClass("ch-source-row")
-			.setName(`${providerName}: ${acc.label}`)
+			.setName(providerName)
 			.setDesc(!signedIn ? "Not signed in on this device" : needsReauth ? "⚠ Access expired – sign in again" : "✓ Signed in on this device");
 		if (!signedIn || needsReauth) head.descEl.addClass("ch-error");
+		head.addText((t) => {
+			t.setPlaceholder("Account name").setValue(acc.label).onChange(async (v) => {
+				acc.label = v.trim() || acc.label;
+				acc.customLabel = true;
+				await this.save();
+			});
+			t.inputEl.setAttr("aria-label", "Account name (shown in the event dialog)");
+		});
 
 		head.addButton((b) =>
 			b.setButtonText(signedIn && !needsReauth ? "Reconnect" : "Sign in").onClick(() =>

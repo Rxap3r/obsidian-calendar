@@ -99,8 +99,10 @@ export class AccountManager {
 		this.needsReauth.delete(account.id);
 		const calendars = await providerFor(account.provider).listCalendars(this.tokenGetter(account));
 		const primary = calendars.find((c) => c.primary);
-		if (primary && account.provider === "google" && primary.id.includes("@")) account.label = primary.id;
-		if (primary?.owner) account.label = primary.owner;
+		if (!account.customLabel) {
+			if (primary && account.provider === "google" && primary.id.includes("@")) account.label = primary.id;
+			if (primary?.owner) account.label = primary.owner;
+		}
 		return calendars;
 	}
 
