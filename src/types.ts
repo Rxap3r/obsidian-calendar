@@ -148,6 +148,10 @@ export interface OmniCalendarSettings {
 	refreshIntervalMinutes: number;
 	agendaDays: number;
 	sidebarUpcomingDays: number;
+	/** Which sidebar the calendar is placed in by the toggle commands. */
+	sidebarSide: "left" | "right";
+	/** What to show in the sidebar when Obsidian starts. */
+	sidebarOnStartup: "none" | "mini" | "full";
 	notesFolder: string;
 	noteTemplate: string;
 	defaultCalendarId: string;

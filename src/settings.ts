@@ -19,6 +19,8 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	refreshIntervalMinutes: 30,
 	agendaDays: 30,
 	sidebarUpcomingDays: 7,
+	sidebarSide: "right",
+	sidebarOnStartup: "none",
 	notesFolder: "Calendar",
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,
 	defaultCalendarId: "personal",
@@ -100,6 +102,27 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		this.numberSetting(containerEl, "Scroll to hour", "Week/day views start scrolled to this hour (0–23).", s.scrollToHour, 0, 23, (v) => (s.scrollToHour = v));
 		this.numberSetting(containerEl, "Default event duration (minutes)", "", s.defaultEventDuration, 5, 1440, (v) => (s.defaultEventDuration = v));
 		this.numberSetting(containerEl, "Agenda length (days)", "", s.agendaDays, 1, 365, (v) => (s.agendaDays = v));
+		new Setting(containerEl)
+			.setName("Sidebar")
+			.setDesc("Which sidebar “Toggle calendar in sidebar” uses.")
+			.addDropdown((d) =>
+				d.addOptions({ right: "Right sidebar", left: "Left sidebar" }).setValue(s.sidebarSide).onChange(async (v) => {
+					s.sidebarSide = v as "left" | "right";
+					await this.save();
+				})
+			);
+		new Setting(containerEl)
+			.setName("Show in sidebar on startup")
+			.setDesc("Make sure a calendar is in the sidebar every time Obsidian starts.")
+			.addDropdown((d) =>
+				d
+					.addOptions({ none: "Nothing (keep the layout as it is)", mini: "Mini calendar", full: "Full calendar" })
+					.setValue(s.sidebarOnStartup)
+					.onChange(async (v) => {
+						s.sidebarOnStartup = v as "none" | "mini" | "full";
+						await this.save();
+					})
+			);
 		this.numberSetting(containerEl, "Sidebar: upcoming days", "How many days of upcoming events the sidebar calendar lists (0 hides the list).", s.sidebarUpcomingDays, 0, 60, (v) => (s.sidebarUpcomingDays = v));
 
 		// ---------------------------------------------------------------- Notes

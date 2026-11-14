@@ -47,10 +47,17 @@ Download `main.js`, `manifest.json` and `styles.css` from the
 
 | How | What it opens |
 | --- | --- |
-| Ribbon icon 📅 (left bar) | Full-page calendar in a new tab |
-| Command **Omni Calendar: Open calendar (full page)** | Full-page calendar |
-| Command **Omni Calendar: Show calendar in sidebar** | Mini calendar in the right sidebar. You can drag it to the left sidebar if you prefer |
+| Ribbon icon 📅 (left bar), **click** | Full-page calendar in the main area |
+| Ribbon icon 📅, **right-click** | Menu: open full calendar, show/hide the mini or full calendar in the sidebar, new event |
+| Command **Omni Calendar: Open calendar (full page)** | Full-page calendar in the main area |
+| Command **Toggle mini calendar in sidebar** | Shows the mini calendar in the sidebar, or hides it if it's already there |
+| Command **Toggle full calendar in sidebar** | The same for the full calendar (month/week/day/agenda), in a compact layout |
 | Commands **Open month / week / day / agenda view** | The full calendar in that view |
+| Button ⤢ / ⇥ in the calendar's toolbar | In the sidebar: **open the full page** (the sidebar calendar stays). In the main area: **move this calendar to the sidebar** |
+
+You never have to drag anything. *Open calendar* always opens in the main area, even if a calendar already sits in a sidebar.
+In *Settings → General* you can choose the **left or right sidebar** and whether the mini or full calendar should be shown in the sidebar
+**on startup**. Commands can be given hotkeys in *Settings → Hotkeys* (search for "Omni Calendar").
 
 On first install the mini calendar is added to the right sidebar automatically.
 
@@ -333,6 +340,8 @@ ICS links can only be read. For Google and Outlook, use the two-way account conn
 | Scroll to hour | Where week/day views start scrolled. If today is visible, the view scrolls to the current time |
 | Default event duration | Length of a new event, in minutes |
 | Agenda length | Number of days in the Agenda view |
+| Sidebar | Which sidebar (left or right) the toggle commands use |
+| Show in sidebar on startup | Nothing, the mini calendar, or the full calendar |
 | Sidebar: upcoming days | Days listed under "Upcoming". `0` hides the list |
 | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
 | New events | Which calendars (local, Google, Outlook – one, several or all) new events are saved to by default |
@@ -344,7 +353,8 @@ ICS links can only be read. For Google and Outlook, use the two-way account conn
 ## Commands
 
 - Open calendar (full page)
-- Show calendar in sidebar
+- Toggle mini calendar in sidebar / Toggle full calendar in sidebar
+- Show mini calendar in sidebar
 - Open month / week / day / agenda view
 - Create new event
 - Create event linked to current note
