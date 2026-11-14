@@ -161,7 +161,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		} else {
 			containerEl.createDiv({
 				cls: "ch-modal-hint",
-				text: "🔒 No Omni Calendar server is involved – Obsidian talks directly to Google / Microsoft. Microsoft: just sign in. Google: uses your own app registration. Sign-in tokens are kept only in Obsidian's secure storage on this device (never in your vault or sync), so each device signs in separately.",
+				text: "🔒 No Omni Calendar server is involved – Obsidian talks directly to Google / Microsoft. Just sign in – no setup needed. Sign-in tokens are kept only in Obsidian's secure storage on this device (never in your vault or sync), so each device signs in separately.",
 			});
 		}
 		for (const acc of s.accounts) this.accountBox(containerEl, acc);
@@ -231,7 +231,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		const rows: [string, string, string][] = [
 			["Local calendar", "Read & write in Obsidian only", "Nothing – works out of the box."],
 			["ICS link (below)", "Read-only · Google, Outlook, Proton, iCloud, …", "Only the calendar's private ICS link. 2 minutes, works on every device."],
-			["Google account", "Read & write · Google Calendar", "A Google account and a free Google Cloud project (no credit card). ≈10–15 minutes, once."],
+			["Google account", "Read & write · Google Calendar", "Nothing – just sign in (built-in app). Google shows an “unverified app” warning for now; Workspace admins may block it. 1 minute."],
 			["Microsoft account", "Read & write · Outlook.com, Hotmail, Live, Microsoft 365", "Nothing – just sign in (built-in app). Work/school accounts may need approval from IT. 1 minute."],
 			["Proton Calendar", "Read-only (ICS link)", "Proton offers no write access for apps. Export local events to .ics and import them in Proton if needed."],
 		];
@@ -244,7 +244,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		}
 		det.createDiv({
 			cls: "ch-provider",
-			text: "Tip: only want to see your events? Use an ICS link. Want to create or edit Google / Outlook events from Obsidian? Connect the account – Microsoft needs no setup; for Google the sign-in dialog shows the steps.",
+			text: "Tip: only want to see your events? Use an ICS link. Want to create or edit Google / Outlook events from Obsidian? Connect the account – no setup needed.",
 		});
 	}
 

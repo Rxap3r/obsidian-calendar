@@ -8,7 +8,7 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 - 🗂 **Sidebar mini calendar** with event dots, the selected day's events and an "Upcoming" list
 - ✍️ **Create, edit, duplicate and delete events** inside Obsidian, including all-day, multi-day and recurring events (daily / weekly / monthly / yearly)
 - 🖱 **Drag to create** a time range in week/day view. **Drag and drop** events to move them
-- 🔄 **Two-way Google Calendar & Outlook / Microsoft 365**: connect your account to show its calendars and create, edit, move and delete events from Obsidian. Microsoft is a one-click sign-in. Google needs a one-time setup. Both use secure OAuth sign-in, and tokens stay in Obsidian's secure storage on each device
+- 🔄 **Two-way Google Calendar & Outlook / Microsoft 365**: connect your account to show its calendars and create, edit, move and delete events from Obsidian. Both are a one-click sign-in with no setup, using secure OAuth sign-in, and tokens stay in Obsidian's secure storage on each device
 - 🌐 **External calendars (read-only)**: subscribe to ICS / iCal links from Google, Outlook, Proton, iCloud, Fastmail, Nextcloud and others. Recurring events, exceptions and time zones are supported
 - 📝 **Notes for events**: create a note from any event using a template you can change. Local events stay linked to their note
 - 🎨 Several local calendars, each with its own colour, and a filter to show or hide calendars
@@ -119,14 +119,14 @@ Omni Calendar has three ways to get events in. Pick by what you want to do and h
 | --- | --- | :-: | :-: | --- | --- | --- |
 | **Local calendar** | Obsidian only | ✅ | ✅ | Nothing. Works out of the box | 0 min | Free |
 | **ICS link** (subscription) | Google, Outlook (personal & work), Proton, iCloud, Fastmail, Nextcloud, … | ✅ | ❌ | The calendar's private/secret ICS link | 2 min | Free |
-| **Google account** (two-way) | Google Calendar (Gmail; Workspace if your admin allows it) | ✅ | ✅ | A Google account and a free Google Cloud project you create yourself | 10–15 min | Free, no credit card |
+| **Google account** (two-way) | Google Calendar (Gmail; Workspace if your admin allows it) | ✅ | ✅ | Nothing. Just click *Sign in with Google* (built-in app). Google shows an "unverified app" warning for now | 1 min | Free |
 | **Microsoft account** (two-way) | Outlook.com, Hotmail, Live and work/school Microsoft 365 | ✅ | ✅ | Nothing. Just click *Sign in with Microsoft* (built-in app). Work/school accounts may need IT approval | 1 min | Free |
 | **Proton Calendar** | Proton | ✅ (ICS link) | ❌ | Proton offers no way for apps to write. Use the ICS link to read, and *Export local events to .ics* plus Proton's *Import* to copy events over | 2 min | Free |
 
 **Quick advice**
 
 - You only want to **see** your Google, Outlook or Proton events in Obsidian → use an **ICS link**. It's the fastest and works on every device without signing in.
-- You want to **create or change** Google or Outlook events from Obsidian → connect the **account** (two-way). Microsoft needs no setup. Google needs a one-time setup on a desktop computer.
+- You want to **create or change** Google or Outlook events from Obsidian → connect the **account** (two-way). No setup is needed.
 - Outlook / Microsoft 365 → just **sign in**. No setup is needed.
 
 Two-way accounts need **Obsidian 1.11.4 or newer**, because sign-in tokens are kept in Obsidian's secure storage.
@@ -156,13 +156,28 @@ partner verification, and the sign-in itself is Microsoft's standard sign-in.
 **Work/school accounts:** many organisations only let users approve verified apps. If you see *"Need admin approval"*, ask your IT team to approve
 "Omni Calendar", or use your own app registration (Method B below).
 
+### Google: just sign in
+
+1. *Settings → Omni Calendar → **Connect Google account***. Leave *How do you want to connect?* on **Quick sign-in (recommended)**.
+2. Click **Sign in with Google** and choose your account.
+3. Google shows **"Google hasn't verified this app"**. Click **Advanced → Go to Omni Calendar (unsafe)**. This is Google's standard text for apps that
+   haven't completed Google's review yet. The sign-in itself is Google's normal sign-in.
+4. Allow Omni Calendar to **view and edit events** in your calendars and to **see your list of calendars**. Tick both boxes, then click *Continue*.
+5. Back in Obsidian, switch on the calendars you want to see.
+
+**Good to know**
+- Until Google verifies Omni Calendar, the built-in app is limited to **100 users** in total. If Google refuses sign-in for that reason, use your own app registration (Method A below).
+- Google Workspace (work/school) administrators may block unverified apps.
+- To remove access, use Omni Calendar → *Sign out*, which revokes it at Google, or [myaccount.google.com → Security → Third-party connections](https://myaccount.google.com/connections).
+- The built-in client ID and client secret are public by design. For desktop apps Google documents the "client secret" as not confidential. On their own they give no access to anyone's calendar.
+
 ### Optional: use your own app registration
 
-Omni Calendar has **no central server**. For Google, and optionally for Microsoft, you can register a small app of your own, so that only you,
+Omni Calendar has **no central server**. If you prefer, or your organisation requires it, you can register a small app of your own, so that only you,
 your devices and Google/Microsoft are involved. The steps below are also shown in the sign-in dialog. You only do this once per account.
 Other devices then just sign in with the same Client ID.
 
-#### Method A: Google account
+#### Method A (optional): own Google app
 
 **You need**
 - A Google account (personal Gmail works. With a Google Workspace work/school account, your admin may block self-made apps)
@@ -179,7 +194,7 @@ Other devices then just sign in with the same Client ID.
    - Under **Audience**, click **Publish app** (status "In production"). Otherwise Google signs you out every 7 days. You don't need to submit for verification.
 4. *Clients* (or *Credentials*) → **Create client** → application type **Desktop app** → *Create*.
 5. Copy the **Client ID** (ends in `.apps.googleusercontent.com`) and the **Client secret** (starts with `GOCSPX-`).
-6. In Obsidian: *Settings → Omni Calendar → **Connect Google account***. Paste both values and click **Sign in with Google**.
+6. In Obsidian: *Settings → Omni Calendar → **Connect Google account*** → *Use my own app registration (advanced)*. Paste both values and click **Sign in with Google**.
 7. In the browser, choose your account. Google shows **"Google hasn't verified this app"**. This is expected because the app is your own. Click *Advanced → Go to (your app name)*, then **Allow**.
 8. Back in Obsidian, switch on the calendars you want to see.
 
@@ -257,7 +272,7 @@ After signing in, switch on the calendars you want to see. The primary calendar 
 | --- | --- |
 | **Sign-in** | OAuth 2.0 authorization code flow with **PKCE** and a random `state` check (RFC 8252, recommended for desktop and mobile apps). You sign in on the real Google or Microsoft page in your own browser, so Omni Calendar never sees your password or 2FA. |
 | **Redirect** | The sign-in result comes back to a one-time web server that only accepts connections from your own computer (loopback `127.0.0.1` / `localhost`), not from the network. It accepts exactly one valid response, rejects anything with a wrong `state`, and shuts down straight away or after 5 minutes. |
-| **No middleman** | No Omni Calendar server exists. With the built-in Microsoft app or your own registration, requests go only to `accounts.google.com`, `oauth2.googleapis.com`, `www.googleapis.com`, `login.microsoftonline.com` and `graph.microsoft.com`, always over HTTPS. The plugin refuses to send a token to any other host. |
+| **No middleman** | No Omni Calendar server exists. With the built-in apps or your own registration, requests go only to `accounts.google.com`, `oauth2.googleapis.com`, `www.googleapis.com`, `login.microsoftonline.com` and `graph.microsoft.com`, always over HTTPS. The plugin refuses to send a token to any other host. |
 | **Token storage** | The refresh token, and Google's client secret, are kept only in **Obsidian's secure storage** (SecretStorage, Obsidian 1.11.4+) **on this device**. They are never written to `data.json`, your vault or your sync, and never to logs or error messages. Access tokens are kept only in memory and expire after about an hour. Each device signs in separately. |
 | **Least privilege** | Google: `calendar.events` and `calendar.calendarlist.readonly`. Microsoft: `Calendars.ReadWrite` and `offline_access`. No access to e-mail, contacts, files or your profile. |
 | **Event data** | Events from connected accounts are kept in memory only, not cached to disk. |
@@ -344,6 +359,10 @@ npm install
 npm run dev     # watch mode – builds main.js on change
 npm run build   # type-check + production build
 ```
+
+**Built-in Google sign-in:** the Google OAuth client is not stored in the repository. The build reads it from the environment variables
+`OMNI_GOOGLE_CLIENT_ID` and `OMNI_GOOGLE_CLIENT_SECRET`. The release workflow takes them from the repository secrets of the same names
+(*Settings → Secrets and variables → Actions*). Without them the build still works, and Google is then connected with your own app registration.
 
 To try it in a vault, symlink or copy the repository folder (or just `main.js`, `manifest.json`, `styles.css`) into
 `<vault>/.obsidian/plugins/omni-calendar/`.
