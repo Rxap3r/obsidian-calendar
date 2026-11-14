@@ -89,7 +89,7 @@ follows, so it never pops back unexpectedly. Commands can be given hotkeys in *S
 - **Click an event** to edit it. For an external event this shows its details instead. **Right-click an event** for a menu with *Edit*, *Create/Open note*, *Duplicate*, *Delete this occurrence* and *Delete*.
 
 **Adapts to its width** (handy in a sidebar):
-- In a narrow view, *Month* switches from the 7-column grid to **day cards** in one or more columns, and *Week* still covers the **whole week** but shows only as many days as fit (e.g. 3). **Swipe left or right** (or scroll sideways) to move day by day. It snaps to each day, and the hour labels stay in place. The arrows jump a whole week, and the view opens with today (or the chosen day) first.
+- In a narrow view, *Month* switches from the 7-column grid to **day cards** in one or more columns, and *Week* still covers the **whole week** but shows only as many days as fit (e.g. 3). **Swipe left or right** (or scroll sideways, or tap the **‹ ›** arrows) to move day by day. It snaps to each day, and the hour labels stay in place. A small **week bar** under the day headers highlights which days are on screen, and a soft shadow marks the edge that continues. The arrows jump a whole week, and the view opens with today (or the chosen day) first.
 - In a very wide sidebar the calendar stops growing at a comfortable width and stays centred, instead of stretching the days apart.
 
 ### Sidebar mini calendar

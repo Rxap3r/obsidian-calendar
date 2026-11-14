@@ -411,15 +411,31 @@
 .ch-tg-hscroll .ch-tg-allday-label { font-size: 0.6em; }
 
 /* ---------------------------------------------------------------- settings tabs */
+.ch-settings-tabs-wrap {
+	position: sticky; top: 0; z-index: 2; background: var(--background-primary);
+	border-bottom: 1px solid var(--background-modifier-border);
+	margin-bottom: 12px;
+}
 .ch-settings-tabs {
 	/* One line; swipe / scroll sideways when the tabs do not fit (mobile). */
 	display: flex; flex-wrap: nowrap; gap: 4px;
 	overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch;
 	overscroll-behavior-x: contain;
-	border-bottom: 1px solid var(--background-modifier-border);
-	margin-bottom: 12px; padding-bottom: 6px;
-	position: sticky; top: 0; z-index: 2; background: var(--background-primary);
+	padding-bottom: 6px;
 }
+/* Arrow buttons shown at the edge that has more tabs. */
+.ch-tabs-arrow {
+	position: absolute; top: 2px; z-index: 3;
+	width: 28px; height: 28px; padding: 0; border-radius: 50%;
+	display: flex; align-items: center; justify-content: center;
+	background: var(--background-primary); border: 1px solid var(--background-modifier-border);
+	box-shadow: var(--shadow-s); color: var(--text-normal); cursor: pointer;
+	transition: opacity 0.15s;
+}
+.ch-tabs-arrow svg { width: 16px; height: 16px; }
+.ch-tabs-prev { left: 0; }
+.ch-tabs-next { right: 0; }
+.ch-tabs-arrow.is-hidden { opacity: 0; pointer-events: none; }
 .ch-settings-tabs::-webkit-scrollbar { display: none; }
 .ch-settings-tabs.ch-more-right { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
 .ch-settings-tabs.ch-more-left { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }
@@ -438,3 +454,29 @@
 .ch-settings .ch-info > summary { color: var(--text-muted); }
 .ch-settings .ch-info[open] > summary { color: var(--text-accent); }
 .ch-settings .ch-empty { text-align: left; padding: 6px 0; }
+
+/* ---------------------------------------------------------------- swipe week: scroll indicators */
+.ch-tg-hscroll { position: relative; }
+/* Week bar under the day headers: ‹ one segment per day (visible days highlighted) ›. */
+.ch-week-bar { display: flex; align-items: center; gap: 6px; padding: 2px 4px 3px calc(var(--ch-gutter) - 22px); }
+.ch-week-bar-track { flex: 1; display: flex; gap: 3px; }
+.ch-week-bar-seg { flex: 1; height: 4px; border-radius: 2px; background: var(--background-modifier-border); transition: background 0.15s; }
+.ch-week-bar-seg.is-visible { background: var(--interactive-accent); }
+.ch-hs-arrow {
+	flex: none; width: 22px; height: 22px; padding: 0; border-radius: 50%;
+	display: flex; align-items: center; justify-content: center;
+	background: transparent; border: none; box-shadow: none; color: var(--text-muted); cursor: pointer;
+	transition: opacity 0.15s;
+}
+.ch-hs-arrow:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+.ch-hs-arrow svg { width: 16px; height: 16px; }
+.ch-hs-arrow.is-hidden { opacity: 0.25; pointer-events: none; }
+/* Soft shadow on the grid edge that continues. */
+.ch-tg-hscroll::before,
+.ch-tg-hscroll::after {
+	content: ""; position: absolute; bottom: 0; width: 14px; z-index: 4; pointer-events: none;
+	top: 0; opacity: 0; transition: opacity 0.15s;
+}
+.ch-tg-hscroll::before { left: var(--ch-gutter); background: linear-gradient(to right, rgba(0, 0, 0, 0.12), transparent); }
+.ch-tg-hscroll::after { right: 0; background: linear-gradient(to left, rgba(0, 0, 0, 0.12), transparent); }
+.ch-tg-hscroll.ch-more-left::before, .ch-tg-hscroll.ch-more-right::after { opacity: 1; }
