@@ -421,11 +421,21 @@ release tag must exactly match `version` in `manifest.json` (for example `1.0.1`
 
 ## Roadmap ideas
 
+### Planned: event reminders and notifications
+
+- **Reminder field** in the event dialog (none, at start, 5/10/15/30 minutes, 1 hour, 1 day before) and a **default reminder** in settings, plus an on/off switch for each device so two computers don't both notify.
+- **Desktop:** system notifications from Obsidian, clicking one opens the event. They work while Obsidian is running (even minimised). Reminders missed while it was closed are shown on the next start.
+- **Mobile:** Obsidian plugins can't send phone notifications or run in the background, so there's an in-app pop-up while Obsidian is open, with *Open event* and *Snooze 5 min*.
+- **Google / Outlook events:** the reminder is saved in Google or Outlook itself (both APIs support it), so the phone's calendar app sends a **real phone notification**, even when Obsidian is closed. A desktop notification from Obsidian is optional.
+- Optional desktop reminders for read-only ICS calendars (e.g. Proton).
+- Each reminder fires only once, and timing stays reliable across sleep mode and restarts.
+
+### Other ideas
+
 - CalDAV write support (iCloud, Fastmail, Nextcloud, …)
 - Editing the repeat rule of Google / Outlook series
 - Resize events by dragging their edge
 - Daily-notes integration (open or create the daily note from a day)
-- Event reminders and notifications
 
 ## License
 
