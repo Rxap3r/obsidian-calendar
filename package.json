@@ -6,9 +6,17 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "version": "node version-bump.mjs && git add manifest.json versions.json"
+    "version": "node version-bump.mjs && git add manifest.json versions.json",
+    "test:sync": "node tests/sync/run.cjs",
+    "test:ui": "node tests/ui/run.cjs",
+    "test": "npm run build && npm run test:sync && npm run test:ui"
   },
-  "keywords": ["obsidian", "calendar", "ics", "brat"],
+  "keywords": [
+    "obsidian",
+    "calendar",
+    "ics",
+    "brat"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.0.0",
