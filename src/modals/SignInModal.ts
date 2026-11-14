@@ -3,6 +3,7 @@ import type OmniCalendarPlugin from "../main";
 import { Account, AccountProvider } from "../types";
 import { AuthSession } from "../sync/oauth";
 import { PALETTE } from "../settings";
+import { BUILTIN_MICROSOFT_CLIENT_ID, BUILTIN_MICROSOFT_TENANT, isBuiltinMicrosoftClient } from "../sync/builtin";
 
 interface SetupGuide {
 	title: string;
@@ -89,6 +90,8 @@ export class SignInModal extends Modal {
 	private clientId: string;
 	private clientSecret = "";
 	private tenant: string;
+	/** Microsoft only: use the built-in Omni Calendar app registration. */
+	private useBuiltin: boolean;
 	private statusEl!: HTMLElement;
 	private manualEl!: HTMLElement;
 	private signInBtn!: HTMLButtonElement;
@@ -102,6 +105,11 @@ export class SignInModal extends Modal {
 		super(plugin.app);
 		this.clientId = existing?.clientId ?? "";
 		this.tenant = existing?.tenant ?? "consumers";
+		this.useBuiltin = provider === "outlook" && (!existing || isBuiltinMicrosoftClient(existing.clientId));
+		if (this.useBuiltin && existing) {
+			this.clientId = "";
+			this.tenant = "consumers";
+		}
 	}
 
 	private get name() {
@@ -123,87 +131,121 @@ export class SignInModal extends Modal {
 		}
 
 		const intro = contentEl.createDiv({ cls: "ch-modal-hint" });
-		intro.appendText(
-			`You connect with your own ${this.name} app registration, so no third party is involved: Obsidian talks directly to ${this.name}. ` +
-				"Sign-in happens in your browser – Omni Calendar never sees your password. The access token is stored only on this device in Obsidian's secure storage, never in your vault."
-		);
-
-		const isKnownTenant = (t: string) => ["common", "consumers", "organizations"].includes(t);
-		let tenantRow: Setting | null = null;
 		if (this.provider === "outlook") {
 			new Setting(contentEl)
-				.setName("Which Microsoft account?")
-				.setDesc("Choose the kind of account you want to connect. This changes the setup steps below and must match “Supported account types” in your app registration.")
-				.addDropdown((d) => {
-					d.addOptions(TENANT_OPTIONS);
-					d.setValue(isKnownTenant(this.tenant) ? this.tenant : "other").onChange((v) => {
-						if (v !== "other") this.tenant = v;
-						else if (isKnownTenant(this.tenant)) this.tenant = "";
-						tenantRow?.settingEl.toggle(v === "other");
-						renderGuide();
-					});
-				});
-		}
-
-		const guideEl = contentEl.createDiv();
-		const renderGuide = () => {
-			guideEl.empty();
-			const guide =
-				this.provider === "google"
-					? GOOGLE_GUIDE
-					: this.tenant === "consumers" || this.tenant === "common"
-						? MS_PERSONAL_GUIDE
-						: MS_WORK_GUIDE;
-			const det = guideEl.createEl("details", { cls: "ch-provider-help ch-setup-guide" });
-			det.open = !this.existing;
-			det.createEl("summary", { text: guide.title });
-			det.createEl("div", { cls: "ch-guide-label", text: "What you need" });
-			const needs = det.createEl("ul");
-			for (const n of guide.needs) needs.createEl("li", { text: n });
-			det.createEl("div", { cls: "ch-guide-label", text: "Steps" });
-			const ol = det.createEl("ol");
-			for (const st of guide.steps) ol.createEl("li", { text: st });
-			det.createEl("div", { cls: "ch-guide-label", text: "If something goes wrong" });
-			const pr = det.createEl("ul");
-			for (const p of guide.problems) pr.createEl("li", { text: p });
-			det.createEl("div", {
-				cls: "ch-muted",
-				text: "Only want to see events, not edit them? An ICS link (External calendars below) needs no setup at all.",
-			});
-		};
-		renderGuide();
-
-		new Setting(contentEl)
-			.setName(this.provider === "google" ? "Client ID" : "Application (client) ID")
-			.addText((t) => {
-				t.setPlaceholder(this.provider === "google" ? "….apps.googleusercontent.com" : "00000000-0000-0000-0000-000000000000")
-					.setValue(this.clientId)
-					.onChange((v) => (this.clientId = v.trim()));
-				t.inputEl.addClass("ch-wide-input");
-				t.inputEl.autocomplete = "off";
-				t.inputEl.spellcheck = false;
-			});
-
-		if (this.provider === "google") {
-			const hasSecret = this.existing ? accounts.hasClientSecret(this.existing) : false;
-			new Setting(contentEl)
-				.setName("Client secret")
-				.setDesc(hasSecret ? "Stored securely on this device. Leave empty to keep it." : "Stored only in Obsidian's secure storage on this device.")
-				.addText((t) => {
-					t.inputEl.type = "password";
-					t.inputEl.autocomplete = "off";
-					t.inputEl.addClass("ch-wide-input");
-					t.setPlaceholder(hasSecret ? "••••••••" : "GOCSPX-…").onChange((v) => (this.clientSecret = v.trim()));
-				});
-		} else {
-			tenantRow = new Setting(contentEl)
-				.setName("Directory (tenant) ID")
-				.setDesc("From the Overview page of your app registration.")
-				.addText((t) =>
-					t.setPlaceholder("00000000-0000-0000-0000-000000000000").setValue(isKnownTenant(this.tenant) ? "" : this.tenant).onChange((v) => (this.tenant = v.trim()))
+				.setName("How do you want to connect?")
+				.addDropdown((d) =>
+					d
+						.addOptions({ builtin: "Quick sign-in (recommended)", own: "Use my own app registration (advanced)" })
+						.setValue(this.useBuiltin ? "builtin" : "own")
+						.onChange((v) => {
+							this.useBuiltin = v === "builtin";
+							renderBody();
+						})
 				);
-			tenantRow.settingEl.toggle(!isKnownTenant(this.tenant));
 		}
+		const body = contentEl.createDiv();
+		const renderBody = () => {
+			body.empty();
+			intro.empty();
+			if (this.provider === "outlook" && this.useBuiltin) {
+				intro.appendText(
+					"Sign in with your Microsoft account – personal (Outlook.com, Hotmail, Live) or work/school. No setup needed. " +
+						"Sign-in happens in your browser, so Omni Calendar never sees your password. The access token is stored only on this device in Obsidian's secure storage, never in your vault, and no Omni Calendar server is involved."
+				);
+				const det = body.createEl("details", { cls: "ch-provider-help ch-setup-guide" });
+				det.createEl("summary", { text: "What will I see when signing in?" });
+				const ul = det.createEl("ul");
+				for (const t of [
+					"Microsoft asks you to allow “Omni Calendar” to read and write your calendars and to keep access (so you stay signed in). Nothing else – no e-mail, contacts or files.",
+					"The app may be labelled “unverified”. That only means the publisher has not completed Microsoft's paid partner verification; the sign-in itself is the standard, secure Microsoft sign-in.",
+					"Work or school accounts: your organisation may require an administrator to approve the app first (“Need admin approval”). Ask IT, or choose “Use my own app registration”.",
+					"You can remove the access anytime: Omni Calendar → Sign out, and account.microsoft.com → Privacy → Apps and services.",
+				]) ul.createEl("li", { text: t });
+				return;
+			}
+			intro.appendText(
+				`You connect with your own ${this.name} app registration, so no third party is involved: Obsidian talks directly to ${this.name}. ` +
+					"Sign-in happens in your browser – Omni Calendar never sees your password. The access token is stored only on this device in Obsidian's secure storage, never in your vault."
+			);
+			const isKnownTenant = (t: string) => ["common", "consumers", "organizations"].includes(t);
+			let tenantRow: Setting | null = null;
+			if (this.provider === "outlook") {
+				new Setting(body)
+					.setName("Which Microsoft account?")
+					.setDesc("Choose the kind of account you want to connect. This changes the setup steps below and must match “Supported account types” in your app registration.")
+					.addDropdown((d) => {
+						d.addOptions(TENANT_OPTIONS);
+						d.setValue(isKnownTenant(this.tenant) ? this.tenant : "other").onChange((v) => {
+							if (v !== "other") this.tenant = v;
+							else if (isKnownTenant(this.tenant)) this.tenant = "";
+							tenantRow?.settingEl.toggle(v === "other");
+							renderGuide();
+						});
+					});
+			}
+
+			const guideEl = body.createDiv();
+			const renderGuide = () => {
+				guideEl.empty();
+				const guide =
+					this.provider === "google"
+						? GOOGLE_GUIDE
+						: this.tenant === "consumers" || this.tenant === "common"
+							? MS_PERSONAL_GUIDE
+							: MS_WORK_GUIDE;
+				const det = guideEl.createEl("details", { cls: "ch-provider-help ch-setup-guide" });
+				det.open = !this.existing;
+				det.createEl("summary", { text: guide.title });
+				det.createEl("div", { cls: "ch-guide-label", text: "What you need" });
+				const needs = det.createEl("ul");
+				for (const n of guide.needs) needs.createEl("li", { text: n });
+				det.createEl("div", { cls: "ch-guide-label", text: "Steps" });
+				const ol = det.createEl("ol");
+				for (const st of guide.steps) ol.createEl("li", { text: st });
+				det.createEl("div", { cls: "ch-guide-label", text: "If something goes wrong" });
+				const pr = det.createEl("ul");
+				for (const p of guide.problems) pr.createEl("li", { text: p });
+				det.createEl("div", {
+					cls: "ch-muted",
+					text: "Only want to see events, not edit them? An ICS link (External calendars below) needs no setup at all.",
+				});
+			};
+			renderGuide();
+
+			new Setting(body)
+				.setName(this.provider === "google" ? "Client ID" : "Application (client) ID")
+				.addText((t) => {
+					t.setPlaceholder(this.provider === "google" ? "….apps.googleusercontent.com" : "00000000-0000-0000-0000-000000000000")
+						.setValue(this.clientId)
+						.onChange((v) => (this.clientId = v.trim()));
+					t.inputEl.addClass("ch-wide-input");
+					t.inputEl.autocomplete = "off";
+					t.inputEl.spellcheck = false;
+				});
+
+			if (this.provider === "google") {
+				const hasSecret = this.existing ? accounts.hasClientSecret(this.existing) : false;
+				new Setting(body)
+					.setName("Client secret")
+					.setDesc(hasSecret ? "Stored securely on this device. Leave empty to keep it." : "Stored only in Obsidian's secure storage on this device.")
+					.addText((t) => {
+						t.inputEl.type = "password";
+						t.inputEl.autocomplete = "off";
+						t.inputEl.addClass("ch-wide-input");
+						t.setPlaceholder(hasSecret ? "••••••••" : "GOCSPX-…").onChange((v) => (this.clientSecret = v.trim()));
+					});
+			} else {
+				tenantRow = new Setting(body)
+					.setName("Directory (tenant) ID")
+					.setDesc("From the Overview page of your app registration.")
+					.addText((t) =>
+						t.setPlaceholder("00000000-0000-0000-0000-000000000000").setValue(isKnownTenant(this.tenant) ? "" : this.tenant).onChange((v) => (this.tenant = v.trim()))
+					);
+				tenantRow.settingEl.toggle(!isKnownTenant(this.tenant));
+			}
+		};
+		renderBody();
 
 		const actions = new Setting(contentEl).setClass("ch-modal-buttons");
 		actions.addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()));
@@ -219,6 +261,7 @@ export class SignInModal extends Modal {
 	}
 
 	private validate(): string | null {
+		if (this.provider === "outlook" && this.useBuiltin) return null;
 		if (!this.clientId) return "Enter the Client ID.";
 		if (this.provider === "google") {
 			if (!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(this.clientId)) return "The Google Client ID should end with .apps.googleusercontent.com";
@@ -239,9 +282,12 @@ export class SignInModal extends Modal {
 		}
 		const accounts = this.plugin.accounts;
 		const isNew = !this.existing;
-		const account: Account = this.existing ?? accounts.newAccount(this.provider, this.clientId, this.provider === "outlook" ? this.tenant : undefined);
-		account.clientId = this.clientId;
-		if (this.provider === "outlook") account.tenant = this.tenant;
+		const builtin = this.provider === "outlook" && this.useBuiltin;
+		const clientId = builtin ? BUILTIN_MICROSOFT_CLIENT_ID : this.clientId;
+		const tenant = builtin ? BUILTIN_MICROSOFT_TENANT : this.tenant;
+		const account: Account = this.existing ?? accounts.newAccount(this.provider, clientId, this.provider === "outlook" ? tenant : undefined);
+		account.clientId = clientId;
+		if (this.provider === "outlook") account.tenant = tenant;
 
 		this.session?.cancel();
 		this.signInBtn.disabled = true;

@@ -8,7 +8,7 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 - 🗂 **Sidebar mini calendar** with event dots, the selected day's events and an "Upcoming" list
 - ✍️ **Create, edit, duplicate and delete events** inside Obsidian, including all-day, multi-day and recurring events (daily / weekly / monthly / yearly)
 - 🖱 **Drag to create** a time range in week/day view. **Drag and drop** events to move them
-- 🔄 **Two-way Google Calendar & Outlook / Microsoft 365**: connect your account to show its calendars and create, edit, move and delete events from Obsidian. The connection uses secure OAuth sign-in and your own app registration, and tokens stay in Obsidian's secure storage on each device
+- 🔄 **Two-way Google Calendar & Outlook / Microsoft 365**: connect your account to show its calendars and create, edit, move and delete events from Obsidian. Microsoft is a one-click sign-in. Google needs a one-time setup. Both use secure OAuth sign-in, and tokens stay in Obsidian's secure storage on each device
 - 🌐 **External calendars (read-only)**: subscribe to ICS / iCal links from Google, Outlook, Proton, iCloud, Fastmail, Nextcloud and others. Recurring events, exceptions and time zones are supported
 - 📝 **Notes for events**: create a note from any event using a template you can change. Local events stay linked to their note
 - 🎨 Several local calendars, each with its own colour, and a filter to show or hide calendars
@@ -120,15 +120,14 @@ Omni Calendar has three ways to get events in. Pick by what you want to do and h
 | **Local calendar** | Obsidian only | ✅ | ✅ | Nothing. Works out of the box | 0 min | Free |
 | **ICS link** (subscription) | Google, Outlook (personal & work), Proton, iCloud, Fastmail, Nextcloud, … | ✅ | ❌ | The calendar's private/secret ICS link | 2 min | Free |
 | **Google account** (two-way) | Google Calendar (Gmail; Workspace if your admin allows it) | ✅ | ✅ | A Google account and a free Google Cloud project you create yourself | 10–15 min | Free, no credit card |
-| **Microsoft work/school account** (two-way) | Outlook / Microsoft 365 at a company or school | ✅ | ✅ | Permission in your organisation to register an app (often allowed, otherwise ask IT) | 10 min | Free |
-| **Microsoft personal account** (two-way) | Outlook.com, Hotmail, Live | ✅ | ✅ | A free Azure account, so that you get a Microsoft Entra "directory" to register the app in. Microsoft asks for a phone number and credit card to verify you | 20–30 min | Free (the card is only for identity checks) |
+| **Microsoft account** (two-way) | Outlook.com, Hotmail, Live and work/school Microsoft 365 | ✅ | ✅ | Nothing. Just click *Sign in with Microsoft* (built-in app). Work/school accounts may need IT approval | 1 min | Free |
 | **Proton Calendar** | Proton | ✅ (ICS link) | ❌ | Proton offers no way for apps to write. Use the ICS link to read, and *Export local events to .ics* plus Proton's *Import* to copy events over | 2 min | Free |
 
 **Quick advice**
 
 - You only want to **see** your Google, Outlook or Proton events in Obsidian → use an **ICS link**. It's the fastest and works on every device without signing in.
-- You want to **create or change** Google or Outlook events from Obsidian → connect the **account** (two-way). You need to do this setup once, on a desktop computer.
-- The Microsoft personal-account setup puts you off → use the **ICS link** for Outlook (read-only) and create new events in a **local** or **Google** calendar.
+- You want to **create or change** Google or Outlook events from Obsidian → connect the **account** (two-way). Microsoft needs no setup. Google needs a one-time setup on a desktop computer.
+- Outlook / Microsoft 365 → just **sign in**. No setup is needed.
 
 Two-way accounts need **Obsidian 1.11.4 or newer**, because sign-in tokens are kept in Obsidian's secure storage.
 
@@ -140,11 +139,28 @@ Connect an account in *Settings → Omni Calendar → **Google & Outlook account
 Omni Calendar. In calendars you can write to, you can **create, edit, move (drag & drop) and delete** events, and every change
 is saved straight to Google or Outlook. Calendars shared with you read-only (e.g. holidays) are shown but can't be edited.
 
-### One-time setup: your own app registration
+### Microsoft (Outlook.com, Hotmail, Live, Microsoft 365): just sign in
 
-Omni Calendar has **no central server and no shared app**. You register a small app of your own with Google or
-Microsoft, and only you, your devices and Google/Microsoft are involved. The steps below are also shown in the sign-in dialog.
-You only do this once per account. Other devices then just sign in with the same Client ID.
+1. *Settings → Omni Calendar → **Connect Outlook / Microsoft 365***. Leave *How do you want to connect?* on **Quick sign-in (recommended)**.
+2. Click **Sign in with Microsoft**, sign in with your account in the browser and click **Accept**.
+3. Back in Obsidian, switch on the calendars you want to see.
+
+This uses Omni Calendar's built-in Microsoft app registration, so you don't need an Azure account or any setup. Its client ID is public by design (every
+desktop app's ID is). It gives the plugin no access by itself: access only exists through the sign-in that happens on *your* device, with
+PKCE, and the tokens stay on that device. No Omni Calendar server is involved.
+
+**What you'll see:** Microsoft asks you to allow *Omni Calendar* to **read and write your calendars** and to **keep access** (so you stay signed in).
+It asks for nothing else: no e-mail, contacts or files. The app may be marked **"unverified"**. That only means the publisher hasn't done Microsoft's
+partner verification, and the sign-in itself is Microsoft's standard sign-in.
+
+**Work/school accounts:** many organisations only let users approve verified apps. If you see *"Need admin approval"*, ask your IT team to approve
+"Omni Calendar", or use your own app registration (Method B below).
+
+### Optional: use your own app registration
+
+Omni Calendar has **no central server**. For Google, and optionally for Microsoft, you can register a small app of your own, so that only you,
+your devices and Google/Microsoft are involved. The steps below are also shown in the sign-in dialog. You only do this once per account.
+Other devices then just sign in with the same Client ID.
 
 #### Method A: Google account
 
@@ -172,7 +188,7 @@ You only do this once per account. Other devices then just sign in with the same
 - Signed out again after a week → the app is still in "Testing". Click *Publish app* (step 3).
 - *"Error 403: org_internal"* or blocked by your admin → your Workspace administrator doesn't allow it. Use an ICS link instead.
 
-#### Method B: Microsoft work or school account (Microsoft 365)
+#### Method B (optional): own Microsoft app for a work or school account
 
 **You need**
 - A work or school Microsoft 365 account
@@ -186,15 +202,15 @@ You only do this once per account. Other devices then just sign in with the same
 3. **Redirect URI:** platform **Public client/native (mobile & desktop)**, value `http://localhost` → **Register**.
 4. *API permissions* → *Add a permission* → *Microsoft Graph* → *Delegated permissions* → tick **Calendars.ReadWrite** → *Add permissions*. (`offline_access` is requested automatically at sign-in.)
 5. On the *Overview* page, copy the **Application (client) ID**. For a single-tenant app, also copy the **Directory (tenant) ID**.
-6. In Obsidian: **Connect Outlook / Microsoft 365** → paste the client ID → account type **Work or school only**, or **Other (tenant ID)** for a single-tenant app → **Sign in with Microsoft**.
+6. In Obsidian: **Connect Outlook / Microsoft 365** → *Use my own app registration (advanced)* → paste the client ID → account type **Work or school only**, or **Other (tenant ID)** for a single-tenant app → **Sign in with Microsoft**.
 
 **Common problems**
 - *"Need admin approval"* → your organisation requires an administrator to consent. Send the app's client ID to IT and ask them to *Grant admin consent* for Calendars.ReadWrite.
 - *AADSTS50194 / "not configured as a multi-tenant application"* → choose **Other (tenant ID)** and enter your Directory (tenant) ID.
 
-#### Method C: Microsoft personal account (Outlook.com, Hotmail, Live)
+#### Method C (optional): own Microsoft app for a personal account
 
-The sign-in works with personal accounts. Microsoft only lets you create app registrations inside a Microsoft Entra **directory (tenant)**,
+You only need this if you don't want to use the built-in app. Microsoft only lets you create app registrations inside a Microsoft Entra **directory (tenant)**,
 though, and a personal account doesn't have one on its own. You get a directory by signing up for a free Azure account.
 
 **You need**
@@ -210,7 +226,7 @@ though, and a personal account doesn't have one on its own. You get a directory 
 4. **Redirect URI:** platform **Public client/native (mobile & desktop)**, value `http://localhost` → **Register**.
 5. *API permissions* → *Add a permission* → *Microsoft Graph* → *Delegated* → **Calendars.ReadWrite** → *Add permissions*.
 6. Copy the **Application (client) ID** from the *Overview* page.
-7. In Obsidian: **Connect Outlook / Microsoft 365** → paste the client ID → account type **Personal (outlook.com / hotmail)** → **Sign in with Microsoft** → sign in with your Outlook.com account and **Accept**.
+7. In Obsidian: **Connect Outlook / Microsoft 365** → *Use my own app registration (advanced)* → paste the client ID → account type **Personal** → **Sign in with Microsoft** → sign in with your Outlook.com account and **Accept**.
 
 **Common problems**
 - *"You can't create app registrations"* or no directory shown → the Azure sign-up (step 1) isn't finished.
@@ -241,7 +257,7 @@ After signing in, switch on the calendars you want to see. The primary calendar 
 | --- | --- |
 | **Sign-in** | OAuth 2.0 authorization code flow with **PKCE** and a random `state` check (RFC 8252, recommended for desktop and mobile apps). You sign in on the real Google or Microsoft page in your own browser, so Omni Calendar never sees your password or 2FA. |
 | **Redirect** | The sign-in result comes back to a one-time web server that only accepts connections from your own computer (loopback `127.0.0.1` / `localhost`), not from the network. It accepts exactly one valid response, rejects anything with a wrong `state`, and shuts down straight away or after 5 minutes. |
-| **No middleman** | You use your own app registration. Requests go only to `accounts.google.com`, `oauth2.googleapis.com`, `www.googleapis.com`, `login.microsoftonline.com` and `graph.microsoft.com`, always over HTTPS. The plugin refuses to send a token to any other host. |
+| **No middleman** | No Omni Calendar server exists. With the built-in Microsoft app or your own registration, requests go only to `accounts.google.com`, `oauth2.googleapis.com`, `www.googleapis.com`, `login.microsoftonline.com` and `graph.microsoft.com`, always over HTTPS. The plugin refuses to send a token to any other host. |
 | **Token storage** | The refresh token, and Google's client secret, are kept only in **Obsidian's secure storage** (SecretStorage, Obsidian 1.11.4+) **on this device**. They are never written to `data.json`, your vault or your sync, and never to logs or error messages. Access tokens are kept only in memory and expire after about an hour. Each device signs in separately. |
 | **Least privilege** | Google: `calendar.events` and `calendar.calendarlist.readonly`. Microsoft: `Calendars.ReadWrite` and `offline_access`. No access to e-mail, contacts, files or your profile. |
 | **Event data** | Events from connected accounts are kept in memory only, not cached to disk. |
