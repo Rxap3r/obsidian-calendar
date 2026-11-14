@@ -56,16 +56,18 @@ Download `main.js`, `manifest.json` and `styles.css` from the
 | Button ⤢ / ⇥ in the calendar's toolbar | In the sidebar: **open the full page** (the sidebar calendar stays). In the main area: **move this calendar to the sidebar** |
 
 You never have to drag anything. *Open calendar* always opens in the main area, even if a calendar already sits in a sidebar.
-In *Settings → General* you can choose the **left or right sidebar** and whether the mini or full calendar should be shown in the sidebar
-**on startup**. Commands can be given hotkeys in *Settings → Hotkeys* (search for "Omni Calendar").
 
-On first install the mini calendar is added to the right sidebar automatically.
+**Calendar in the sidebar:** in *Settings → General → **Calendar in sidebar***, choose **Off / Mini calendar / Full calendar** and the **side**
+(left or right). Changes apply **immediately** and are restored every time Obsidian starts. The toggle commands and the ribbon
+right-click menu change the same setting. If you close the sidebar calendar yourself (or drag it somewhere else), the setting
+follows, so it never pops back unexpectedly. Commands can be given hotkeys in *Settings → Hotkeys* (search for "Omni Calendar").
 
 ### Full-page calendar
 
 - **Toolbar:** `‹ Today ›` navigates. *Month / Week / Day / Agenda* switches the view. The filter icon shows or hides individual calendars. ⟳ re-downloads external calendars. **+ New** creates an event.
 - **Month view:** click a **day number** to open that day. **Double-click** a cell, or click the **+** that appears on hover, to create an event. When a day is full, click "+N more".
 - **Week / Day view:** **click** an empty slot to create an event there. **Click and drag** to create an event covering the selected range (it snaps to 15 minutes). Overlapping events are shown side by side, and a red line marks the current time. Double-click the *all-day* row to create an all-day event.
+- **On touch screens:** swipe scrolls as usual, **tap** an empty slot to create an event there, and **press and hold** (about half a second), then drag, to select a time range.
 - **Drag and drop:** drag a local, non-recurring event to another day (month view) or another time (week/day view) to move it.
 - **Click an event** to edit it. For an external event this shows its details instead. **Right-click an event** for a menu with *Edit*, *Create/Open note*, *Duplicate*, *Delete this occurrence* and *Delete*.
 
@@ -344,8 +346,7 @@ ICS links can only be read. For Google and Outlook, use the two-way account conn
 | Scroll to hour | Where week/day views start scrolled. If today is visible, the view scrolls to the current time |
 | Default event duration | Length of a new event, in minutes |
 | Agenda length | Number of days in the Agenda view |
-| Sidebar | Which sidebar (left or right) the toggle commands use |
-| Show in sidebar on startup | Nothing, the mini calendar, or the full calendar |
+| Calendar in sidebar | Off / mini calendar / full calendar, and left or right side. Applied immediately and kept after restarts |
 | Sidebar: upcoming days | Days listed under "Upcoming". `0` hides the list |
 | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
 | New events | Which calendars (local, Google, Outlook – one, several or all) new events are saved to by default |

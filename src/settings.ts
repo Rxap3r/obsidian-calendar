@@ -1,6 +1,6 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type OmniCalendarPlugin from "./main";
-import { Account, OmniCalendarSettings, CalendarSource, ViewMode } from "./types";
+import { Account, OmniCalendarSettings, CalendarSource, SidebarView, ViewMode } from "./types";
 import { SignInModal } from "./modals/SignInModal";
 import { confirmAction } from "./modals/ConfirmModal";
 import { providerFor } from "./sync/providers";
@@ -20,7 +20,7 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	agendaDays: 30,
 	sidebarUpcomingDays: 7,
 	sidebarSide: "right",
-	sidebarOnStartup: "none",
+	sidebarView: "none",
 	notesFolder: "Calendar",
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,
 	defaultCalendarId: "personal",
@@ -103,26 +103,26 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		this.numberSetting(containerEl, "Default event duration (minutes)", "", s.defaultEventDuration, 5, 1440, (v) => (s.defaultEventDuration = v));
 		this.numberSetting(containerEl, "Agenda length (days)", "", s.agendaDays, 1, 365, (v) => (s.agendaDays = v));
 		new Setting(containerEl)
-			.setName("Sidebar")
-			.setDesc("Which sidebar the calendar lives in. Changing this moves an open sidebar calendar over immediately (and on the next start).")
-			.addDropdown((d) =>
-				d.addOptions({ right: "Right sidebar", left: "Left sidebar" }).setValue(s.sidebarSide).onChange(async (v) => {
-					s.sidebarSide = v as "left" | "right";
-					await this.save();
-					// Move an open sidebar calendar over right away.
-					await this.plugin.enforceSidebarSide();
-				})
-			);
-		new Setting(containerEl)
-			.setName("Show in sidebar on startup")
-			.setDesc("Make sure a calendar is in the sidebar every time Obsidian starts.")
+			.setName("Calendar in sidebar")
+			.setDesc("Shows it right away and keeps it there after restarts. Closing it yourself sets this back to Off.")
 			.addDropdown((d) =>
 				d
-					.addOptions({ none: "Nothing (keep the layout as it is)", mini: "Mini calendar", full: "Full calendar" })
-					.setValue(s.sidebarOnStartup)
+					.addOptions({ none: "Off", mini: "Mini calendar", full: "Full calendar" })
+					.setValue(s.sidebarView)
 					.onChange(async (v) => {
-						s.sidebarOnStartup = v as "none" | "mini" | "full";
+						s.sidebarView = v as SidebarView;
 						await this.save();
+						await this.plugin.applySidebar(true);
+					})
+			)
+			.addDropdown((d) =>
+				d
+					.addOptions({ right: "Right side", left: "Left side" })
+					.setValue(s.sidebarSide)
+					.onChange(async (v) => {
+						s.sidebarSide = v as "left" | "right";
+						await this.save();
+						await this.plugin.applySidebar(s.sidebarView !== "none");
 					})
 			);
 		this.numberSetting(containerEl, "Sidebar: upcoming days", "How many days of upcoming events the sidebar calendar lists (0 hides the list).", s.sidebarUpcomingDays, 0, 60, (v) => (s.sidebarUpcomingDays = v));
