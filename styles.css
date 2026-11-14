@@ -381,3 +381,27 @@
 
 /* Long-press on the ribbon icon: no text selection / iOS callout. */
 .ch-ribbon-icon { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+/* ---------------------------------------------------------------- week view that scrolls sideways (narrow / mobile) */
+.ch-tg-hscroll { --ch-gutter: 44px; }
+.ch-tg-hscroll .ch-tg-head,
+.ch-tg-hscroll .ch-tg-allday {
+	grid-template-columns: var(--ch-gutter) repeat(var(--ch-days), var(--ch-day-w));
+	overflow: hidden;
+	padding-right: 0;
+}
+.ch-tg-hscroll .ch-tg-inner { grid-template-columns: var(--ch-gutter) calc(var(--ch-days) * var(--ch-day-w)); width: max-content; }
+.ch-tg-hscroll .ch-tg-cols { grid-template-columns: repeat(var(--ch-days), var(--ch-day-w)); }
+.ch-tg-hscroll .ch-grid-scroll {
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	scroll-padding-left: var(--ch-gutter);
+	overscroll-behavior-x: contain;
+	scrollbar-width: none;
+}
+.ch-tg-hscroll .ch-grid-scroll::-webkit-scrollbar { height: 0; }
+.ch-tg-hscroll .ch-tg-col { scroll-snap-align: start; touch-action: pan-x pan-y; }
+.ch-tg-hscroll .ch-tg-col.ch-selecting { touch-action: none; }
+/* The hour labels / corner cells stay put while the days scroll. */
+.ch-tg-hscroll .ch-tg-gutter { position: sticky; left: 0; z-index: 3; background: var(--background-primary); }
+.ch-tg-hscroll .ch-tg-allday-label { font-size: 0.6em; }
