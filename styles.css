@@ -378,3 +378,6 @@
 	padding: 6px 2px 2px;
 }
 .ch-week-divider:first-child { padding-top: 0; }
+
+/* Long-press on the ribbon icon: no text selection / iOS callout. */
+.ch-ribbon-icon { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
