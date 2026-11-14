@@ -88,6 +88,17 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 			};
 		}
 
+		// Fade the edge that has more tabs to scroll to, and bring the active tab into view.
+		const updateFade = () => {
+			bar.toggleClass("ch-more-left", bar.scrollLeft > 2);
+			bar.toggleClass("ch-more-right", bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 2);
+		};
+		bar.addEventListener("scroll", updateFade, { passive: true });
+		window.requestAnimationFrame(() => {
+			bar.querySelector<HTMLElement>(".ch-settings-tab.is-active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+			updateFade();
+		});
+
 		const body = containerEl.createDiv({ cls: "ch-settings-body" });
 		switch (OmniCalendarSettingTab.tab) {
 			case "calendars": this.calendarsTab(body); break;

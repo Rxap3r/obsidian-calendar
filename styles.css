@@ -412,12 +412,20 @@
 
 /* ---------------------------------------------------------------- settings tabs */
 .ch-settings-tabs {
-	display: flex; flex-wrap: wrap; gap: 4px;
+	/* One line; swipe / scroll sideways when the tabs do not fit (mobile). */
+	display: flex; flex-wrap: nowrap; gap: 4px;
+	overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+	overscroll-behavior-x: contain;
 	border-bottom: 1px solid var(--background-modifier-border);
 	margin-bottom: 12px; padding-bottom: 6px;
 	position: sticky; top: 0; z-index: 2; background: var(--background-primary);
 }
+.ch-settings-tabs::-webkit-scrollbar { display: none; }
+.ch-settings-tabs.ch-more-right { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
+.ch-settings-tabs.ch-more-left { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }
+.ch-settings-tabs.ch-more-left.ch-more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); }
 .ch-settings-tab {
+	flex: none; white-space: nowrap;
 	display: inline-flex; align-items: center; gap: 6px;
 	background: transparent; box-shadow: none; border: none;
 	padding: 6px 12px; border-radius: var(--radius-s); color: var(--text-muted); cursor: pointer;
