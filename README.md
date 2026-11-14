@@ -81,6 +81,15 @@ The event dialog has these fields:
 
 Editing a recurring event changes **every occurrence** of it. To remove a single date, use *Delete this occurrence*.
 
+### Choosing which calendars new events go to
+
+- **Default:** *Settings → Omni Calendar → **New events*** lists every calendar you can write to: your local calendars, plus the Google and Outlook
+  calendars that are switched on and signed in on this device. Switch on one, several or all of them. New events are saved there by default.
+- **For each event:** the *Save to* row in the event dialog shows one button per calendar, with your defaults already selected. Click a button
+  to add or remove that calendar for this event only.
+- **Several calendars:** the event is created in each selected calendar as a **separate copy**. Editing or deleting one copy later doesn't change the
+  others. If saving fails for one calendar (e.g. you're offline), the others are still saved and you're told which one failed.
+
 ### Notes for events
 
 *Create note* makes a note named `YYYY-MM-DD Event title.md` in the notes folder (default `Calendar/`) and opens it.
@@ -326,7 +335,8 @@ ICS links can only be read. For Google and Outlook, use the two-way account conn
 | Agenda length | Number of days in the Agenda view |
 | Sidebar: upcoming days | Days listed under "Upcoming". `0` hides the list |
 | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
-| Local calendars | Add, rename, recolour, hide or delete calendars, and pick ★ the default one |
+| New events | Which calendars (local, Google, Outlook – one, several or all) new events are saved to by default |
+| Local calendars | Add, rename, recolour, hide or delete calendars |
 | Google & Outlook accounts | Connect, reconnect, sign out or remove accounts. Show or hide each of an account's calendars and set its colour and display name |
 | External calendars | Name, colour, ICS URL, on/off, refresh and remove. Each shows its status (event count, last update or error) |
 | Refresh interval | How often external calendars are re-downloaded, in minutes. `0` means manual only |

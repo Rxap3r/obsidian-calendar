@@ -44,6 +44,26 @@ export class CalendarStore extends Events {
 		return this.settings.sources.filter((s) => s.type === "local");
 	}
 
+	/** Every calendar a new event can be saved to: local calendars + writable, signed-in Google / Outlook calendars. */
+	writableTargets(): CalendarSource[] {
+		return [...this.localSources(), ...this.writableRemoteSources()];
+	}
+
+	/** The calendars new events go to by default (falls back to the default local calendar). */
+	defaultTargets(): CalendarSource[] {
+		const ids = new Set(this.settings.defaultTargets ?? []);
+		const chosen = this.writableTargets().filter((s) => ids.has(s.id));
+		return chosen.length ? chosen : [this.defaultLocalSource()];
+	}
+
+	/** Short "where" label: "Obsidian", "Google · me@gmail.com", "Outlook · Name". */
+	sourceKindLabel(source: CalendarSource): string {
+		if (source.type === "local") return "Obsidian";
+		if (source.type === "ics") return "ICS";
+		const acc = this.plugin.accounts.getAccount(source.accountId);
+		return `${source.type === "google" ? "Google" : "Outlook"}${acc?.label ? ` · ${acc.label}` : ""}`;
+	}
+
 	defaultLocalSource(): CalendarSource {
 		const locals = this.localSources();
 		return locals.find((s) => s.id === this.settings.defaultCalendarId) ?? locals[0];

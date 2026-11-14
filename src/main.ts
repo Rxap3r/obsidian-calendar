@@ -101,6 +101,9 @@ export default class OmniCalendarPlugin extends Plugin {
 		if (!settings.sources.some((s) => s.id === settings.defaultCalendarId && s.type === "local")) {
 			settings.defaultCalendarId = settings.sources.find((s) => s.type === "local")?.id ?? "personal";
 		}
+		const targets = Array.isArray(raw.settings?.defaultTargets) ? raw.settings.defaultTargets : [settings.defaultCalendarId];
+		settings.defaultTargets = targets.filter((id) => settings.sources.some((s) => s.id === id));
+		if (!settings.defaultTargets.length) settings.defaultTargets = [settings.defaultCalendarId];
 		this.data = { settings, events: Array.isArray(raw.events) ? raw.events : [] };
 		this.settings = settings;
 	}

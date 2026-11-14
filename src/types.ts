@@ -151,6 +151,8 @@ export interface OmniCalendarSettings {
 	notesFolder: string;
 	noteTemplate: string;
 	defaultCalendarId: string;
+	/** Calendars new events are saved to by default (local and/or Google / Outlook). */
+	defaultTargets: string[];
 	sources: CalendarSource[];
 	accounts: Account[];
 }

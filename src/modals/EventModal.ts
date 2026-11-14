@@ -28,6 +28,8 @@ export interface EventModalInit {
 export class EventModal extends Modal {
 	private title: string;
 	private calendarId: string;
+	/** New events: every calendar the event will be created in. */
+	private targets: string[] = [];
 	private allDay: boolean;
 	private startDate: string;
 	private startTime: string;
@@ -94,7 +96,8 @@ export class EventModal extends Modal {
 				({ start, end } = store.defaultTimes(day));
 			}
 			this.title = init.title ?? "";
-			this.calendarId = init.calendarId ?? store.defaultLocalSource()?.id ?? "";
+			this.targets = init.calendarId ? [init.calendarId] : store.defaultTargets().map((t) => t.id);
+			this.calendarId = this.targets[0] ?? store.defaultLocalSource()?.id ?? "";
 			this.allDay = init.allDay ?? false;
 			this.startDate = toDateKey(this.allDay ? day : start);
 			this.startTime = toTimeKey(start);
@@ -147,7 +150,9 @@ export class EventModal extends Modal {
 		const store = this.plugin.store;
 		const locals = store.localSources();
 		const remotes = store.writableRemoteSources();
-		new Setting(contentEl).setName("Calendar").addDropdown((d) => {
+		const isNew = !this.init.event && !remote;
+		if (isNew) this.targetPicker(contentEl);
+		else new Setting(contentEl).setName("Calendar").addDropdown((d) => {
 			for (const s of locals) d.addOption(s.id, `${s.name} (Obsidian)`);
 			for (const s of remotes) {
 				const acc = this.plugin.accounts.getAccount(s.accountId);
@@ -314,6 +319,47 @@ export class EventModal extends Modal {
 		s.settingEl.addClass(which === "start" ? "ch-start-row" : "ch-end-row");
 	}
 
+	/** Toggle buttons to choose which calendars a new event is saved to. */
+	private targetPicker(container: HTMLElement) {
+		const store = this.plugin.store;
+		const setting = new Setting(container).setName("Save to").setClass("ch-target-setting");
+		setting.setDesc("Click to choose one or more calendars.");
+		const wrap = setting.controlEl.createDiv({ cls: "ch-target-chips" });
+		const hint = container.createDiv({ cls: "ch-target-hint ch-muted" });
+		const render = () => {
+			wrap.empty();
+			const options = store.writableTargets();
+			for (const extra of this.targets) {
+				const src = store.getSource(extra);
+				if (src && !options.includes(src)) options.push(src);
+			}
+			for (const src of options) {
+				const on = this.targets.includes(src.id);
+				const chip = wrap.createEl("button", { cls: `ch-target-chip${on ? " is-on" : ""}`, attr: { "aria-pressed": String(on), type: "button" } });
+				chip.style.setProperty("--ch-event-color", src.color);
+				chip.createSpan({ cls: "ch-target-check", text: on ? "✓" : "" });
+				chip.createSpan({ cls: "ch-target-name", text: src.name });
+				chip.createSpan({ cls: "ch-target-kind", text: store.sourceKindLabel(src) });
+				chip.onclick = () => {
+					if (on && this.targets.length === 1) {
+						new Notice("At least one calendar is needed.");
+						return;
+					}
+					this.targets = on ? this.targets.filter((x) => x !== src.id) : [...this.targets, src.id];
+					this.calendarId = this.targets[0];
+					render();
+				};
+			}
+			hint.setText(
+				this.targets.length > 1
+					? `The event will be created in ${this.targets.length} calendars as separate copies – editing one later does not change the others.`
+					: ""
+			);
+			hint.toggle(this.targets.length > 1);
+		};
+		render();
+	}
+
 	private refreshVisibility() {
 		for (const el of this.timeEls) el.toggle(!this.allDay);
 		// The repeat rule can be set for new events; existing remote events keep their rule.
@@ -402,12 +448,40 @@ export class EventModal extends Modal {
 				} else {
 					await store.updateEvent(this.init.event.id, data);
 				}
-			} else if (toRemote && target) {
-				await store.createRemote(target, input);
-				new Notice(`Saved "${title}" to ${target.name}`);
 			} else {
-				const ev = await store.addEvent({ ...data, exdates: [], notePath: this.init.notePath });
-				this.init.event = ev;
+				// New event: create it in every selected calendar.
+				const targets = this.targets.map((id) => store.getSource(id)).filter((x): x is NonNullable<typeof x> => !!x);
+				if (!targets.length) {
+					new Notice("Choose at least one calendar.");
+					return;
+				}
+				const saved: string[] = [];
+				const savedIds: string[] = [];
+				const failed: string[] = [];
+				let firstLocal: LocalEvent | null = null;
+				for (const t of targets) {
+					try {
+						if (store.isRemoteSource(t)) {
+							await store.createRemote(t, input);
+						} else {
+							const ev = await store.addEvent({ ...data, calendarId: t.id, exdates: [], notePath: firstLocal ? undefined : this.init.notePath });
+							firstLocal = firstLocal ?? ev;
+						}
+						saved.push(t.name);
+						savedIds.push(t.id);
+					} catch (e) {
+						failed.push(`${t.name}: ${e instanceof Error ? e.message : String(e)}`);
+					}
+				}
+				if (firstLocal) this.init.event = firstLocal;
+				if (failed.length) {
+					new Notice(`Could not save to ${failed.join("; ")}${saved.length ? `\nSaved to: ${saved.join(", ")}` : ""}`, 10000);
+					if (!saved.length) return;
+					// Do not retry calendars that already have the event.
+					this.targets = this.targets.filter((id) => !savedIds.includes(id));
+				} else if (targets.length > 1 || store.isRemoteSource(targets[0])) {
+					new Notice(`Saved "${title}" to ${saved.join(", ")}`);
+				}
 			}
 			if (close) this.close();
 		} catch (e) {
