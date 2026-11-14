@@ -47,6 +47,8 @@ export interface Account {
 	provider: AccountProvider;
 	/** E-mail / display label, filled in after sign-in. */
 	label: string;
+	/** The user renamed the account; keep their label on reconnect. */
+	customLabel?: boolean;
 	/** OAuth client ID of the user's own app registration. */
 	clientId: string;
 	/** Microsoft only: "common", "consumers", "organizations" or a tenant ID. */
@@ -149,6 +151,8 @@ export interface OmniCalendarSettings {
 	notesFolder: string;
 	noteTemplate: string;
 	defaultCalendarId: string;
+	/** Calendars new events are saved to by default (local and/or Google / Outlook). */
+	defaultTargets: string[];
 	sources: CalendarSource[];
 	accounts: Account[];
 }

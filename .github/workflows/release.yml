@@ -26,9 +26,14 @@ jobs:
           cache: npm
 
       - name: Install & build
+        env:
+          # Built-in Google sign-in (Settings → Secrets and variables → Actions). Optional.
+          OMNI_GOOGLE_CLIENT_ID: ${{ secrets.OMNI_GOOGLE_CLIENT_ID }}
+          OMNI_GOOGLE_CLIENT_SECRET: ${{ secrets.OMNI_GOOGLE_CLIENT_SECRET }}
         run: |
           npm ci
           npm run build
+          if [ -z "$OMNI_GOOGLE_CLIENT_ID" ]; then echo "::warning::OMNI_GOOGLE_CLIENT_ID not set – Google quick sign-in is disabled in this build"; fi
 
       - name: Determine version
         id: version

@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	notesFolder: "Calendar",
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,
 	defaultCalendarId: "personal",
+	defaultTargets: ["personal"],
 	sources: [{ id: "personal", name: "Personal", color: PALETTE[0], type: "local", enabled: true }],
 	accounts: [],
 };
@@ -130,6 +131,13 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 				})
 			);
 
+		// ---------------------------------------------------------------- New events
+		new Setting(containerEl)
+			.setName("New events")
+			.setDesc("Which calendars new events are saved to by default – one, several or all. You can still change it for each event in the event dialog.")
+			.setHeading();
+		this.defaultTargetsSection(containerEl);
+
 		// ---------------------------------------------------------------- Local calendars
 		new Setting(containerEl)
 			.setName("Local calendars")
@@ -161,7 +169,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		} else {
 			containerEl.createDiv({
 				cls: "ch-modal-hint",
-				text: "🔒 No Omni Calendar server is involved – Obsidian talks directly to Google / Microsoft. Microsoft: just sign in. Google: uses your own app registration. Sign-in tokens are kept only in Obsidian's secure storage on this device (never in your vault or sync), so each device signs in separately.",
+				text: "🔒 No Omni Calendar server is involved – Obsidian talks directly to Google / Microsoft. Just sign in – no setup needed. Sign-in tokens are kept only in Obsidian's secure storage on this device (never in your vault or sync), so each device signs in separately.",
 			});
 		}
 		for (const acc of s.accounts) this.accountBox(containerEl, acc);
@@ -231,7 +239,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		const rows: [string, string, string][] = [
 			["Local calendar", "Read & write in Obsidian only", "Nothing – works out of the box."],
 			["ICS link (below)", "Read-only · Google, Outlook, Proton, iCloud, …", "Only the calendar's private ICS link. 2 minutes, works on every device."],
-			["Google account", "Read & write · Google Calendar", "A Google account and a free Google Cloud project (no credit card). ≈10–15 minutes, once."],
+			["Google account", "Read & write · Google Calendar", "Nothing – just sign in (built-in app). Google shows an “unverified app” warning for now; Workspace admins may block it. 1 minute."],
 			["Microsoft account", "Read & write · Outlook.com, Hotmail, Live, Microsoft 365", "Nothing – just sign in (built-in app). Work/school accounts may need approval from IT. 1 minute."],
 			["Proton Calendar", "Read-only (ICS link)", "Proton offers no write access for apps. Export local events to .ics and import them in Proton if needed."],
 		];
@@ -244,8 +252,43 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		}
 		det.createDiv({
 			cls: "ch-provider",
-			text: "Tip: only want to see your events? Use an ICS link. Want to create or edit Google / Outlook events from Obsidian? Connect the account – Microsoft needs no setup; for Google the sign-in dialog shows the steps.",
+			text: "Tip: only want to see your events? Use an ICS link. Want to create or edit Google / Outlook events from Obsidian? Connect the account – no setup needed.",
 		});
+	}
+
+	/** Toggle list of every calendar new events can be saved to. */
+	private defaultTargetsSection(el: HTMLElement) {
+		const s = this.plugin.settings;
+		const store = this.plugin.store;
+		const options = store.writableTargets();
+		const chosen = new Set(store.defaultTargets().map((x) => x.id));
+		for (const src of options) {
+			const row = new Setting(el).setClass("ch-source-row").setName(src.name).setDesc(store.sourceKindLabel(src));
+			const dot = row.nameEl.createSpan({ cls: "ch-dot" });
+			dot.style.setProperty("--ch-event-color", src.color);
+			row.nameEl.prepend(dot);
+			row.addToggle((t) =>
+				t.setTooltip("Save new events here").setValue(chosen.has(src.id)).onChange(async (v) => {
+					const next = new Set(store.defaultTargets().map((x) => x.id));
+					if (v) next.add(src.id);
+					else next.delete(src.id);
+					if (!next.size) {
+						new Notice("At least one calendar is needed.");
+						t.setValue(true);
+						return;
+					}
+					s.defaultTargets = Array.from(next);
+					const firstLocal = s.defaultTargets.find((id) => s.sources.some((x) => x.id === id && x.type === "local"));
+					if (firstLocal) s.defaultCalendarId = firstLocal;
+					await this.save();
+				})
+			);
+		}
+		const hint = el.createDiv({ cls: "ch-provider ch-muted ch-small-hint" });
+		hint.setText(
+			"Only calendars you can write to are listed: your local calendars and the Google / Outlook calendars that are switched on below and signed in on this device. " +
+				"With several calendars selected, each one gets its own copy of the event."
+		);
 	}
 
 	private nextColor(): string {
@@ -273,7 +316,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 	private localRow(el: HTMLElement, src: CalendarSource) {
 		const s = this.plugin.settings;
 		const count = this.plugin.data.events.filter((e) => e.calendarId === src.id).length;
-		const row = new Setting(el).setClass("ch-source-row").setDesc(`${count} event${count === 1 ? "" : "s"}${s.defaultCalendarId === src.id ? " · default" : ""}`);
+		const row = new Setting(el).setClass("ch-source-row").setDesc(`${count} event${count === 1 ? "" : "s"}${s.defaultTargets.includes(src.id) ? " · default for new events" : ""}`);
 		row.addColorPicker((c) =>
 			c.setValue(src.color).onChange(async (v) => {
 				src.color = v;
@@ -292,14 +335,6 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 				await this.save();
 			})
 		);
-		if (s.defaultCalendarId !== src.id) {
-			row.addExtraButton((b) =>
-				b.setIcon("star").setTooltip("Make default for new events").onClick(async () => {
-					s.defaultCalendarId = src.id;
-					await this.save(true);
-				})
-			);
-		}
 		row.addExtraButton((b) =>
 			b.setIcon("trash").setTooltip("Delete calendar and its events").onClick(async () => {
 				const locals = s.sources.filter((x) => x.type === "local");
@@ -311,6 +346,8 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 				s.sources = s.sources.filter((x) => x.id !== src.id);
 				this.plugin.data.events = this.plugin.data.events.filter((e) => e.calendarId !== src.id);
 				if (s.defaultCalendarId === src.id) s.defaultCalendarId = s.sources.find((x) => x.type === "local")?.id ?? "";
+				s.defaultTargets = s.defaultTargets.filter((id) => id !== src.id);
+				if (!s.defaultTargets.length) s.defaultTargets = [s.defaultCalendarId];
 				await this.save(true);
 			})
 		);
@@ -324,9 +361,17 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		const providerName = providerFor(acc.provider).label;
 		const head = new Setting(box)
 			.setClass("ch-source-row")
-			.setName(`${providerName}: ${acc.label}`)
+			.setName(providerName)
 			.setDesc(!signedIn ? "Not signed in on this device" : needsReauth ? "⚠ Access expired – sign in again" : "✓ Signed in on this device");
 		if (!signedIn || needsReauth) head.descEl.addClass("ch-error");
+		head.addText((t) => {
+			t.setPlaceholder("Account name").setValue(acc.label).onChange(async (v) => {
+				acc.label = v.trim() || acc.label;
+				acc.customLabel = true;
+				await this.save();
+			});
+			t.inputEl.setAttr("aria-label", "Account name (shown in the event dialog)");
+		});
 
 		head.addButton((b) =>
 			b.setButtonText(signedIn && !needsReauth ? "Reconnect" : "Sign in").onClick(() =>

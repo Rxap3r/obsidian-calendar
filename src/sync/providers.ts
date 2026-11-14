@@ -241,7 +241,7 @@ export const OutlookProvider: CalendarProvider = {
 					color: c.hexColor || undefined,
 					readOnly: c.canEdit === false,
 					primary: !!c.isDefaultCalendar,
-					owner: c.owner?.address || undefined,
+					owner: friendlyOwner(c.owner),
 				});
 			}
 			url = j?.["@odata.nextLink"];
@@ -347,6 +347,18 @@ function graphBody(input: EventInput) {
 		body.recurrence = { pattern, range };
 	}
 	return body;
+}
+
+/**
+ * Microsoft accounts whose primary e-mail is not a Microsoft address get an internal
+ * mailbox address like "outlook_1A2B3C…@outlook.com". Prefer the display name then.
+ */
+export function friendlyOwner(owner: { name?: string; address?: string } | undefined): string | undefined {
+	const address = owner?.address?.trim();
+	const name = owner?.name?.trim();
+	const technical = !!address && /^outlook_[0-9a-f]+@outlook\.com$/i.test(address);
+	if (address && !technical) return address;
+	return name || address || undefined;
 }
 
 export function providerFor(p: Account["provider"]): CalendarProvider {

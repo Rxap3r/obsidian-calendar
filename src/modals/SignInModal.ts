@@ -3,7 +3,7 @@ import type OmniCalendarPlugin from "../main";
 import { Account, AccountProvider } from "../types";
 import { AuthSession } from "../sync/oauth";
 import { PALETTE } from "../settings";
-import { BUILTIN_MICROSOFT_CLIENT_ID, BUILTIN_MICROSOFT_TENANT, isBuiltinMicrosoftClient } from "../sync/builtin";
+import { BUILTIN_GOOGLE_CLIENT_ID, BUILTIN_MICROSOFT_CLIENT_ID, BUILTIN_MICROSOFT_TENANT, hasBuiltinGoogleClient, isBuiltinClient } from "../sync/builtin";
 
 interface SetupGuide {
 	title: string;
@@ -105,7 +105,8 @@ export class SignInModal extends Modal {
 		super(plugin.app);
 		this.clientId = existing?.clientId ?? "";
 		this.tenant = existing?.tenant ?? "consumers";
-		this.useBuiltin = provider === "outlook" && (!existing || isBuiltinMicrosoftClient(existing.clientId));
+		const builtinAvailable = provider === "outlook" || hasBuiltinGoogleClient();
+		this.useBuiltin = builtinAvailable && (!existing || isBuiltinClient(provider, existing.clientId));
 		if (this.useBuiltin && existing) {
 			this.clientId = "";
 			this.tenant = "consumers";
@@ -131,7 +132,7 @@ export class SignInModal extends Modal {
 		}
 
 		const intro = contentEl.createDiv({ cls: "ch-modal-hint" });
-		if (this.provider === "outlook") {
+		if (this.provider === "outlook" || hasBuiltinGoogleClient()) {
 			new Setting(contentEl)
 				.setName("How do you want to connect?")
 				.addDropdown((d) =>
@@ -148,6 +149,24 @@ export class SignInModal extends Modal {
 		const renderBody = () => {
 			body.empty();
 			intro.empty();
+			if (this.provider === "google" && this.useBuiltin) {
+				intro.appendText(
+					"Sign in with your Google account. No setup needed. " +
+						"Sign-in happens in your browser, so Omni Calendar never sees your password. The access token is stored only on this device in Obsidian's secure storage, never in your vault, and no Omni Calendar server is involved."
+				);
+				const det = body.createEl("details", { cls: "ch-provider-help ch-setup-guide" });
+				det.open = true;
+				det.createEl("summary", { text: "What will I see when signing in?" });
+				const ul = det.createEl("ul");
+				for (const t of [
+					"Google shows “Google hasn’t verified this app”. This is expected while Omni Calendar is not yet verified by Google: click “Advanced” → “Go to Omni Calendar (unsafe)”. The wording is Google's standard text for apps that have not completed Google's review – the sign-in itself is Google's normal, secure sign-in.",
+					"Google then asks you to allow Omni Calendar to view and edit events in your calendars and to see your list of calendars. Nothing else – no e-mail, contacts, Drive or profile. Tick both boxes and click Continue.",
+					"Until Google has verified the app, it is limited to 100 users in total. If sign-in is refused for that reason, choose “Use my own app registration”.",
+					"Google Workspace (work/school) accounts: your administrator may block apps that are not verified.",
+					"You can remove the access anytime: Omni Calendar → Sign out, and myaccount.google.com → Security → Third-party connections.",
+				]) ul.createEl("li", { text: t });
+				return;
+			}
 			if (this.provider === "outlook" && this.useBuiltin) {
 				intro.appendText(
 					"Sign in with your Microsoft account – personal (Outlook.com, Hotmail, Live) or work/school. No setup needed. " +
@@ -261,7 +280,7 @@ export class SignInModal extends Modal {
 	}
 
 	private validate(): string | null {
-		if (this.provider === "outlook" && this.useBuiltin) return null;
+		if (this.useBuiltin) return null;
 		if (!this.clientId) return "Enter the Client ID.";
 		if (this.provider === "google") {
 			if (!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(this.clientId)) return "The Google Client ID should end with .apps.googleusercontent.com";
@@ -282,8 +301,8 @@ export class SignInModal extends Modal {
 		}
 		const accounts = this.plugin.accounts;
 		const isNew = !this.existing;
-		const builtin = this.provider === "outlook" && this.useBuiltin;
-		const clientId = builtin ? BUILTIN_MICROSOFT_CLIENT_ID : this.clientId;
+		const builtin = this.useBuiltin;
+		const clientId = builtin ? (this.provider === "google" ? BUILTIN_GOOGLE_CLIENT_ID : BUILTIN_MICROSOFT_CLIENT_ID) : this.clientId;
 		const tenant = builtin ? BUILTIN_MICROSOFT_TENANT : this.tenant;
 		const account: Account = this.existing ?? accounts.newAccount(this.provider, clientId, this.provider === "outlook" ? tenant : undefined);
 		account.clientId = clientId;
@@ -292,7 +311,7 @@ export class SignInModal extends Modal {
 		this.session?.cancel();
 		this.signInBtn.disabled = true;
 		try {
-			if (this.clientSecret) accounts.setClientSecret(account, this.clientSecret);
+			if (!builtin && this.clientSecret) accounts.setClientSecret(account, this.clientSecret);
 			const session = await accounts.beginSignIn(account);
 			this.session = session;
 			this.showWaiting(session);

@@ -22,6 +22,11 @@ const context = await esbuild.context({
 	treeShaking: true,
 	minify: prod,
 	outfile: "main.js",
+	// Built-in Google OAuth client (see src/sync/builtin.ts). Empty when not provided.
+	define: {
+		__OMNI_GOOGLE_CLIENT_ID__: JSON.stringify(process.env.OMNI_GOOGLE_CLIENT_ID ?? ""),
+		__OMNI_GOOGLE_CLIENT_SECRET__: JSON.stringify(process.env.OMNI_GOOGLE_CLIENT_SECRET ?? ""),
+	},
 });
 
 if (prod) {

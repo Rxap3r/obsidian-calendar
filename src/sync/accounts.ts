@@ -4,6 +4,7 @@ import { uid } from "../dateUtils";
 import { AuthSession, OAuthError, refreshAccessToken } from "./oauth";
 import { providerFor, RemoteCalendarInfo } from "./providers";
 import { TokenGetter } from "./http";
+import { BUILTIN_GOOGLE_CLIENT_SECRET, isBuiltinGoogleClient } from "./builtin";
 
 interface CachedToken {
 	token: string;
@@ -61,7 +62,13 @@ export class AccountManager {
 	}
 
 	hasClientSecret(account: Account): boolean {
-		return !!this.getSecret(account, "cs");
+		return !!this.clientSecretFor(account);
+	}
+
+	/** Google client secret: built-in for the built-in client, otherwise from secure storage. */
+	private clientSecretFor(account: Account): string | undefined {
+		if (account.provider === "google" && isBuiltinGoogleClient(account.clientId)) return BUILTIN_GOOGLE_CLIENT_SECRET;
+		return this.getSecret(account, "cs") ?? undefined;
 	}
 
 	newAccount(provider: AccountProvider, clientId: string, tenant?: string): Account {
@@ -79,7 +86,7 @@ export class AccountManager {
 			throw new Error("Secure storage is not available. Please update Obsidian to version 1.11.4 or newer to connect accounts.");
 		}
 		const provider = providerFor(account.provider);
-		const cfg = provider.oauthConfig(account, this.getSecret(account, "cs") ?? undefined);
+		const cfg = provider.oauthConfig(account, this.clientSecretFor(account));
 		if (!cfg.clientId) throw new Error("Client ID is missing.");
 		if (account.provider === "google" && !cfg.clientSecret) throw new Error("Client secret is missing.");
 		const session = new AuthSession(cfg);
@@ -99,8 +106,10 @@ export class AccountManager {
 		this.needsReauth.delete(account.id);
 		const calendars = await providerFor(account.provider).listCalendars(this.tokenGetter(account));
 		const primary = calendars.find((c) => c.primary);
-		if (primary && account.provider === "google" && primary.id.includes("@")) account.label = primary.id;
-		if (primary?.owner) account.label = primary.owner;
+		if (!account.customLabel) {
+			if (primary && account.provider === "google" && primary.id.includes("@")) account.label = primary.id;
+			if (primary?.owner) account.label = primary.owner;
+		}
 		return calendars;
 	}
 
@@ -126,7 +135,7 @@ export class AccountManager {
 			this.needsReauth.add(account.id);
 			throw new OAuthError("not_signed_in", "Not signed in on this device. Open Omni Calendar settings and sign in.");
 		}
-		const cfg = providerFor(account.provider).oauthConfig(account, this.getSecret(account, "cs") ?? undefined);
+		const cfg = providerFor(account.provider).oauthConfig(account, this.clientSecretFor(account));
 		try {
 			const t = await refreshAccessToken(cfg, rt);
 			// Microsoft rotates refresh tokens – store the new one.
