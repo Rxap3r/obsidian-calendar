@@ -1,7 +1,7 @@
 {
   "id": "omni-calendar",
   "name": "Omni Calendar",
-  "version": "1.5.3",
+  "version": "1.5.5",
   "minAppVersion": "1.5.0",
   "description": "Full-page and sidebar calendar with local events, event notes, two-way Google Calendar and Outlook sync, and read-only ICS subscriptions (Proton, iCloud, ...).",
   "author": "rxap3r",

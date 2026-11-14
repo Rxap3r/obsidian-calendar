@@ -8,13 +8,29 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 - 🗂 **Sidebar mini calendar** with event dots, the selected day's events and an "Upcoming" list
 - ✍️ **Create, edit, duplicate and delete events** inside Obsidian, including all-day, multi-day and recurring events (daily / weekly / monthly / yearly)
 - 🖱 **Drag to create** a time range in week/day view. **Drag and drop** events to move them
-- 🔄 **Two-way Google Calendar & Outlook / Microsoft 365**: connect your account to show its calendars and create, edit, move and delete events from Obsidian. Both are a one-click sign-in with no setup, using secure OAuth sign-in, and tokens stay in Obsidian's secure storage on each device
+- 🔄 **Two-way Google Calendar & Outlook / Microsoft 365**: one-click sign-in, then create, edit, move and delete events from Obsidian. Your sign-in stays on your device
 - 🌐 **External calendars (read-only)**: subscribe to ICS / iCal links from Google, Outlook, Proton, iCloud, Fastmail, Nextcloud and others. Recurring events, exceptions and time zones are supported
 - 📝 **Notes for events**: create a note from any event using a template you can change. Local events stay linked to their note
 - 🎨 Several local calendars, each with its own colour, and a filter to show or hide calendars
-- 📋 **Embed an agenda in any note** with a `omni-calendar` code block
+- 📋 **Embed an agenda in any note** with an `omni-calendar` code block
 - 📤 **Export** your local events to an `.ics` file, which you can import into Google, Outlook or Proton
 - 📱 Works on desktop and mobile. It follows your light/dark theme
+
+### Quick start
+
+1. Install with **BRAT**: add `rxap3r/obsidian-calendar` ([details](#installation-with-brat-beta)).
+2. Click the 📅 icon in the left ribbon to open the calendar. Double-click a day, or click **+ New**, to create an event.
+3. Optional: in *Settings → Omni Calendar → **Google & Outlook***, click **Connect** to see and edit your Google / Outlook events.
+
+### Contents
+
+- [Installation](#installation-with-brat-beta)
+- [Using the calendar](#using-the-calendar): views, sidebar, creating events, notes, agenda in notes
+- [Which connection method should I use?](#which-connection-method-should-i-use)
+- [Google & Outlook (two-way)](#two-way-sync-with-google-calendar-and-outlook--microsoft-365): sign-in, editing, security
+- [Read-only ICS subscriptions](#read-only-subscriptions-via-ics-link-proton-icloud-google-outlook-) (Proton, iCloud, …)
+- [Settings](#settings-reference) · [Commands](#commands) · [Where data is stored](#where-data-is-stored)
+- [Development & releases](#development) · [Roadmap](#roadmap-ideas)
 
 ---
 
@@ -48,7 +64,8 @@ Download `main.js`, `manifest.json` and `styles.css` from the
 | How | What it opens |
 | --- | --- |
 | Ribbon icon 📅 (left bar), **click** | Full-page calendar in the main area |
-| Ribbon icon 📅, **right-click** | Menu: open full calendar, show/hide the mini or full calendar in the sidebar, new event |
+| Ribbon icon 📅, **right-click** (desktop) or **press and hold** (mobile) | Menu: open full calendar, show/hide the mini or full calendar in the sidebar, new event, settings |
+| Command **Calendar menu** | The same menu. Handy for the mobile toolbar (*Settings → Mobile → Manage toolbar options*) or a hotkey |
 | Command **Omni Calendar: Open calendar (full page)** | Full-page calendar in the main area |
 | Command **Toggle mini calendar in sidebar** | Shows the mini calendar in the sidebar, or hides it if it's already there |
 | Command **Toggle full calendar in sidebar** | The same for the full calendar (month/week/day/agenda), in a compact layout |
@@ -57,7 +74,7 @@ Download `main.js`, `manifest.json` and `styles.css` from the
 
 You never have to drag anything. *Open calendar* always opens in the main area, even if a calendar already sits in a sidebar.
 
-**Calendar in the sidebar:** in *Settings → General → **Calendar in sidebar***, choose **Off / Mini calendar / Full calendar** and the **side**
+**Calendar in the sidebar:** in *Settings → Omni Calendar → **Display** → **Calendar in sidebar***, choose **Off / Mini calendar / Full calendar** and the **side**
 (left or right). Changes apply **immediately** and are restored every time Obsidian starts. The toggle commands and the ribbon
 right-click menu change the same setting. If you close the sidebar calendar yourself (or drag it somewhere else), the setting
 follows, so it never pops back unexpectedly. Commands can be given hotkeys in *Settings → Hotkeys* (search for "Omni Calendar").
@@ -72,7 +89,7 @@ follows, so it never pops back unexpectedly. Commands can be given hotkeys in *S
 - **Click an event** to edit it. For an external event this shows its details instead. **Right-click an event** for a menu with *Edit*, *Create/Open note*, *Duplicate*, *Delete this occurrence* and *Delete*.
 
 **Adapts to its width** (handy in a sidebar):
-- In a narrow view, *Month* switches from the 7-column grid to **day cards** in one or more columns, and *Week* shows **fewer days side by side** (e.g. 3 days). The arrows then move by that many days.
+- In a narrow view, *Month* switches from the 7-column grid to **day cards** in one or more columns, and *Week* still covers the **whole week** but shows only as many days as fit (e.g. 3). **Swipe left or right** (or scroll sideways) to move day by day. It snaps to each day, and the hour labels stay in place. The arrows jump a whole week, and the view opens with today (or the chosen day) first.
 - In a very wide sidebar the calendar stops growing at a comfortable width and stays centred, instead of stretching the days apart.
 
 ### Sidebar mini calendar
@@ -96,7 +113,7 @@ Editing a recurring event changes **every occurrence** of it. To remove a single
 
 ### Choosing which calendars new events go to
 
-- **Default:** *Settings → Omni Calendar → **New events*** lists every calendar you can write to: your local calendars, plus the Google and Outlook
+- **Default:** *Settings → Omni Calendar → **Calendars** → **New events*** lists every calendar you can write to: your local calendars, plus the Google and Outlook
   calendars that are switched on and signed in on this device. Switch on one, several or all of them. New events are saved there by default.
 - **For each event:** the *Save to* row in the event dialog shows one button per calendar, with your defaults already selected. Click a button
   to add or remove that calendar for this event only.
@@ -157,13 +174,13 @@ Two-way accounts need **Obsidian 1.11.4 or newer**, because sign-in tokens are k
 
 ## Two-way sync with Google Calendar and Outlook / Microsoft 365
 
-Connect an account in *Settings → Omni Calendar → **Google & Outlook accounts***. The account's calendars then appear in
+Connect an account in *Settings → Omni Calendar → **Google & Outlook***. The account's calendars then appear in
 Omni Calendar. In calendars you can write to, you can **create, edit, move (drag & drop) and delete** events, and every change
 is saved straight to Google or Outlook. Calendars shared with you read-only (e.g. holidays) are shown but can't be edited.
 
 ### Microsoft (Outlook.com, Hotmail, Live, Microsoft 365): just sign in
 
-1. *Settings → Omni Calendar → **Connect Outlook / Microsoft 365***. Leave *How do you want to connect?* on **Quick sign-in (recommended)**.
+1. *Settings → Omni Calendar → **Google & Outlook** → **Connect Outlook / Microsoft 365***. Leave *How do you want to connect?* on **Quick sign-in (recommended)**.
 2. Click **Sign in with Microsoft**, sign in with your account in the browser and click **Accept**.
 3. Back in Obsidian, switch on the calendars you want to see.
 
@@ -180,7 +197,7 @@ partner verification, and the sign-in itself is Microsoft's standard sign-in.
 
 ### Google: just sign in
 
-1. *Settings → Omni Calendar → **Connect Google account***. Leave *How do you want to connect?* on **Quick sign-in (recommended)**.
+1. *Settings → Omni Calendar → **Google & Outlook** → **Connect Google***. Leave *How do you want to connect?* on **Quick sign-in (recommended)**.
 2. Click **Sign in with Google** and choose your account.
 3. Google shows **"Google hasn't verified this app"**. Click **Advanced → Go to Omni Calendar (unsafe)**. This is Google's standard text for apps that
    haven't completed Google's review yet. The sign-in itself is Google's normal sign-in.
@@ -196,10 +213,12 @@ partner verification, and the sign-in itself is Microsoft's standard sign-in.
 ### Optional: use your own app registration
 
 Omni Calendar has **no central server**. If you prefer, or your organisation requires it, you can register a small app of your own, so that only you,
-your devices and Google/Microsoft are involved. The steps below are also shown in the sign-in dialog. You only do this once per account.
-Other devices then just sign in with the same Client ID.
+your devices and Google/Microsoft are involved. You only do this once per account, and other devices then just sign in with the same Client ID.
+The steps are also shown in the sign-in dialog. Click a method below to expand it.
 
-#### Method A (optional): own Google app
+<details>
+<summary><b>Method A (optional): own Google app</b></summary>
+
 
 **You need**
 - A Google account (personal Gmail works. With a Google Workspace work/school account, your admin may block self-made apps)
@@ -216,7 +235,7 @@ Other devices then just sign in with the same Client ID.
    - Under **Audience**, click **Publish app** (status "In production"). Otherwise Google signs you out every 7 days. You don't need to submit for verification.
 4. *Clients* (or *Credentials*) → **Create client** → application type **Desktop app** → *Create*.
 5. Copy the **Client ID** (ends in `.apps.googleusercontent.com`) and the **Client secret** (starts with `GOCSPX-`).
-6. In Obsidian: *Settings → Omni Calendar → **Connect Google account*** → *Use my own app registration (advanced)*. Paste both values and click **Sign in with Google**.
+6. In Obsidian: *Settings → Omni Calendar → **Google & Outlook** → **Connect Google*** → *Use my own app registration (advanced)*. Paste both values and click **Sign in with Google**.
 7. In the browser, choose your account. Google shows **"Google hasn't verified this app"**. This is expected because the app is your own. Click *Advanced → Go to (your app name)*, then **Allow**.
 8. Back in Obsidian, switch on the calendars you want to see.
 
@@ -225,7 +244,11 @@ Other devices then just sign in with the same Client ID.
 - Signed out again after a week → the app is still in "Testing". Click *Publish app* (step 3).
 - *"Error 403: org_internal"* or blocked by your admin → your Workspace administrator doesn't allow it. Use an ICS link instead.
 
-#### Method B (optional): own Microsoft app for a work or school account
+</details>
+
+<details>
+<summary><b>Method B (optional): own Microsoft app for a work or school account</b></summary>
+
 
 **You need**
 - A work or school Microsoft 365 account
@@ -245,7 +268,11 @@ Other devices then just sign in with the same Client ID.
 - *"Need admin approval"* → your organisation requires an administrator to consent. Send the app's client ID to IT and ask them to *Grant admin consent* for Calendars.ReadWrite.
 - *AADSTS50194 / "not configured as a multi-tenant application"* → choose **Other (tenant ID)** and enter your Directory (tenant) ID.
 
-#### Method C (optional): own Microsoft app for a personal account
+</details>
+
+<details>
+<summary><b>Method C (optional): own Microsoft app for a personal account</b></summary>
+
 
 You only need this if you don't want to use the built-in app. Microsoft only lets you create app registrations inside a Microsoft Entra **directory (tenant)**,
 though, and a personal account doesn't have one on its own. You get a directory by signing up for a free Azure account.
@@ -269,6 +296,8 @@ though, and a personal account doesn't have one on its own. You get a directory 
 - *"You can't create app registrations"* or no directory shown → the Azure sign-up (step 1) isn't finished.
 - *AADSTS50020 / "account does not exist in tenant"* → the app was registered for organisational accounts only. Change *Supported account types* to include personal accounts (*Authentication* page), or re-register.
 - *"unauthorized_client"* → the redirect URI platform isn't **Public client/native**, or the value isn't exactly `http://localhost`.
+
+</details>
 
 #### Signing in (all methods)
 
@@ -310,7 +339,7 @@ After signing in, switch on the calendars you want to see. The primary calendar 
 and it works on every device including mobile. **Limits:** read-only, and some providers update the ICS feed with a delay
 (from a few minutes up to several hours), so very recent changes can take a while to appear.
 
-Go to *Settings → Omni Calendar → External calendars → **Add external calendar***. Give it a name and colour, and paste the calendar's
+Go to *Settings → Omni Calendar → **Calendars** → **Add subscription***. Give it a name and colour, and paste the calendar's
 **ICS link**. The calendar is downloaded at startup, then every *N* minutes (default 30), and whenever you press ⟳.
 The last download is stored in the plugin folder, so events still show when you are offline.
 
@@ -337,27 +366,30 @@ ICS links can only be read. For Google and Outlook, use the two-way account conn
 
 ## Settings reference
 
-| Setting | Description |
-| --- | --- |
-| First day of the week | Sunday through Saturday |
-| 24-hour clock | `14:00` vs `2pm` |
-| Default view | The view used when the calendar page opens |
-| Show week numbers | ISO week numbers in the month view and sidebar |
-| Scroll to hour | Where week/day views start scrolled. If today is visible, the view scrolls to the current time |
-| Default event duration | Length of a new event, in minutes |
-| Agenda length | Number of days in the Agenda view |
-| Calendar in sidebar | Off / mini calendar / full calendar, and left or right side. Applied immediately and kept after restarts |
-| Sidebar: upcoming days | Days listed under "Upcoming". `0` hides the list |
-| Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
-| New events | Which calendars (local, Google, Outlook – one, several or all) new events are saved to by default |
-| Local calendars | Add, rename, recolour, hide or delete calendars |
-| Google & Outlook accounts | Connect, reconnect, sign out or remove accounts. Show or hide each of an account's calendars and set its colour and display name |
-| External calendars | Name, colour, ICS URL, on/off, refresh and remove. Each shows its status (event count, last update or error) |
-| Refresh interval | How often external calendars are re-downloaded, in minutes. `0` means manual only |
+The settings are split into four tabs. Longer explanations sit in collapsible **ℹ** sections.
+
+| Tab | Setting | Description |
+| --- | --- | --- |
+| **Calendars** | New events | Which calendars (local, Google, Outlook – one, several or all) new events are saved to by default |
+| | Local calendars | Add, rename, recolour, hide or delete calendars |
+| | Subscriptions (read-only) | Name, colour, ICS URL, on/off, refresh and remove. Each shows its status (event count, last update or error) |
+| | Refresh every | How often subscriptions and accounts are re-downloaded, in minutes. `0` means start-up / manual only |
+| **Google & Outlook** | Accounts | Connect, reconnect, sign out, rename or remove accounts. Show or hide each of an account's calendars and set its colour and name |
+| **Display** | Default view | The view used when the calendar page opens |
+| | First day of the week | Sunday through Saturday |
+| | 24-hour clock | `14:00` vs `2pm` |
+| | Show week numbers | ISO week numbers in the month view, sidebar and narrow layouts |
+| | Scroll to hour | Where week/day views start. If today is visible, the view scrolls to the current time |
+| | Default event length | Length of a new event, in minutes |
+| | Agenda length | Number of days in the Agenda view |
+| | Calendar in sidebar | Off / mini / full calendar, and left or right side. Applied immediately and kept after restarts |
+| | Upcoming days | Days listed under "Upcoming" in the mini calendar. `0` hides the list |
+| **Notes** | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
 
 ## Commands
 
 - Open calendar (full page)
+- Calendar menu (open, sidebar, new event, settings)
 - Toggle mini calendar in sidebar / Toggle full calendar in sidebar
 - Show mini calendar in sidebar
 - Open month / week / day / agenda view

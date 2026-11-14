@@ -1,4 +1,4 @@
-import { MarkdownRenderChild, Menu, Notice, Plugin, TFile, WorkspaceLeaf, WorkspaceSidedock, normalizePath } from "obsidian";
+import { MarkdownRenderChild, Menu, Notice, Platform, Plugin, TFile, WorkspaceLeaf, WorkspaceSidedock, normalizePath } from "obsidian";
 import { OmniCalendarSettings, CalendarOccurrence, LocalEvent, PluginData, SidebarView, ViewMode } from "./types";
 import { OmniCalendarSettingTab, DEFAULT_SETTINGS } from "./settings";
 import { CalendarStore } from "./store";
@@ -17,6 +17,7 @@ export default class OmniCalendarPlugin extends Plugin {
 	accounts!: AccountManager;
 	private refreshTimer: number | null = null;
 	private firstRun = false;
+	private ribbonMenuShownAt = 0;
 	private sidebarViewUnset = false;
 	/** True while the plugin itself changes the sidebar (ignore those layout changes). */
 	private applyingSidebar = false;
@@ -33,25 +34,54 @@ export default class OmniCalendarPlugin extends Plugin {
 		this.registerView(VIEW_TYPE_MINI, (leaf) => new MiniCalendarView(leaf, this));
 		this.addSettingTab(new OmniCalendarSettingTab(this.app, this));
 
-		const ribbon = this.addRibbonIcon("calendar-days", "Open calendar (right-click for more)", () => void this.openCalendar());
+		const ribbon = this.addRibbonIcon(
+			"calendar-days",
+			Platform.isMobile ? "Open calendar (hold for more)" : "Open calendar (right-click for more)",
+			() => {
+				// A long press that opened the menu must not also open the calendar.
+				if (Date.now() - this.ribbonMenuShownAt < 1000) return;
+				void this.openCalendar();
+			}
+		);
+		ribbon.addClass("ch-ribbon-icon");
+		// Desktop: right-click. (Some mobile browsers also send this on long press.)
 		ribbon.addEventListener("contextmenu", (e) => {
 			e.preventDefault();
-			const menu = new Menu();
-			menu.addItem((i) => i.setTitle("Open full calendar").setIcon("calendar-days").onClick(() => void this.openCalendar()));
-			menu.addItem((i) =>
-				i.setTitle(this.settings.sidebarView === "mini" ? "Hide mini calendar in sidebar" : "Show mini calendar in sidebar")
-					.setIcon("panel-right").onClick(() => void this.toggleSidebar("mini"))
-			);
-			menu.addItem((i) =>
-				i.setTitle(this.settings.sidebarView === "full" ? "Hide full calendar in sidebar" : "Show full calendar in sidebar")
-					.setIcon("panel-right-open").onClick(() => void this.toggleSidebar("full"))
-			);
-			menu.addSeparator();
-			menu.addItem((i) => i.setTitle("New event").setIcon("plus").onClick(() => new EventModal(this, { start: new Date(new Date().setHours(0, 0, 0, 0)) }).open()));
-			menu.showAtMouseEvent(e);
+			this.showCalendarMenu({ x: e.clientX, y: e.clientY });
 		});
+		// Touch: press and hold.
+		let holdTimer: number | null = null;
+		let holdStart = { x: 0, y: 0 };
+		const clearHold = () => {
+			if (holdTimer !== null) window.clearTimeout(holdTimer);
+			holdTimer = null;
+		};
+		ribbon.addEventListener("pointerdown", (e) => {
+			if (e.pointerType === "mouse") return;
+			holdStart = { x: e.clientX, y: e.clientY };
+			clearHold();
+			holdTimer = window.setTimeout(() => {
+				holdTimer = null;
+				try {
+					navigator.vibrate?.(15);
+				} catch {
+					/* not supported */
+				}
+				this.showCalendarMenu(holdStart);
+			}, 500);
+		});
+		ribbon.addEventListener("pointermove", (e) => {
+			if (holdTimer !== null && Math.hypot(e.clientX - holdStart.x, e.clientY - holdStart.y) > 10) clearHold();
+		});
+		for (const ev of ["pointerup", "pointercancel", "pointerleave"]) ribbon.addEventListener(ev, clearHold);
+		this.register(clearHold);
 
 		this.addCommand({ id: "open-calendar", name: "Open calendar (full page)", callback: () => void this.openCalendar() });
+		this.addCommand({
+			id: "calendar-menu",
+			name: "Calendar menu (open, sidebar, new event, settings)",
+			callback: () => this.showCalendarMenu({ x: window.innerWidth / 2, y: window.innerHeight / 3 }),
+		});
 		this.addCommand({ id: "open-sidebar", name: "Show mini calendar in sidebar", callback: () => void this.openSidebar(true) });
 		this.addCommand({ id: "toggle-sidebar-mini", name: "Toggle mini calendar in sidebar", callback: () => void this.toggleSidebar("mini") });
 		this.addCommand({ id: "toggle-sidebar-full", name: "Toggle full calendar in sidebar", callback: () => void this.toggleSidebar("full") });
@@ -163,6 +193,28 @@ export default class OmniCalendarPlugin extends Plugin {
 	}
 
 	// ------------------------------------------------------------------ views
+
+	/** The calendar quick menu (ribbon right-click / long press, or the "Calendar menu" command). */
+	showCalendarMenu(pos: { x: number; y: number }) {
+		// Right-click and long press can both fire on some phones – show the menu only once.
+		if (Date.now() - this.ribbonMenuShownAt < 800) return;
+		this.ribbonMenuShownAt = Date.now();
+		const menu = new Menu();
+		menu.addItem((i) => i.setTitle("Open full calendar").setIcon("calendar-days").onClick(() => void this.openCalendar()));
+		menu.addItem((i) =>
+			i.setTitle(this.settings.sidebarView === "mini" ? "Hide mini calendar in sidebar" : "Show mini calendar in sidebar")
+				.setIcon("panel-right").onClick(() => void this.toggleSidebar("mini"))
+		);
+		menu.addItem((i) =>
+			i.setTitle(this.settings.sidebarView === "full" ? "Hide full calendar in sidebar" : "Show full calendar in sidebar")
+				.setIcon("panel-right-open").onClick(() => void this.toggleSidebar("full"))
+		);
+		menu.addSeparator();
+		menu.addItem((i) => i.setTitle("New event").setIcon("plus").onClick(() => new EventModal(this, { start: new Date(new Date().setHours(0, 0, 0, 0)) }).open()));
+		menu.addSeparator();
+		menu.addItem((i) => i.setTitle("Settings").setIcon("settings").onClick(() => this.openSettings()));
+		menu.showAtPosition(pos);
+	}
 
 	/** True when the leaf lives in the left or right sidebar (not the main editor area). */
 	isInSidebar(leaf: WorkspaceLeaf): boolean {

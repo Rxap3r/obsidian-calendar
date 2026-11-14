@@ -21,6 +21,8 @@ const MONTH_CARD_MIN = 120;
 /** Minimum width of a day column in the week view; fewer days are shown below it. */
 const WEEK_MIN_COL = 74;
 const GUTTER = 56;
+/** Hour-label column width in the horizontally scrolling week view (must match styles.css). */
+const HSCROLL_GUTTER = 44;
 /** Touch: hold this long before dragging selects a time range. */
 const LONG_PRESS_MS = 400;
 /** Touch: movement (px) that counts as scrolling instead of a tap / long press. */
@@ -213,7 +215,7 @@ export class CalendarView extends ItemView {
 	private step(dir: number) {
 		switch (this.mode) {
 			case "month": this.cursor = addMonths(startOfMonth(this.cursor), dir); break;
-			case "week": this.cursor = addDays(this.cursor, this.weekDayCount() * dir); break;
+			case "week": this.cursor = addDays(this.cursor, 7 * dir); break;
 			case "day": this.cursor = addDays(this.cursor, dir); break;
 			case "agenda": this.cursor = addDays(this.cursor, this.plugin.settings.agendaDays * dir); break;
 		}
@@ -236,12 +238,10 @@ export class CalendarView extends ItemView {
 		this.layoutKey = this.computeLayoutKey();
 		switch (this.mode) {
 			case "month": this.renderMonth(); break;
-			case "week": {
-				const n = this.weekDayCount();
-				// Full week: start on the configured first weekday. Fewer days: start at the cursor.
-				this.renderTimeGrid(n === 7 ? startOfWeek(this.cursor, this.plugin.settings.firstDayOfWeek) : startOfDay(this.cursor), n);
+			case "week":
+				// Always the whole week; if not all days fit, it scrolls sideways day by day.
+				this.renderTimeGrid(startOfWeek(this.cursor, this.plugin.settings.firstDayOfWeek), 7, this.weekDayCount());
 				break;
-			}
 			case "day": this.renderTimeGrid(this.cursor, 1); break;
 			case "agenda": this.renderAgenda(); break;
 		}
@@ -260,6 +260,10 @@ export class CalendarView extends ItemView {
 		this.width = w;
 		const key = this.computeLayoutKey();
 		if (key !== this.layoutKey) this.queueRender();
+		else {
+			const wrap = this.bodyEl.querySelector<HTMLElement>(".ch-tg-hscroll");
+			if (wrap) this.updateDayWidth(wrap, this.weekDayCount());
+		}
 	}
 
 	private computeLayoutKey(): string {
@@ -438,7 +442,11 @@ export class CalendarView extends ItemView {
 		});
 	}
 
-	private renderTimeGrid(first: Date, days: number) {
+	/**
+	 * Time grid for `days` days starting at `first`. When only `visible` days fit, the
+	 * grid scrolls horizontally with snapping to each day (mobile / narrow sidebar).
+	 */
+	private renderTimeGrid(first: Date, days: number, visible = days) {
 		const s = this.plugin.settings;
 		const last = addDays(first, days - 1);
 		if (days === 1) {
@@ -465,6 +473,12 @@ export class CalendarView extends ItemView {
 
 		const wrap = this.bodyEl.createDiv({ cls: "ch-timegrid" });
 		wrap.style.setProperty("--ch-days", String(days));
+		const hscroll = visible < days;
+		if (hscroll) {
+			wrap.addClass("ch-tg-hscroll");
+			wrap.style.setProperty("--ch-visible", String(visible));
+			this.updateDayWidth(wrap, visible);
+		}
 
 		// Day headers
 		const head = wrap.createDiv({ cls: "ch-tg-head" });
@@ -576,6 +590,40 @@ export class CalendarView extends ItemView {
 			}
 		});
 		scroll.addEventListener("scroll", () => (this.scrollTop = scroll.scrollTop));
+
+		if (hscroll) {
+			// Header and all-day row follow the horizontal scroll of the hour grid.
+			const sync = () => {
+				head.scrollLeft = scroll.scrollLeft;
+				adRow.scrollLeft = scroll.scrollLeft;
+			};
+			let settle: number | null = null;
+			scroll.addEventListener("scroll", () => {
+				sync();
+				// Remember the first visible day so re-renders keep the position.
+				if (settle !== null) window.clearTimeout(settle);
+				settle = window.setTimeout(() => {
+					const dayW = this.dayWidth(wrap);
+					if (dayW > 0) this.cursor = addDays(first, Math.round(scroll.scrollLeft / dayW));
+				}, 150);
+			});
+			// Start with the cursor day (e.g. today) as the first visible day.
+			window.requestAnimationFrame(() => {
+				const idx = Math.max(0, Math.min(days - visible, dayDiff(first, this.cursor)));
+				scroll.scrollLeft = idx * this.dayWidth(wrap);
+				sync();
+			});
+		}
+	}
+
+	/** Width of one day column in the horizontally scrolling week view. */
+	private dayWidth(wrap: HTMLElement): number {
+		return parseFloat(wrap.style.getPropertyValue("--ch-day-w")) || 0;
+	}
+
+	private updateDayWidth(wrap: HTMLElement, visible: number) {
+		const w = Math.max(0, (this.width || this.bodyEl.clientWidth) - HSCROLL_GUTTER);
+		wrap.style.setProperty("--ch-day-w", `${Math.floor(w / visible)}px`);
 	}
 
 	/**

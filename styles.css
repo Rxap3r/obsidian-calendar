@@ -378,3 +378,51 @@
 	padding: 6px 2px 2px;
 }
 .ch-week-divider:first-child { padding-top: 0; }
+
+/* Long-press on the ribbon icon: no text selection / iOS callout. */
+.ch-ribbon-icon { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+/* ---------------------------------------------------------------- week view that scrolls sideways (narrow / mobile) */
+.ch-tg-hscroll { --ch-gutter: 44px; }
+.ch-tg-hscroll .ch-tg-head,
+.ch-tg-hscroll .ch-tg-allday {
+	grid-template-columns: var(--ch-gutter) repeat(var(--ch-days), var(--ch-day-w));
+	overflow: hidden;
+	padding-right: 0;
+}
+.ch-tg-hscroll .ch-tg-inner { grid-template-columns: var(--ch-gutter) calc(var(--ch-days) * var(--ch-day-w)); width: max-content; }
+.ch-tg-hscroll .ch-tg-cols { grid-template-columns: repeat(var(--ch-days), var(--ch-day-w)); }
+.ch-tg-hscroll .ch-grid-scroll {
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	scroll-padding-left: var(--ch-gutter);
+	overscroll-behavior-x: contain;
+	scrollbar-width: none;
+}
+.ch-tg-hscroll .ch-grid-scroll::-webkit-scrollbar { height: 0; }
+.ch-tg-hscroll .ch-tg-col { scroll-snap-align: start; touch-action: pan-x pan-y; }
+.ch-tg-hscroll .ch-tg-col.ch-selecting { touch-action: none; }
+/* The hour labels / corner cells stay put while the days scroll. */
+.ch-tg-hscroll .ch-tg-gutter { position: sticky; left: 0; z-index: 3; background: var(--background-primary); }
+.ch-tg-hscroll .ch-tg-allday-label { font-size: 0.6em; }
+
+/* ---------------------------------------------------------------- settings tabs */
+.ch-settings-tabs {
+	display: flex; flex-wrap: wrap; gap: 4px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	margin-bottom: 12px; padding-bottom: 6px;
+	position: sticky; top: 0; z-index: 2; background: var(--background-primary);
+}
+.ch-settings-tab {
+	display: inline-flex; align-items: center; gap: 6px;
+	background: transparent; box-shadow: none; border: none;
+	padding: 6px 12px; border-radius: var(--radius-s); color: var(--text-muted); cursor: pointer;
+}
+.ch-settings-tab:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.ch-settings-tab.is-active { background: var(--interactive-accent); color: var(--text-on-accent); }
+.ch-settings-tab-icon { display: inline-flex; }
+.ch-settings-tab-icon svg { width: 16px; height: 16px; }
+.ch-settings .ch-info { margin: 4px 0 10px; }
+.ch-settings .ch-info > summary { color: var(--text-muted); }
+.ch-settings .ch-info[open] > summary { color: var(--text-accent); }
+.ch-settings .ch-empty { text-align: left; padding: 6px 0; }
