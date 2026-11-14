@@ -66,8 +66,8 @@ follows, so it never pops back unexpectedly. Commands can be given hotkeys in *S
 
 - **Toolbar:** `‹ Today ›` navigates. *Month / Week / Day / Agenda* switches the view. The filter icon shows or hides individual calendars. ⟳ re-downloads external calendars. **+ New** creates an event.
 - **Month view:** click a **day number** to open that day. **Double-click** a cell, or click the **+** that appears on hover, to create an event. When a day is full, click "+N more".
-- **Week / Day view:** **click** an empty slot to create an event there. **Click and drag** to create an event covering the selected range (it snaps to 15 minutes).
-  **On touch screens:** swipe scrolls as usual, **tap** an empty slot to create an event there, and **press and hold** (about half a second), then drag, to select a time range. Overlapping events are shown side by side, and a red line marks the current time. Double-click the *all-day* row to create an all-day event.
+- **Week / Day view:** **click** an empty slot to create an event there. **Click and drag** to create an event covering the selected range (it snaps to 15 minutes). Overlapping events are shown side by side, and a red line marks the current time. Double-click the *all-day* row to create an all-day event.
+- **On touch screens:** swipe scrolls as usual, **tap** an empty slot to create an event there, and **press and hold** (about half a second), then drag, to select a time range.
 - **Drag and drop:** drag a local, non-recurring event to another day (month view) or another time (week/day view) to move it.
 - **Click an event** to edit it. For an external event this shows its details instead. **Right-click an event** for a menu with *Edit*, *Create/Open note*, *Duplicate*, *Delete this occurrence* and *Delete*.
 
