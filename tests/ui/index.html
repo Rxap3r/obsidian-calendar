@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Test page for tests/ui/run.cjs. Obsidian's CSS variables are approximated here. -->
+<style>
+:root{--background-primary:#fff;--background-secondary:#f6f6f6;--background-modifier-border:#e0e0e0;--background-modifier-hover:#0000000d;--text-normal:#222;--text-muted:#666;--text-faint:#aaa;--text-on-accent:#fff;--interactive-accent:#7c5cff;--text-accent:#7c5cff;--text-error:#d00;--color-red:#e03131;--radius-s:4px;--radius-m:8px;--shadow-s:0 1px 4px #0003;--font-monospace:monospace}
+body{margin:0;font-family:system-ui;font-size:14px;color:var(--text-normal);background:var(--background-primary);display:flex;height:100vh}
+#main{flex:1;display:flex;flex-direction:column;min-width:0;border-right:1px solid #ddd;overflow:auto}
+#main>.view-content{flex:1;min-height:0;display:flex;flex-direction:column}
+#side{width:280px;overflow:auto}
+button{font:inherit;border:1px solid #ccc;background:#fff;border-radius:4px;cursor:pointer}
+.mod-cta{background:var(--interactive-accent);color:#fff}
+.modal-container{position:fixed;z-index:100;inset:0;background:#0006;display:flex;align-items:center;justify-content:center}
+.modal{background:#fff;padding:16px;border-radius:8px;width:640px;max-width:95vw;max-height:96vh;overflow:auto}
+.modal-title{font-weight:700;font-size:1.2em;margin-bottom:8px}
+.setting-item{display:flex;align-items:center;border-top:1px solid #eee;padding:6px 0}
+.setting-item-info{flex:1}.setting-item-description{color:#888;font-size:.85em}.setting-item-control{display:flex;align-items:center}
+.setting-item-heading .setting-item-name{font-weight:700;font-size:1.1em}
+.checkbox-container{width:32px;height:18px;border-radius:9px;background:#ccc}.checkbox-container.is-enabled{background:var(--interactive-accent)}
+.test-ribbon{position:fixed;left:0;bottom:0;width:30px;height:30px;background:#ccc;z-index:50}
+</style>
+<link rel="stylesheet" href="../../styles.css">
+</head>
+<body><div id="main"></div><div id="side"></div><script src="../.out/ui-bundle.js"></script></body>
+</html>

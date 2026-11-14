@@ -415,7 +415,11 @@ The plugin only makes network requests to the ICS URLs you configure and, for co
 npm install
 npm run dev     # watch mode – builds main.js on change
 npm run build   # type-check + production build
+npm test        # build + automated tests (sign-in/connectors + UI in headless Chromium), see tests/README.md
 ```
+
+Contributors and AI assistants: the working agreements (branching, versioning, releases, security rules) are in
+[`CLAUDE.md`](CLAUDE.md).
 
 **Built-in Google sign-in:** the Google OAuth client is not stored in the repository. The build reads it from the environment variables
 `OMNI_GOOGLE_CLIENT_ID` and `OMNI_GOOGLE_CLIENT_SECRET`. The release workflow takes them from the repository secrets of the same names
