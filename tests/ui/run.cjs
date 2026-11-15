@@ -91,6 +91,15 @@ test("desktop: drag on time grid creates exactly one dialog", {}, async ({ page 
 	await page.mouse.move(col.x + 20, sc + 100);
 	await page.mouse.down();
 	await page.mouse.move(col.x + 20, sc + 196, { steps: 5 });
+	const preview = await page.evaluate(() => {
+		const g = document.querySelector(".ch-tg-selection");
+		return g && { time: g.querySelector(".ch-tg-selection-time").textContent, title: g.querySelector(".ch-tg-selection-title").textContent,
+			color: getComputedStyle(g).getPropertyValue("--ch-event-color").trim() };
+	});
+	expect(preview && /^\d\d:\d\d – \d\d:\d\d$/.test(preview.time), `preview shows the time range: ${JSON.stringify(preview)}`);
+	eq(preview.title, "New event", "preview title");
+	eq(preview.color, await page.evaluate(() => plugin.settings.sources.find((s) => s.id === plugin.settings.defaultTargets[0]).color), "preview uses target calendar colour");
+	await page.locator(".ch-tg-col").nth(4).screenshot({ path: path.join(SHOTS, "drag-preview.png") });
 	await page.mouse.up();
 	await page.waitForTimeout(100);
 	eq(await page.locator(".modal").count(), 1, "dialogs open");

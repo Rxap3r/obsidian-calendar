@@ -685,11 +685,20 @@ export class CalendarView extends ItemView {
 			let timer: number | null = null;
 
 			const draw = () => {
-				if (!ghost) ghost = col.createDiv({ cls: "ch-tg-selection" });
+				if (!ghost) {
+					ghost = col.createDiv({ cls: "ch-tg-selection" });
+					ghost.style.setProperty("--ch-event-color", this.newEventColor());
+					ghost.createDiv({ cls: "ch-tg-selection-time" });
+					ghost.createDiv({ cls: "ch-tg-selection-title", text: "New event" });
+				}
 				const a = Math.min(startMin, endMin);
-				const b = Math.max(startMin + SNAP_MIN, endMin);
+				const b = moved ? Math.max(startMin + SNAP_MIN, endMin) : startMin + this.plugin.settings.defaultEventDuration;
 				ghost.style.top = `${(a / 60) * HOUR_HEIGHT}px`;
 				ghost.style.height = `${((b - a) / 60) * HOUR_HEIGHT}px`;
+				ghost.toggleClass("ch-compact", (b - a) / 60 * HOUR_HEIGHT < 34);
+				const base = startOfDay(day);
+				const use24 = this.plugin.settings.use24h;
+				(ghost.firstChild as HTMLElement).setText(`${formatTime(addMinutes(base, a), use24)} – ${formatTime(addMinutes(base, b), use24)}`);
 			};
 			const cleanup = () => {
 				window.removeEventListener("pointermove", move);
@@ -755,6 +764,13 @@ export class CalendarView extends ItemView {
 				draw();
 			}
 		});
+	}
+
+	/** Colour of the first calendar new events are saved to, for the drag preview. */
+	private newEventColor(): string {
+		const s = this.plugin.settings;
+		const id = s.defaultTargets[0] ?? s.defaultCalendarId;
+		return s.sources.find((c) => c.id === id)?.color ?? "var(--interactive-accent)";
 	}
 
 	private updateNowLine() {
