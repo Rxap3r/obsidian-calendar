@@ -560,6 +560,31 @@ test("mobile: picking dates/times never jumps to the title field (no keyboard)",
 	await page.screenshot({ path: path.join(SHOTS, "time-picker-mobile-type.png") });
 });
 
+test("mobile: event dialog – date/time pickers never jump to the title field", { mobile: true }, async ({ page }) => {
+	await page.evaluate(() => {
+		const { EventModal } = window.__eventMod;
+		new EventModal(plugin, { start: new Date(2026, 10, 14, 10, 0), end: new Date(2026, 10, 14, 11, 0) }).open();
+		window.titleFocus = 0;
+		const title = () => document.querySelector(".ch-event-modal .ch-title-input");
+		document.addEventListener("focusin", (e) => { if (!e.target.closest(".modal-container")) title().focus(); }, true);
+		setTimeout(() => { title().blur(); title().addEventListener("focus", () => window.titleFocus++); }, 50);
+	});
+	await page.waitForTimeout(120);
+	await page.tap(".ch-event-start-date button");
+	await page.tap('.ch-date-nav[aria-label="Next month"]');
+	await page.tap('.ch-date-day[data-date="2026-12-03"]');
+	await page.tap(".ch-event-start-time input");
+	await page.tap('.ch-time-list [data-value="09:00"]');
+	await page.tap(".ch-event-end-date button");
+	await page.tap('.ch-date-day[data-date="2026-12-04"]');
+	await page.tap(".ch-event-end-time input");
+	await page.tap('.ch-time-list [data-value="12:00"]');
+	await page.tap(".ch-target-chip >> nth=1");
+	await page.waitForTimeout(100);
+	const r = await page.evaluate(() => ({ titleFocus: window.titleFocus, start: document.querySelector(".ch-event-start-date").textContent, end: document.querySelector(".ch-event-end-date").textContent }));
+	eq(r, { titleFocus: 0, start: "Thu, Dec 3, 2026", end: "Fri, Dec 4, 2026" }, "title never refocused in the event dialog");
+});
+
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {
 	await page.evaluate(() => mountTasks());
 	await page.waitForTimeout(100);
