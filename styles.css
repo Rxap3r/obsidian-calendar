@@ -341,49 +341,53 @@
 .ch-in-sidebar .ch-agenda { max-width: 560px; }
 .ch-in-sidebar .ch-month-cell { max-height: 140px; }
 
-/* Narrow month layout: day cards in a few columns. */
-.ch-month-cards {
-	display: grid;
-	grid-template-columns: repeat(var(--ch-cols, 2), minmax(0, 1fr));
-	gap: 6px;
-	padding: 6px;
-	box-sizing: border-box;
-	width: 100%;
-	max-width: 640px;
-	margin: 0 auto;
-	align-content: start;
+/* Narrow month layout (phone, sidebar): compact grid with bars or dots + the selected day's list. */
+.ch-month-compact { width: 100%; max-width: 560px; margin: 0 auto; padding: 0 4px 12px; box-sizing: border-box; }
+.ch-mc-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.ch-with-weeknums .ch-mc-row { grid-template-columns: 24px repeat(7, minmax(0, 1fr)); }
+.ch-mc-head { position: sticky; top: 0; z-index: 2; background: var(--background-primary); }
+.ch-mc-dow { text-align: center; font-size: 0.72em; font-weight: 600; color: var(--text-muted); text-transform: uppercase; padding: 4px 0; }
+.ch-mc-wn { font-size: 0.68em; color: var(--text-faint); text-align: center; padding-top: 6px; }
+.ch-mc-head .ch-mc-wn { padding-top: 4px; }
+.ch-mc-cell {
+	min-width: 0; overflow: hidden; cursor: pointer; border-top: 1px solid var(--background-modifier-border);
+	padding: 2px 1px 3px; display: flex; flex-direction: column; align-items: stretch;
+	-webkit-tap-highlight-color: transparent;
 }
-.ch-day-card {
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-s);
-	padding: 3px 5px 4px;
-	min-height: 56px;
-	min-width: 0;
-	display: flex;
-	flex-direction: column;
+.ch-bars .ch-mc-cell { min-height: 64px; }
+.ch-dots .ch-mc-cell { min-height: 40px; }
+.ch-mc-cell.ch-weekend { background: var(--background-secondary); }
+.ch-mc-cell.ch-other-month .ch-mc-num { color: var(--text-faint); }
+.ch-mc-cell.ch-other-month .ch-mc-marks { opacity: 0.5; }
+.ch-mc-num { text-align: center; font-size: 0.85em; line-height: 1; margin-bottom: 2px; }
+.ch-mc-num span { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 11px; }
+.ch-mc-cell.ch-today .ch-mc-num span { color: var(--text-accent); font-weight: 700; }
+.ch-mc-cell.ch-selected .ch-mc-num span { background: var(--interactive-accent); color: var(--text-on-accent); font-weight: 600; }
+.ch-mc-cell.ch-drop-target { background: var(--ch-today-bg); }
+.ch-mc-marks { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ch-dots .ch-mc-marks { flex-direction: row; justify-content: center; gap: 2px; }
+.ch-mc-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ch-event-color); }
+.ch-mc-bar {
+	font-size: 0.62em; line-height: 1.45; padding: 0 2px; border-radius: 2px; white-space: nowrap; overflow: hidden;
+	background: color-mix(in srgb, var(--ch-event-color) 22%, var(--background-primary));
+	border-left: 2px solid var(--ch-event-color); color: var(--text-normal);
 }
-.ch-day-card.ch-weekend { background: var(--background-secondary); }
-.ch-day-card.ch-today { background: var(--ch-today-bg); border-color: var(--interactive-accent); }
-.ch-day-card-empty { min-height: 34px; }
-.ch-day-card-empty .ch-cell-events { display: none; }
-.ch-day-card-head { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-.ch-day-card-dow { color: var(--text-muted); font-size: 0.8em; text-transform: uppercase; }
-.ch-day-card-head .ch-cell-add { margin-left: auto; }
-.ch-day-card:hover .ch-cell-add { opacity: 1; }
+.ch-mc-bar.ch-allday { background: var(--ch-event-color); color: #fff; border-left: none; }
+.ch-mc-bar.ch-continued { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.ch-mc-more { font-size: 0.6em; color: var(--text-muted); text-align: center; line-height: 1.3; }
+.ch-mc-day { border-top: 1px solid var(--background-modifier-border); margin-top: 2px; padding-top: 6px; }
+.ch-mc-day-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.ch-mc-day-title {
+	flex: 1; text-align: left; font-weight: 600; background: transparent; box-shadow: none; border: none; padding: 2px 4px;
+	color: var(--text-normal); cursor: pointer; height: auto;
+}
+.ch-mc-day-title:hover { color: var(--text-accent); }
+.ch-mc-item { font-size: 0.9em; padding: 4px 6px; margin-bottom: 2px; }
+.ch-mc-day .ch-chip-time { display: inline; }
 
 /* Touch: no text selection / callout menu while long-pressing time slots. */
 .ch-tg-col { -webkit-user-select: none; -webkit-touch-callout: none; }
 .ch-tg-col.ch-selecting { touch-action: none; }
-
-/* Week number divider in the narrow month (day-card) layout. */
-.ch-week-divider {
-	grid-column: 1 / -1;
-	font-size: 0.75em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
-	color: var(--text-muted);
-	border-bottom: 1px solid var(--background-modifier-border);
-	padding: 6px 2px 2px;
-}
-.ch-week-divider:first-child { padding-top: 0; }
 
 /* ---------------------------------------------------------------- week view that scrolls sideways (narrow / mobile) */
 .ch-tg-hscroll { --ch-gutter: 44px; }

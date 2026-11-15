@@ -190,10 +190,34 @@ test("desktop: sidebar setting (Off / Mini / Full, side, user closes)", {}, asyn
 	eq(out, { full: "left:view", right: "right:view", off: "-", toggle: "right:mini/mini", closed: "-/none", mainKept: true }, "sidebar model");
 });
 
+test("desktop: day planner in sidebar opens in Day view and remembers its own view", {}, async ({ page }) => {
+	const r = await page.evaluate(async () => {
+		const out = {};
+		plugin.settings.defaultView = "month";
+		await plugin.toggleSidebar("full");
+		const leaf = plugin.sidebarLeaves("omni-calendar-view")[0];
+		out.opens = leaf.getViewState().state.mode;
+		// a real view inside a sidebar leaf: switching to Week is remembered, the main view is not affected
+		const L = ws.mk(ws.rightSplit); L.app = plugin.app;
+		const V = new view.constructor(L, plugin); await V.onOpen();
+		[...V.contentEl.querySelectorAll(".ch-segmented button")].find((b) => b.textContent === "Week").click();
+		out.remembered = plugin.settings.sidebarCalendarMode;
+		[...view.contentEl.querySelectorAll(".ch-segmented button")].find((b) => b.textContent === "Agenda").click();
+		out.afterMain = plugin.settings.sidebarCalendarMode;
+		await plugin.toggleSidebar("full"); for (const l of plugin.sidebarLeaves("omni-calendar-view")) l.detach();
+		await plugin.toggleSidebar("full");
+		out.reopens = plugin.sidebarLeaves("omni-calendar-view")[0].getViewState().state.mode;
+		tab.constructor.tab = "display"; tab.display();
+		out.label = [...tab.containerEl.querySelectorAll("option")].find((o) => o.value === "full")?.text ?? null;
+		return out;
+	});
+	eq(r, { opens: "day", remembered: "week", afterMain: "week", reopens: "week", label: "Day planner (timeline)" }, "day planner");
+});
+
 test("desktop: responsive month/week at narrow widths", { width: 360 }, async ({ page }) => {
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "month"));
 	await page.waitForTimeout(200);
-	expect(await page.locator(".ch-month-cards").count() === 1, "month uses day cards when narrow");
+	expect(await page.locator(".ch-month-compact").count() === 1, "month uses the compact grid when narrow");
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "week"));
 	await page.waitForTimeout(200);
 	expect(await page.locator(".ch-tg-hscroll").count() === 1, "week scrolls sideways when narrow");
@@ -309,10 +333,48 @@ test("mobile: settings tabs stay on one line and scroll", { mobile: true, width:
 	eq(r, { oneLine: true, scrollable: true, nextArrow: true }, "tab bar");
 });
 
+test("mobile: compact month grid with bars, selected day list", { mobile: true }, async ({ page }) => {
+	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "month"));
+	await page.waitForTimeout(200);
+	const r = await page.evaluate(() => ({
+		layout: document.querySelector(".ch-month-compact")?.className,
+		cells: document.querySelectorAll(".ch-mc-row:not(.ch-mc-head) .ch-mc-cell").length,
+		selected: document.querySelector(".ch-mc-cell.ch-selected .ch-mc-num")?.textContent,
+		listTitle: document.querySelector(".ch-mc-day-title")?.textContent,
+		items: [...document.querySelectorAll(".ch-mc-item .ch-chip-title")].map((e) => e.textContent),
+		overflowX: document.querySelector(".ch-body").scrollWidth > document.querySelector(".ch-body").clientWidth,
+	}));
+	expect(/ch-bars/.test(r.layout), "phone width uses title bars: " + r.layout);
+	eq(r.cells, 42, "6 weeks for November 2026 (Mon-first)");
+	eq(r.selected, "14", "today selected");
+	expect(/14/.test(r.listTitle), "list shows today: " + r.listTitle);
+	expect(r.items.includes("Design review") && r.items.includes("Standup"), "today's events listed: " + JSON.stringify(r.items));
+	eq(r.overflowX, false, "no sideways scrolling");
+	await page.screenshot({ path: path.join(SHOTS, "mobile-month.png") });
+	// tap another day: selects it, stays in month view
+	const cell = page.locator(".ch-mc-cell", { hasText: "17" }).first();
+	await cell.tap();
+	await page.waitForTimeout(150);
+	eq(await page.evaluate(() => [view.mode, document.querySelector(".ch-mc-cell.ch-selected .ch-mc-num").textContent]), ["month", "17"], "tap selects day");
+	expect((await page.textContent(".ch-mc-day")).includes("Vacation"), "list shows the 17th");
+	// heading opens the day view
+	await page.click(".ch-mc-day-title");
+	await page.waitForTimeout(150);
+	eq(await page.evaluate(() => view.mode), "day", "heading opens day view");
+});
+
+test("desktop: very narrow month uses dots", { width: 560 }, async ({ page }) => {
+	await page.evaluate(() => { document.getElementById("main").style.flex = "none"; document.getElementById("main").style.width = "260px"; view.handleResize(); view.goTo(new Date(2026, 10, 14), "month"); });
+	await page.waitForTimeout(250);
+	const r = await page.evaluate(() => ({ cls: document.querySelector(".ch-month-compact")?.className, dots: document.querySelectorAll(".ch-mc-dot").length }));
+	expect(/ch-dots/.test(r.cls) && r.dots > 10, "dots layout: " + JSON.stringify(r));
+	await page.locator("#main").screenshot({ path: path.join(SHOTS, "narrow-month-dots.png") });
+});
+
 test("mobile: week numbers in narrow layouts", { mobile: true }, async ({ page }) => {
 	await page.evaluate(() => { plugin.settings.showWeekNumbers = true; view.goTo(new Date(2026, 10, 14), "month"); });
 	await page.waitForTimeout(200);
-	eq(await page.$$eval(".ch-week-divider", (d) => d.map((x) => x.textContent)), ["Week 44", "Week 45", "Week 46", "Week 47", "Week 48", "Week 49"], "month dividers");
+	eq(await page.$$eval(".ch-mc-row:not(.ch-mc-head) .ch-mc-wn", (d) => d.map((x) => x.textContent)), ["44", "45", "46", "47", "48", "49"], "month week numbers");
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "day"));
 	await page.waitForTimeout(150);
 	expect((await page.textContent(".ch-title")).endsWith("· W46"), "day title has week number");

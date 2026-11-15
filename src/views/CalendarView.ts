@@ -14,10 +14,10 @@ export const VIEW_TYPE_CALENDAR = "omni-calendar-view";
 const HOUR_HEIGHT = 48;
 const SNAP_MIN = 15;
 const MONTH_MAX_CHIPS = 4;
-/** Below this width per day the month grid becomes a list of day cards. */
+/** Below this width per day the month grid becomes the compact grid (title bars). */
 const MONTH_MIN_CELL = 62;
-/** Minimum width of a day card in the narrow month layout. */
-const MONTH_CARD_MIN = 120;
+/** Below this width per day the compact grid shows dots instead of title bars. */
+const MONTH_BARS_MIN_CELL = 44;
 /** Minimum width of a day column in the week view; fewer days are shown below it. */
 const WEEK_MIN_COL = 74;
 const GUTTER = 56;
@@ -49,6 +49,8 @@ export class CalendarView extends ItemView {
 	/** The time-slot selection in progress (at most one). */
 	private selection: { cancel: () => void } | null = null;
 	private layoutKey = "";
+	/** Day whose events are listed below the compact month grid. */
+	private monthSelected: Date | null = null;
 	/** Occurrences currently on screen, by key (used for drag & drop). */
 	private rendered = new Map<string, CalendarOccurrence>();
 
@@ -105,10 +107,22 @@ export class CalendarView extends ItemView {
 	/** Navigate to a date and (optionally) a view mode. */
 	goTo(date: Date, mode?: ViewMode) {
 		this.cursor = startOfDay(date);
-		if (mode) this.mode = mode;
+		this.monthSelected = startOfDay(date);
+		if (mode) {
+			this.mode = mode;
+			this.rememberSidebarMode();
+		}
 		this.scrollTop = null;
 		this.render();
 		this.app.workspace.requestSaveLayout();
+	}
+
+	/** In the sidebar, the chosen view is remembered for the next time the day planner opens. */
+	private rememberSidebarMode() {
+		const s = this.plugin.settings;
+		if (s.sidebarCalendarMode === this.mode || !this.plugin.isInSidebar(this.leaf)) return;
+		s.sidebarCalendarMode = this.mode;
+		void this.plugin.persist();
 	}
 
 	private queueRender() {
@@ -142,6 +156,7 @@ export class CalendarView extends ItemView {
 			const b = modes.createEl("button", { text: labels[m] });
 			b.onclick = () => {
 				this.mode = m;
+				this.rememberSidebarMode();
 				this.render();
 				this.app.workspace.requestSaveLayout();
 			};
@@ -267,16 +282,16 @@ export class CalendarView extends ItemView {
 	}
 
 	private computeLayoutKey(): string {
-		return `${this.monthColumns()}|${this.weekDayCount()}`;
+		return `${this.monthLayout()}|${this.weekDayCount()}`;
 	}
 
-	/** 7 = normal month grid; fewer = day-card layout with that many columns. */
-	private monthColumns(): number {
+	/** Month layout for the current width: full grid, compact grid with title bars, or with dots. */
+	private monthLayout(): "full" | "bars" | "dots" {
 		const w = this.width;
-		if (!w) return 7;
-		const weekNums = this.plugin.settings.showWeekNumbers ? 32 : 0;
-		if (w - weekNums >= 7 * MONTH_MIN_CELL) return 7;
-		return Math.max(1, Math.min(4, Math.floor(w / MONTH_CARD_MIN)));
+		if (!w) return "full";
+		const cell = (w - (this.plugin.settings.showWeekNumbers ? 24 : 0)) / 7;
+		if (cell >= MONTH_MIN_CELL) return "full";
+		return cell >= MONTH_BARS_MIN_CELL ? "bars" : "dots";
 	}
 
 	/** ISO week number of the (configured) week containing this day – same numbering as the month grid. */
@@ -291,60 +306,88 @@ export class CalendarView extends ItemView {
 		return Math.max(1, Math.min(7, Math.floor((w - GUTTER) / WEEK_MIN_COL)));
 	}
 
-	/** Narrow month layout: the days of the month as cards in a few columns. */
-	private renderMonthCards(cols: number) {
+	/**
+	 * Narrow month layout (phone, sidebar): a compact 7-column grid that marks events as
+	 * coloured bars or dots, plus the selected day's events listed below it.
+	 * Tap a day to select it, double-tap (or tap its heading below) to open the day view.
+	 */
+	private renderMonthCompact(dots: boolean) {
+		const s = this.plugin.settings;
 		const monthStart = startOfMonth(this.cursor);
-		this.titleEl.setText(formatDate(monthStart, { month: "long", year: "numeric" }));
 		const monthEnd = addMonths(monthStart, 1);
-		const occs = this.plugin.store.getOccurrences(monthStart, monthEnd, this.hidden);
+		this.titleEl.setText(formatDate(monthStart, { month: "long", year: "numeric" }));
+		const gridStart = startOfWeek(monthStart, s.firstDayOfWeek);
+		const weeks = Math.ceil(dayDiff(gridStart, monthEnd) / 7);
+		const gridEnd = addDays(gridStart, weeks * 7);
+		const occs = this.plugin.store.getOccurrences(gridStart, gridEnd, this.hidden);
 		this.rendered = new Map(occs.map((o) => [o.key, o]));
 		const today = new Date();
-		const wrap = this.bodyEl.createDiv({ cls: "ch-month-cards" });
-		wrap.style.setProperty("--ch-cols", String(cols));
-		const showWeeks = this.plugin.settings.showWeekNumbers;
-		for (let day = monthStart; day < monthEnd; day = addDays(day, 1)) {
-			const d = day;
-			// Week number divider at the start of each week (and on the 1st of the month).
-			if (showWeeks && (isSameDay(d, monthStart) || d.getDay() === this.plugin.settings.firstDayOfWeek)) {
-				wrap.createDiv({ cls: "ch-week-divider", text: `Week ${this.weekNumber(d)}` });
-			}
-			const card = wrap.createDiv({ cls: "ch-day-card" });
-			if (isSameDay(d, today)) card.addClass("ch-today");
-			if (d.getDay() === 0 || d.getDay() === 6) card.addClass("ch-weekend");
-			const head = card.createDiv({ cls: "ch-day-card-head" });
-			head.createSpan({ cls: "ch-day-num", text: String(d.getDate()) });
-			head.createSpan({ cls: "ch-day-card-dow", text: formatDate(d, { weekday: "short" }) });
-			head.onclick = (e) => {
-				e.stopPropagation();
-				this.goTo(d, "day");
-			};
-			const plus = head.createSpan({ cls: "ch-cell-add", attr: { "aria-label": "New event" } });
-			setIcon(plus, "plus");
-			plus.onclick = (e) => {
-				e.stopPropagation();
-				new EventModal(this.plugin, { start: d }).open();
-			};
-			const dayOccs = occs.filter((o) => overlapsDay(o.start, o.end, d));
-			if (!dayOccs.length) card.addClass("ch-day-card-empty");
-			const list = card.createDiv({ cls: "ch-cell-events" });
-			const shown = dayOccs.length > MONTH_MAX_CHIPS ? MONTH_MAX_CHIPS - 1 : MONTH_MAX_CHIPS;
-			for (const o of dayOccs.slice(0, shown)) createChip(this.plugin, list, o, { showTime: true, draggable: true });
-			if (dayOccs.length > shown) {
-				const more = list.createDiv({ cls: "ch-more", text: `+${dayOccs.length - shown} more` });
-				more.onclick = (e) => {
-					e.stopPropagation();
-					this.goTo(d, "day");
+		const inMonth = (d: Date | null) => !!d && d >= monthStart && d < monthEnd;
+		const selected = inMonth(this.monthSelected) ? this.monthSelected! : inMonth(today) ? startOfDay(today) : monthStart;
+
+		const wrap = this.bodyEl.createDiv({ cls: `ch-month-compact ${dots ? "ch-dots" : "ch-bars"}` });
+		if (s.showWeekNumbers) wrap.addClass("ch-with-weeknums");
+		const head = wrap.createDiv({ cls: "ch-mc-row ch-mc-head" });
+		if (s.showWeekNumbers) head.createDiv({ cls: "ch-mc-wn", text: "W" });
+		for (const n of weekdayNames(s.firstDayOfWeek)) head.createDiv({ cls: "ch-mc-dow", text: dots ? n.slice(0, 2) : n });
+
+		for (let w = 0; w < weeks; w++) {
+			const row = wrap.createDiv({ cls: "ch-mc-row" });
+			if (s.showWeekNumbers) row.createDiv({ cls: "ch-mc-wn", text: String(isoWeek(addDays(gridStart, w * 7 + 3))) });
+			for (let i = 0; i < 7; i++) {
+				const day = addDays(gridStart, w * 7 + i);
+				const cell = row.createDiv({ cls: "ch-mc-cell" });
+				if (!inMonth(day)) cell.addClass("ch-other-month");
+				if (isSameDay(day, today)) cell.addClass("ch-today");
+				if (isSameDay(day, selected)) cell.addClass("ch-selected");
+				if (day.getDay() === 0 || day.getDay() === 6) cell.addClass("ch-weekend");
+				cell.createDiv({ cls: "ch-mc-num" }).createSpan({ text: String(day.getDate()) });
+				const dayOccs = occs.filter((o) => overlapsDay(o.start, o.end, day));
+				const marks = cell.createDiv({ cls: "ch-mc-marks" });
+				if (dots) {
+					for (const o of dayOccs.slice(0, 4)) marks.createSpan({ cls: "ch-mc-dot" }).style.setProperty("--ch-event-color", o.color);
+				} else {
+					const shown = dayOccs.length > 3 ? 2 : 3;
+					for (const o of dayOccs.slice(0, shown)) {
+						const bar = marks.createDiv({ cls: "ch-mc-bar", text: o.title });
+						bar.style.setProperty("--ch-event-color", o.color);
+						if (o.allDay) bar.addClass("ch-allday");
+						if (o.allDay && !isSameDay(o.start, day)) bar.addClass("ch-continued");
+					}
+					if (dayOccs.length > shown) marks.createDiv({ cls: "ch-mc-more", text: `+${dayOccs.length - shown}` });
+				}
+				cell.setAttr("aria-label", `${formatDate(day, { weekday: "long", day: "numeric", month: "long" })}: ${dayOccs.length} events`);
+				cell.onclick = () => {
+					this.monthSelected = startOfDay(day);
+					if (!inMonth(day)) this.cursor = startOfDay(day);
+					this.render();
 				};
+				cell.addEventListener("dblclick", () => this.goTo(day, "day"));
+				this.makeDayDropTarget(cell, day, null);
 			}
-			card.addEventListener("dblclick", () => new EventModal(this.plugin, { start: d }).open());
-			this.makeDayDropTarget(card, d, null);
+		}
+
+		// The selected day's events.
+		const list = wrap.createDiv({ cls: "ch-mc-day" });
+		const lh = list.createDiv({ cls: "ch-mc-day-head" });
+		const open = lh.createEl("button", { cls: "ch-mc-day-title", text: formatDate(selected, { weekday: "long", day: "numeric", month: "long" }) });
+		open.setAttr("aria-label", "Open day view");
+		open.onclick = () => this.goTo(selected, "day");
+		const add = lh.createEl("button", { cls: "ch-icon-btn", attr: { "aria-label": "New event" } });
+		setIcon(add, "plus");
+		add.onclick = () => new EventModal(this.plugin, { start: selected }).open();
+		const dayOccs = occs.filter((o) => overlapsDay(o.start, o.end, selected));
+		if (!dayOccs.length) list.createDiv({ cls: "ch-empty", text: "No events" });
+		for (const o of dayOccs) {
+			const chip = createChip(this.plugin, list, o, { showTime: true, draggable: true });
+			chip.addClass("ch-mc-item");
 		}
 	}
 
 	private renderMonth() {
-		const cols = this.monthColumns();
-		if (cols < 7) {
-			this.renderMonthCards(cols);
+		const layout = this.monthLayout();
+		if (layout !== "full") {
+			this.renderMonthCompact(layout === "dots");
 			return;
 		}
 		const s = this.plugin.settings;

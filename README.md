@@ -64,17 +64,17 @@ Download `main.js`, `manifest.json` and `styles.css` from the
 | How | What it opens |
 | --- | --- |
 | Ribbon icon 📅 "Omni Calendar" (left bar), **click** (desktop) | Full-page calendar in the main area |
-| Ribbon icon 📅, **right-click** (desktop) or **tap** (mobile) | Menu: open full calendar, show/hide the mini or full calendar in the sidebar, new event, settings |
+| Ribbon icon 📅, **right-click** (desktop) or **tap** (mobile) | Menu: open full calendar, show/hide the mini calendar or the day planner in the sidebar, new event, settings |
 | Command **Calendar menu** | The same menu. Handy for the mobile toolbar (*Settings → Mobile → Manage toolbar options*) or a hotkey |
 | Command **Omni Calendar: Open calendar (full page)** | Full-page calendar in the main area |
 | Command **Toggle mini calendar in sidebar** | Shows the mini calendar in the sidebar, or hides it if it's already there |
-| Command **Toggle full calendar in sidebar** | The same for the full calendar (month/week/day/agenda), in a compact layout |
+| Command **Toggle day planner in sidebar** | The same for the **day planner**: the full calendar in the sidebar, opening in Day view as a timeline next to your notes. Month/Week/Agenda are one tap away, and the view you pick there is remembered |
 | Commands **Open month / week / day / agenda view** | The full calendar in that view |
 | Button ⤢ / ⇥ in the calendar's toolbar | In the sidebar: **open the full page** (the sidebar calendar stays). In the main area: **move this calendar to the sidebar** |
 
 You never have to drag anything. *Open calendar* always opens in the main area, even if a calendar already sits in a sidebar.
 
-**Calendar in the sidebar:** in *Settings → Omni Calendar → **Display** → **Calendar in sidebar***, choose **Off / Mini calendar / Full calendar** and the **side**
+**Calendar in the sidebar:** in *Settings → Omni Calendar → **Display** → **Calendar in sidebar***, choose **Off / Mini calendar / Day planner (timeline)** and the **side**
 (left or right). Changes apply **immediately** and are restored every time Obsidian starts. The toggle commands and the ribbon
 right-click menu change the same setting. If you close the sidebar calendar yourself (or drag it somewhere else), the setting
 follows, so it never pops back unexpectedly. Commands can be given hotkeys in *Settings → Hotkeys* (search for "Omni Calendar").
@@ -89,7 +89,7 @@ follows, so it never pops back unexpectedly. Commands can be given hotkeys in *S
 - **Click an event** to edit it. For an external event this shows its details instead. **Right-click an event** for a menu with *Edit*, *Create/Open note*, *Duplicate*, *Delete this occurrence* and *Delete*.
 
 **Adapts to its width** (handy in a sidebar):
-- In a narrow view, *Month* switches from the 7-column grid to **day cards** in one or more columns, and *Week* still covers the **whole week** but shows only as many days as fit (e.g. 3). **Swipe left or right** (or scroll sideways, or tap the **‹ ›** arrows) to move day by day. It snaps to each day, and the hour labels stay in place. A small **week bar** under the day headers highlights which days are on screen, and a soft shadow marks the edge that continues. The arrows jump a whole week, and the view opens with today (or the chosen day) first.
+- In a narrow view (phone, sidebar), *Month* becomes a **compact month grid**, like phone calendar apps. Events show as small coloured bars with short titles, or as dots when it is very narrow. **Tap a day** to list its events below the grid. Tap the day heading there, or double-tap a day, to open it in Day view. *Week* still covers the **whole week** but shows only as many days as fit (e.g. 3). **Swipe left or right** (or scroll sideways, or tap the **‹ ›** arrows) to move day by day. It snaps to each day, and the hour labels stay in place. A small **week bar** under the day headers highlights which days are on screen, and a soft shadow marks the edge that continues. The arrows jump a whole week, and the view opens with today (or the chosen day) first.
 - In a very wide sidebar the calendar stops growing at a comfortable width and stays centred, instead of stretching the days apart.
 
 ### Sidebar mini calendar
@@ -382,7 +382,7 @@ The settings are split into four tabs. Longer explanations sit in collapsible **
 | | Scroll to hour | Where week/day views start. If today is visible, the view scrolls to the current time |
 | | Default event length | Length of a new event, in minutes |
 | | Agenda length | Number of days in the Agenda view |
-| | Calendar in sidebar | Off / mini / full calendar, and left or right side. Applied immediately and kept after restarts |
+| | Calendar in sidebar | Off / mini calendar / day planner, and left or right side. Applied immediately and kept after restarts |
 | | Upcoming list in the mini calendar | How far ahead "Upcoming" looks (Hidden … 90 days, or *Same as agenda length*) |
 | **Notes** | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
 
@@ -390,7 +390,7 @@ The settings are split into four tabs. Longer explanations sit in collapsible **
 
 - Open calendar (full page)
 - Calendar menu (open, sidebar, new event, settings)
-- Toggle mini calendar in sidebar / Toggle full calendar in sidebar
+- Toggle mini calendar in sidebar / Toggle day planner in sidebar
 - Show mini calendar in sidebar
 - Open month / week / day / agenda view
 - Create new event

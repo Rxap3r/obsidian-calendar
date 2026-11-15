@@ -21,6 +21,7 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	sidebarUpcomingDays: 7,
 	sidebarSide: "right",
 	sidebarView: "none",
+	sidebarCalendarMode: "day",
 	notesFolder: "Calendar",
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,
 	defaultCalendarId: "personal",
@@ -263,10 +264,10 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		new Setting(el).setName("Sidebar").setHeading();
 		new Setting(el)
 			.setName("Calendar in sidebar")
-			.setDesc("Applies right away and after restarts. Closing it yourself sets this to Off.")
+			.setDesc("Mini calendar: month overview with your upcoming events. Day planner: the full calendar as a timeline next to your notes (opens in Day view, remembers the view you pick there). Applies right away and after restarts. Closing it yourself sets this to Off.")
 			.addDropdown((d) =>
 				d
-					.addOptions({ none: "Off", mini: "Mini calendar", full: "Full calendar" })
+					.addOptions({ none: "Off", mini: "Mini calendar", full: "Day planner (timeline)" })
 					.setValue(s.sidebarView)
 					.onChange(async (v) => {
 						s.sidebarView = v as SidebarView;

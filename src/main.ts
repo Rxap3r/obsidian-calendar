@@ -62,7 +62,7 @@ export default class OmniCalendarPlugin extends Plugin {
 		});
 		this.addCommand({ id: "open-sidebar", name: "Show mini calendar in sidebar", callback: () => void this.openSidebar(true) });
 		this.addCommand({ id: "toggle-sidebar-mini", name: "Toggle mini calendar in sidebar", callback: () => void this.toggleSidebar("mini") });
-		this.addCommand({ id: "toggle-sidebar-full", name: "Toggle full calendar in sidebar", callback: () => void this.toggleSidebar("full") });
+		this.addCommand({ id: "toggle-sidebar-full", name: "Toggle day planner in sidebar", callback: () => void this.toggleSidebar("full") });
 		this.addCommand({ id: "new-event", name: "Create new event", callback: () => new EventModal(this, { start: new Date(new Date().setHours(0, 0, 0, 0)) }).open() });
 		this.addCommand({ id: "refresh", name: "Refresh external calendars", callback: async () => {
 			await this.store.refreshAll();
@@ -146,6 +146,7 @@ export default class OmniCalendarPlugin extends Plugin {
 			this.sidebarViewUnset = false;
 		}
 		delete settings.sidebarOnStartup;
+		if (!["month", "week", "day", "agenda"].includes(settings.sidebarCalendarMode)) settings.sidebarCalendarMode = "day";
 		const up = Number(settings.sidebarUpcomingDays);
 		settings.sidebarUpcomingDays = Number.isFinite(up) ? Math.max(-1, Math.min(365, Math.round(up))) : DEFAULT_SETTINGS.sidebarUpcomingDays;
 		this.data = { settings, events: Array.isArray(raw.events) ? raw.events : [] };
@@ -186,7 +187,7 @@ export default class OmniCalendarPlugin extends Plugin {
 				.setIcon("panel-right").onClick(() => void this.toggleSidebar("mini"))
 		);
 		menu.addItem((i) =>
-			i.setTitle(this.settings.sidebarView === "full" ? "Hide full calendar in sidebar" : "Show full calendar in sidebar")
+			i.setTitle(this.settings.sidebarView === "full" ? "Hide day planner in sidebar" : "Show day planner in sidebar")
 				.setIcon("panel-right-open").onClick(() => void this.toggleSidebar("full"))
 		);
 		menu.addSeparator();
@@ -266,7 +267,7 @@ export default class OmniCalendarPlugin extends Plugin {
 			const created = this.newSidebarLeaf();
 			if (!created) return;
 			leaf = created;
-			await leaf.setViewState({ type, active: reveal, state: state ?? (kind === "full" ? { mode: this.settings.defaultView } : {}) });
+			await leaf.setViewState({ type, active: reveal, state: state ?? (kind === "full" ? { mode: this.settings.sidebarCalendarMode } : {}) });
 		}
 		if (reveal) await this.app.workspace.revealLeaf(leaf);
 	}
