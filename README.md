@@ -98,7 +98,7 @@ follows, so it never pops back unexpectedly. Commands can be given hotkeys in *S
 
 - Coloured dots show which days have events.
 - Click a day to list its events below the calendar. Double-click a day to open it in the calendar.
-- The **Upcoming** section lists the next days: hidden, tomorrow, 3 or 7 days, 2 weeks, 30, 60 or 90 days, or the same length as the agenda. Choose it in *Settings → Omni Calendar → Display → Upcoming list in the mini calendar*. The heading and the "Nothing planned …" text follow your choice.
+- The **Upcoming** section lists the next days: hidden, tomorrow only, one of the [standard periods](#settings-reference), the same length as the agenda, or a custom period. Choose it in *Settings → Omni Calendar → Display → Upcoming list in the mini calendar*. The heading and the "Nothing planned …" text follow your choice.
 - The buttons at the top are: previous/next month, today, new event, and open the calendar.
 
 ### Creating and editing events
@@ -185,7 +185,7 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
 - **Lists on the left.** On the phone and in the sidebar, they become a bar at the top that you swipe sideways.
   - **Today:** due today, plus anything overdue.
   - **Tomorrow.**
-  - **Upcoming:** today and the next days, one heading per day. It covers 7 days by default; change it in *Settings → Omni Calendar → Tasks → Upcoming list* (3 days up to 1 year). Later tasks are under *All*.
+  - **Upcoming:** today and the next days, one heading per day. It covers 7 days by default; change it in *Settings → Omni Calendar → Tasks → Upcoming list*. Later tasks are under *All*.
   - **Overdue:** only shown in the bar when something is overdue.
   - **No date.**
   - **All:** every open task, grouped by when it's due.
@@ -197,6 +197,10 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   - In your own list it goes into that list without a date.
 - **+ New task** opens the full dialog.
 - **Tick the circle** to complete a task. Completed tasks are struck through and move to a collapsed **Done** section (in your own lists and *All*) and to the *Done* list. You can hide that section in the settings.
+- **Completed tasks don't pile up:**
+  - Done shows only tasks completed in the **last 30 days** (setting). Older ones are behind **Show older**; nothing is lost.
+  - **Clear completed** under the Done list (or a list's Done section) deletes completed tasks by hand, after asking.
+  - **Automatic clean-up** (off by default): *Settings → Omni Calendar → Tasks → Delete completed tasks after* (Never by default, or one of the standard periods, or custom).
 - **Click a task** to edit it. **Right-click** it for quick actions:
   - done / not done;
   - Today / Tomorrow / Next week / No date;
@@ -454,18 +458,22 @@ The settings are split into four tabs. Longer explanations sit in collapsible **
 | | Show week numbers | ISO week numbers in the month view, sidebar and narrow layouts |
 | | Scroll to hour | Where week/day views start. If today is visible, the view scrolls to the current time |
 | | Default event length | Length of a new event, in minutes |
-| | Agenda length | Number of days in the Agenda view |
+| | Agenda length | How many days the Agenda view shows (standard periods or custom, default 30 days) |
 | | Calendar in sidebar | Off / mini calendar / day planner, and left or right side. Applied immediately and kept after restarts |
 | | When the day planner opens the calendar | What ⤢ in the day planner does to the sidebar: **switch to the mini calendar** (default), close the day planner, or keep it |
 | | Then show this sidebar tab | Only with *close it*: which tab of the calendar's sidebar (left or right) is shown afterwards, e.g. *Files* or *Bookmarks*. The list shows the tabs that are in that sidebar right now. *Let Obsidian decide* keeps Obsidian's choice |
-| | Upcoming list in the mini calendar | How far ahead "Upcoming" looks (Hidden … 90 days, or *Same as agenda length*) |
+| | Upcoming list in the mini calendar | How far ahead "Upcoming" looks: *Hidden*, *Tomorrow only*, the standard periods, *Same as agenda length*, or custom (up to 1 year) |
 | **Tasks** | Use tasks | Main switch for everything task-related. Off hides it but deletes nothing |
 | | Tasks in sidebar | Shows the Tasks page in the sidebar (same side as the calendar), independent of mini calendar / day planner |
-| | Show completed tasks | Collapsed "Done" section in the lists |
-| | Upcoming list | How far ahead the "Upcoming" list looks: 3, 7 (default), 14, 30, 60 or 90 days, 6 months or 1 year |
+| | Done section in lists | Collapsed "Done" section in your lists and *All* |
+| | Upcoming list | How far ahead the "Upcoming" list looks: standard periods (default 7 days) or custom |
+| | Show completed tasks from the last | Done shows tasks completed in this period (default 30 days, or *Everything*); older ones behind "Show older" |
+| | Delete completed tasks after | Automatic clean-up: **Never** (default), the standard periods, or custom. Deleting can't be undone |
 | | Default priority / Default list | Used for new tasks |
 | | Lists | Rename, recolour, add or delete task lists ("Tasks" is the default list and can't be deleted) |
 | **Notes** | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
+
+**Periods ("how long / how far" settings):** they all offer the **same standard choices**: *7 days, 2 weeks, 30 days, 60 days, 90 days, 6 months, 1 year*. A few add their own extras (*Never*, *Hidden*, *Tomorrow only*, *Everything*, *Same as agenda length*). And they all have **Custom…**. It shows a number and a unit (days, weeks, months, years), for example *2 years* or *200 days*. Values over the maximum are limited, and the field then shows the value that is used.
 
 ## Commands
 
@@ -591,7 +599,7 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 - **Linked notes on events:** the same as on tasks, for local and Google/Outlook events. For Google/Outlook events the links are stored only in Obsidian. The existing single "Create note" becomes one of the linked notes, and older events with a note keep it.
 
 **Step 3 – version 1.9: repeating**
-- **Repeating tasks**, each occurrence ticked off separately.
+- **Repeating tasks**, each occurrence ticked off separately. A repeating task stays **one** task: each completed occurrence is only a small "done on …" entry, not a copy, so Done doesn't fill up with duplicates.
 - **Tasks on repeating events:** the event's task list works as a template, and each occurrence has its own ticks. Ticking one off on 14 Nov doesn't tick it off on 21 Nov.
 
 **Later, maybe:**

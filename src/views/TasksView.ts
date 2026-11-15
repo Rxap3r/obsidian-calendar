@@ -35,6 +35,8 @@ export class TasksView extends ItemView {
 	private rootEl!: HTMLElement;
 	private narrow = false;
 	private collapsedSubtasks = new Set<string>();
+	/** "Show older" was clicked in the Done list / section (reset when another list is selected). */
+	private showOlder = false;
 	private renderQueued = false;
 
 	constructor(leaf: WorkspaceLeaf, private plugin: OmniCalendarPlugin) {
@@ -91,6 +93,7 @@ export class TasksView extends ItemView {
 
 	/** Select a list (smart list id or user list id). */
 	select(id: string) {
+		if (id !== this.selected) this.showOlder = false;
 		this.selected = id;
 		this.render();
 		this.app.workspace.requestSaveLayout();
@@ -197,10 +200,11 @@ export class TasksView extends ItemView {
 		const title = head.createDiv({ cls: "ch-tasks-title" });
 		if (userList) title.createSpan({ cls: "ch-tasks-nav-dot" }).style.setProperty("--ch-event-color", userList.color);
 		title.createSpan({ text: this.listName(id) });
+		if (id === "done" && s.tasksDoneVisibleDays > 0 && !this.showOlder) {
+			title.createSpan({ cls: "ch-tasks-title-sub", text: `last ${periodLabel(s.tasksDoneVisibleDays)}` });
+		}
 		if (id === "upcoming") {
-			const n = store.upcomingDays;
-			const range = n === 7 ? "next 7 days" : n === 14 ? "next 2 weeks" : n === 30 ? "next 30 days" : n === 180 ? "next 6 months" : n === 365 ? "next year" : `next ${n} days`;
-			title.createSpan({ cls: "ch-tasks-title-sub", text: range });
+			title.createSpan({ cls: "ch-tasks-title-sub", text: `next ${periodLabel(store.upcomingDays)}` });
 		}
 		if (userList) {
 			const more = head.createEl("button", { cls: "ch-icon-btn", attr: { "aria-label": "List options" } });
@@ -233,18 +237,27 @@ export class TasksView extends ItemView {
 		}
 
 		const open = store.tasksFor(id);
-		const done = id === "done" ? store.tasksFor("done") : s.tasksShowCompleted ? store.doneFor(id) : [];
+		const allDone = id === "done" ? store.tasksFor("done") : s.tasksShowCompleted ? store.doneFor(id) : [];
+		// Only recently completed tasks are shown; older ones behind "Show older".
+		const { recent, older } = store.splitDone(allDone);
+		const done = this.showOlder ? allDone : recent;
+		const byCompletion = (a: Task, b: Task) => (b.completedAt ?? 0) - (a.completedAt ?? 0);
 		const groups: TaskGroup[] = id === "done"
-			? [{ key: "done", title: "Done", tasks: [...done].sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0)) }]
+			? [{ key: "done", title: "Done", tasks: [...done].sort(byCompletion) }]
 			: store.group(open, done);
+		if (id !== "done" && older.length && !groups.some((g) => g.key === "~~done")) {
+			groups.push({ key: "~~done", title: "Done", tasks: [], collapsed: true });
+		}
 
 		if (!open.length && id !== "done") {
 			main.createDiv({ cls: "ch-empty ch-tasks-empty", text: id === "today" ? "Nothing to do today 🎉" : "No open tasks here." });
 		}
-		if (id === "done" && !done.length) main.createDiv({ cls: "ch-empty ch-tasks-empty", text: "No completed tasks yet." });
+		if (id === "done" && !allDone.length) main.createDiv({ cls: "ch-empty ch-tasks-empty", text: "No completed tasks yet." });
+		else if (id === "done" && !done.length) main.createDiv({ cls: "ch-empty ch-tasks-empty", text: `Nothing completed in the last ${periodLabel(s.tasksDoneVisibleDays)}.` });
 
 		for (const g of groups) {
-			if (!g.tasks.length) continue;
+			const isDone = g.key === "~~done" || g.key === "done";
+			if (!g.tasks.length && !(isDone && (older.length || (id === "done" && allDone.length)))) continue;
 			let body: HTMLElement;
 			if (g.collapsed) {
 				const det = main.createEl("details", { cls: "ch-tasks-group ch-tasks-done-group" });
@@ -260,9 +273,33 @@ export class TasksView extends ItemView {
 				gh.createSpan({ cls: "ch-tasks-group-count", text: String(g.tasks.length) });
 				body = grp;
 			}
-			const showDate = g.key === "!overdue" || g.key === "}later" || g.key === "~~done" || g.key === "done";
+			const showDate = g.key === "!overdue" || g.key === "}later" || isDone;
 			for (const t of g.tasks) this.renderTask(body, t, showDate);
+			if (isDone) this.renderDoneFooter(body, id, older.length, allDone.length);
 		}
+	}
+
+	/** Under the completed tasks: "Show N older" / "Show only recent", and "Clear completed". */
+	private renderDoneFooter(body: HTMLElement, id: string, olderCount: number, total: number) {
+		const store = this.plugin.tasks;
+		const foot = body.createDiv({ cls: "ch-tasks-done-foot" });
+		if (olderCount) {
+			const more = foot.createEl("button", { cls: "ch-tasks-link", text: this.showOlder ? "Show only recent" : `Show ${olderCount} older` });
+			more.onclick = () => {
+				this.showOlder = !this.showOlder;
+				this.render();
+			};
+		}
+		const userList = store.lists.find((l) => l.id === id);
+		if (total && (id === "done" || id === "all" || userList)) {
+			const clear = foot.createEl("button", { cls: "ch-tasks-link ch-tasks-clear", text: "Clear completed" });
+			clear.onclick = async () => {
+				const where = userList ? ` in “${userList.name}”` : "";
+				const ok = await confirmAction(this.app, "Clear completed tasks", `Delete all ${total} completed task${total === 1 ? "" : "s"}${where}? This can't be undone.`);
+				if (ok) await store.clearDone(userList?.id);
+			};
+		}
+		if (!foot.childElementCount) foot.remove();
 	}
 
 	/** Defaults for a task created while this list is selected. */
@@ -476,4 +513,12 @@ export class ListModal extends Modal {
 		}
 		this.close();
 	}
+}
+
+/** 30 → "30 days", 14 → "2 weeks", 365 → "year", 730 → "2 years". */
+export function periodLabel(days: number): string {
+	if (days % 365 === 0) return days === 365 ? "year" : `${days / 365} years`;
+	if (days % 30 === 0 && days >= 60) return `${days / 30} months`;
+	if (days % 7 === 0 && days >= 14 && days < 30) return `${days / 7} weeks`;
+	return days === 1 ? "day" : `${days} days`;
 }

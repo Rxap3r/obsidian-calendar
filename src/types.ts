@@ -174,6 +174,10 @@ export interface OmniCalendarSettings {
 	tasksDefaultListId: string;
 	/** How many days after today the "Upcoming" task list covers. */
 	tasksUpcomingDays: number;
+	/** Completed tasks shown in Done (days since completion); -1 = everything. Older ones behind "Show older". */
+	tasksDoneVisibleDays: number;
+	/** Delete completed tasks this many days after completion; 0 = never. */
+	tasksDeleteDoneAfterDays: number;
 	/** @deprecated replaced by sidebarView (migrated on load). */
 	sidebarOnStartup?: SidebarView;
 	notesFolder: string;

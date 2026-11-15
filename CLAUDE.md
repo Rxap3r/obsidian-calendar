@@ -138,7 +138,13 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - Events: migrate the existing single `notePath` into the list. Remote events store their links locally, keyed by remote ID.
   - **1.7 (done):** Tasks page (full + sidebar), lists, task editing, subtasks, quick add, **linked notes on tasks**, Tasks settings tab, menu entry and commands.
   - **1.8:** calendar integration, tasks on events (dialog section, "2/5" hint), **linked notes on events** (local + remote), "Tasks today" in the mini calendar.
-  - **1.9:** repeating tasks, and per-occurrence tasks on repeating events.
+  - **1.9:** repeating tasks, and per-occurrence tasks on repeating events. A repeating task stays ONE item; completed occurrences are small "done on date" entries, not copies (agreed, to keep Done uncluttered).
+  - **Completed tasks (1.7.5):**
+    - Done shows the last `tasksDoneVisibleDays` (default 30, -1 = everything), with "Show older";
+    - "Clear completed";
+    - optional automatic delete after `tasksDeleteDoneAfterDays` (0 = never, the default).
+    - Period settings use `periodSetting()` in settings.ts. Use it for any new "how long / how far" setting.
+      Every such setting must offer the **same** `STANDARD_PERIODS` (7d, 2w, 30d, 60d, 90d, 6mo, 1y), plus setting-specific extras and "Custom…". The maintainer asked for this uniformity, and a test checks it.
   - **Later:** Microsoft To Do sync (`Tasks.ReadWrite`, re-consent needed), Google Tasks, task reminders.
 - **After Tasks: reminders and notifications.** See the README roadmap for the agreed design:
   - a reminder field and a default reminder;

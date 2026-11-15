@@ -23,6 +23,7 @@ function applyOpts(el: HTMLElement, o: any) {
 	if (o.attr) for (const k in o.attr) el.setAttribute(k, o.attr[k]);
 	if (o.type) (el as any).type = o.type;
 	if (o.href) (el as any).href = o.href;
+	if (o.value !== undefined) (el as any).value = o.value;
 }
 P.createEl = function (tag: string, o?: any) { const e = document.createElement(tag); applyOpts(e, o); this.appendChild(e); return e; };
 P.createDiv = function (o?: any) { return this.createEl("div", o); };
