@@ -12,15 +12,24 @@ plain language: what changed, why, and what to check. Avoid jargon. Be honest ab
 
 1. **Branch:** always work on **`dev-branch`**. Before starting, update it from `main`:
    `git fetch origin main && git merge --ff-only origin/main` (or a normal merge if needed). Never push to `main` directly.
-2. **Version bump with every user-visible change.** Update `manifest.json`, `package.json` and `versions.json` together
-   (patch for fixes and small features, minor for bigger features). Run `npm install --package-lock-only` afterwards.
-   A pull request whose version was already released needs a new number.
-3. **Commit and push** to `dev-branch` after each finished change. Commit messages explain *why*.
-4. **Pull requests only when the maintainer asks** ("pull it", "open a PR", …). Often several changes are collected
-   first. Open the PR from `dev-branch` to `main`. The PR description has *Summary*, *Testing* (say clearly what was
-   not tested on a real device or in real Obsidian) and *After merging* (`git tag X.Y.Z && git push origin X.Y.Z`
-   or run the release workflow).
-5. If the maintainer merged a PR, the next PR needs a new version number.
+2. **Fixes are collected, not released one by one (agreed with the maintainer).** When the maintainer reports a bug,
+   fix it on `dev-branch` right away (with a test) and add a line under **Not released yet** in `CHANGELOG.md`.
+   Write the line in plain language, saying what the user notices. Do **not** open a PR for each fix.
+   If a bug can't be fixed right away, list it under **Known bugs** in `CHANGELOG.md`.
+   Features from the roadmap are also listed under *Not released yet* once they're on `dev-branch`.
+3. **Version number:** `dev-branch` always carries the *next* release number. Set it once, when the first unreleased change
+   lands after a release, in `manifest.json`, `package.json` and `versions.json` together: patch for fixes and small
+   features, minor for bigger features. Then run `npm install --package-lock-only`, and keep the number in the *Not released
+   yet* heading in sync. If the maintainer merged a PR, the next change needs a new number.
+4. **Commit and push** to `dev-branch` after each finished change. Commit messages explain *why*.
+5. **Pull requests only when the maintainer asks** ("pull it", "open a PR", …). Open the PR from `dev-branch` to `main`.
+   The PR description has:
+   - *Summary*: the *Not released yet* list;
+   - *Testing*: say clearly what was not tested on a real device or in real Obsidian;
+   - *After merging*: `git tag X.Y.Z && git push origin X.Y.Z`, or run the release workflow.
+
+   In the same PR, turn *Not released yet* into a `## X.Y.Z` entry under *Released*, and start a new empty
+   *Not released yet* section.
 6. Keep `README.md` in sync with every feature or settings change (paths like *Settings → Omni Calendar → Display*).
    Ideas go into its **Roadmap** section.
 

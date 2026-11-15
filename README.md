@@ -32,7 +32,7 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 - [Google & Outlook (two-way)](#two-way-sync-with-google-calendar-and-outlook--microsoft-365): sign-in, editing, security
 - [Read-only ICS subscriptions](#read-only-subscriptions-via-ics-link-proton-icloud-google-outlook-) (Proton, iCloud, …)
 - [Settings](#settings-reference) · [Commands](#commands) · [Where data is stored](#where-data-is-stored)
-- [Development & releases](#development) · [Roadmap](#roadmap-ideas)
+- [Development & releases](#development) · [Changelog](CHANGELOG.md) · [Roadmap](#roadmap-ideas)
 
 ---
 
