@@ -192,6 +192,39 @@ test("desktop: responsive month/week at narrow widths", { width: 360 }, async ({
 
 // ======================================================================== mobile UI
 
+test("mini calendar: upcoming range setting and wording", {}, async ({ page }) => {
+	const read = () => page.evaluate(() => {
+		const sec = [...document.querySelectorAll("#side .ch-mini-section")].find((e) => e.textContent.startsWith("Upcoming"));
+		return sec ? { head: sec.querySelector(".ch-mini-section-head").textContent, items: sec.querySelectorAll(".ch-mini-item").length,
+			empty: sec.querySelector(".ch-empty")?.textContent ?? null } : null;
+	});
+	const set = async (n) => { await page.evaluate(async (n) => { plugin.settings.sidebarUpcomingDays = n; plugin.store.notify(); }, n); await page.waitForTimeout(100); };
+	await set(7);
+	const seven = await read();
+	eq(seven.head, "Upcoming · in the next 7 days", "7-day header");
+	await set(30);
+	const thirty = await read();
+	eq(thirty.head, "Upcoming · in the next month", "30-day header");
+	await page.locator("#side").screenshot({ path: path.join(SHOTS, "mini-upcoming.png") });
+	expect(thirty.items > seven.items, `30 days shows more (${thirty.items} > ${seven.items})`);
+	await set(-1);
+	eq((await read()).head, "Upcoming · in the next month", "same as agenda (30)");
+	await page.evaluate(() => { plugin.settings.agendaDays = 14; });
+	await set(-1);
+	eq((await read()).head, "Upcoming · in the next 2 weeks", "follows agenda length");
+	await page.evaluate(() => mini.selected = new Date(2027, 4, 31));
+	await set(1);
+	eq((await read()).empty, "Nothing planned tomorrow", "empty text uses the range");
+	await set(0);
+	eq(await read(), null, "0 hides the list");
+	// settings dropdown
+	const opts = await page.evaluate(() => { tab.display(); document.body.appendChild(tab.containerEl);
+		[...tab.containerEl.querySelectorAll(".ch-settings-tab, button")].find((b) => /Display/.test(b.textContent))?.click();
+		const row = [...tab.containerEl.querySelectorAll(".setting-item")].find((r) => /Upcoming list/.test(r.textContent));
+		return row ? [...row.querySelectorAll("option")].map((o) => o.value) : null; });
+	expect(opts && opts.includes("30") && opts.includes("-1"), "dropdown offers 30 days and same-as-agenda: " + JSON.stringify(opts));
+});
+
 test("mobile: ribbon tap opens the menu (not the calendar)", { mobile: true }, async ({ page }) => {
 	const r = await page.evaluate(() => {
 		let opened = 0; plugin.openCalendar = async () => { opened++; };

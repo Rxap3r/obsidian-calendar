@@ -136,21 +136,27 @@ export class MiniCalendarView extends ItemView {
 		for (const o of selOccs) this.item(sel, o, false);
 
 		// Upcoming
-		if (s.sidebarUpcomingDays > 0) {
+		const days = upcomingDays(s);
+		if (days > 0) {
 			const up = el.createDiv({ cls: "ch-mini-section" });
-			up.createDiv({ cls: "ch-mini-section-head", text: "Upcoming" });
+			const head = up.createDiv({ cls: "ch-mini-section-head", text: "Upcoming" });
+			head.createSpan({ cls: "ch-mini-section-sub", text: ` · ${rangeLabel(days)}` });
 			const from = addDays(startOfDay(this.selected), 1);
-			const upOccs = this.plugin.store.getOccurrences(from, addDays(from, s.sidebarUpcomingDays)).filter((o) => o.start >= from)
+			const upOccs = this.plugin.store.getOccurrences(from, addDays(from, days)).filter((o) => o.start >= from)
 				.sort((a, b) => a.start.getTime() - b.start.getTime() || Number(b.allDay) - Number(a.allDay));
-			if (!upOccs.length) up.createDiv({ cls: "ch-empty", text: `Nothing in the next ${s.sidebarUpcomingDays} days` });
+			if (!upOccs.length) up.createDiv({ cls: "ch-empty", text: `Nothing planned ${rangeLabel(days)}` });
 			let lastKey = "";
-			for (const o of upOccs.slice(0, 30)) {
+			for (const o of upOccs.slice(0, MAX_UPCOMING)) {
 				const key = startOfDay(o.start).toDateString();
 				if (key !== lastKey) {
 					up.createDiv({ cls: "ch-mini-upcoming-date", text: formatDate(o.start, { weekday: "short", day: "numeric", month: "short" }) });
 					lastKey = key;
 				}
 				this.item(up, o, false);
+			}
+			if (upOccs.length > MAX_UPCOMING) {
+				const more = up.createEl("button", { cls: "ch-mini-more", text: `${upOccs.length - MAX_UPCOMING} more – open agenda` });
+				more.addEventListener("click", () => void this.plugin.openCalendar(from, "agenda"));
 			}
 		}
 	}
@@ -171,4 +177,22 @@ export class MiniCalendarView extends ItemView {
 			occurrenceMenu(this.plugin, o, e);
 		};
 	}
+}
+
+/** Events listed at most under "Upcoming" (the rest is reachable via the agenda). */
+const MAX_UPCOMING = 100;
+
+/** Days shown under "Upcoming"; -1 means "same as the agenda length". */
+export function upcomingDays(s: { sidebarUpcomingDays: number; agendaDays: number }): number {
+	return s.sidebarUpcomingDays < 0 ? s.agendaDays : s.sidebarUpcomingDays;
+}
+
+/** "tomorrow", "in the next 7 days", "in the next 2 weeks", "in the next month" … */
+export function rangeLabel(days: number): string {
+	if (days === 1) return "tomorrow";
+	if (days === 14 || days === 21 || days === 28) return `in the next ${days / 7} weeks`;
+	if (days === 30 || days === 31) return "in the next month";
+	if (days === 60 || days === 90 || days === 180) return `in the next ${days / 30} months`;
+	if (days === 365) return "in the next year";
+	return `in the next ${days} days`;
 }

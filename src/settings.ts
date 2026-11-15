@@ -258,7 +258,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		);
 		this.numberSetting(el, "Scroll to hour", "Where week and day views start (0–23).", s.scrollToHour, 0, 23, (v) => (s.scrollToHour = v));
 		this.numberSetting(el, "Default event length (minutes)", "", s.defaultEventDuration, 5, 1440, (v) => (s.defaultEventDuration = v));
-		this.numberSetting(el, "Agenda length (days)", "", s.agendaDays, 1, 365, (v) => (s.agendaDays = v));
+		this.numberSetting(el, "Agenda length (days)", "Days shown in the agenda view.", s.agendaDays, 1, 365, (v) => (s.agendaDays = v));
 
 		new Setting(el).setName("Sidebar").setHeading();
 		new Setting(el)
@@ -284,7 +284,18 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 						await this.plugin.applySidebar(s.sidebarView !== "none");
 					})
 			);
-		this.numberSetting(el, "Upcoming days", "Days listed under “Upcoming” in the mini calendar (0 hides the list).", s.sidebarUpcomingDays, 0, 60, (v) => (s.sidebarUpcomingDays = v));
+		new Setting(el)
+			.setName("Upcoming list in the mini calendar")
+			.setDesc("How far ahead the “Upcoming” list below the mini calendar looks.")
+			.addDropdown((d) => {
+				const opts: Record<string, string> = { "0": "Hidden", "1": "Tomorrow only", "3": "3 days", "7": "7 days", "14": "2 weeks", "30": "30 days", "60": "60 days", "90": "90 days", "-1": "Same as agenda length" };
+				const cur = String(s.sidebarUpcomingDays);
+				if (!(cur in opts)) opts[cur] = `${cur} days`;
+				d.addOptions(opts).setValue(cur).onChange(async (v) => {
+					s.sidebarUpcomingDays = parseInt(v);
+					await this.save();
+				});
+			});
 	}
 
 	// ------------------------------------------------------------------ tab: Notes

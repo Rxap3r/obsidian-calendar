@@ -96,7 +96,7 @@ follows, so it never pops back unexpectedly. Commands can be given hotkeys in *S
 
 - Coloured dots show which days have events.
 - Click a day to list its events below the calendar. Double-click a day to open it in the full calendar.
-- The **Upcoming** section lists the next *N* days. You can set *N* in settings.
+- The **Upcoming** section lists the next days: hidden, tomorrow, 3 or 7 days, 2 weeks, 30, 60 or 90 days, or the same length as the agenda. Choose it in *Settings → Omni Calendar → Display → Upcoming list in the mini calendar*. The heading and the "Nothing planned …" text follow your choice.
 - The buttons at the top are: previous/next month, today, new event, and open the full calendar.
 
 ### Creating and editing events
@@ -383,7 +383,7 @@ The settings are split into four tabs. Longer explanations sit in collapsible **
 | | Default event length | Length of a new event, in minutes |
 | | Agenda length | Number of days in the Agenda view |
 | | Calendar in sidebar | Off / mini / full calendar, and left or right side. Applied immediately and kept after restarts |
-| | Upcoming days | Days listed under "Upcoming" in the mini calendar. `0` hides the list |
+| | Upcoming list in the mini calendar | How far ahead "Upcoming" looks (Hidden … 90 days, or *Same as agenda length*) |
 | **Notes** | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
 
 ## Commands

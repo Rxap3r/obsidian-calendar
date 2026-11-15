@@ -146,6 +146,8 @@ export default class OmniCalendarPlugin extends Plugin {
 			this.sidebarViewUnset = false;
 		}
 		delete settings.sidebarOnStartup;
+		const up = Number(settings.sidebarUpcomingDays);
+		settings.sidebarUpcomingDays = Number.isFinite(up) ? Math.max(-1, Math.min(365, Math.round(up))) : DEFAULT_SETTINGS.sidebarUpcomingDays;
 		this.data = { settings, events: Array.isArray(raw.events) ? raw.events : [] };
 		this.settings = settings;
 	}
