@@ -164,6 +164,14 @@ export interface OmniCalendarSettings {
 	sidebarOnExpand: "mini" | "close" | "keep";
 	/** With sidebarOnExpand "close": view type of the sidebar tab to show afterwards (e.g. "file-explorer"); "" = Obsidian decides. */
 	sidebarAfterClose: string;
+	/** Main switch for tasks: off hides the Tasks page, menu entries and commands (nothing is deleted). */
+	tasksEnabled: boolean;
+	/** Show the Tasks page in the sidebar (independent of the mini calendar / day planner). */
+	tasksSidebar: boolean;
+	/** Show ticked-off tasks in the lists (a "Done" section). */
+	tasksShowCompleted: boolean;
+	tasksDefaultPriority: TaskPriority;
+	tasksDefaultListId: string;
 	/** @deprecated replaced by sidebarView (migrated on load). */
 	sidebarOnStartup?: SidebarView;
 	notesFolder: string;
@@ -178,4 +186,52 @@ export interface OmniCalendarSettings {
 export interface PluginData {
 	settings: OmniCalendarSettings;
 	events: LocalEvent[];
+	/** Tasks (1.7+). Kept in data.json like local events, so it syncs the same way. */
+	tasks: TaskData;
 }
+
+// ---------------------------------------------------------------------- tasks
+
+/** 0 = none, 1 = low, 2 = medium, 3 = high. */
+export type TaskPriority = 0 | 1 | 2 | 3;
+
+export interface TaskList {
+	id: string;
+	name: string;
+	color: string;
+}
+
+export interface Subtask {
+	id: string;
+	title: string;
+	done: boolean;
+}
+
+export interface Task {
+	id: string;
+	title: string;
+	notes?: string;
+	listId: string;
+	priority: TaskPriority;
+	/** YYYY-MM-DD, or undefined for "no date". */
+	date?: string;
+	/** HH:MM (needs a date). */
+	start?: string;
+	/** HH:MM, optional end of a time range (needs start). */
+	end?: string;
+	/** One level only. */
+	subtasks: Subtask[];
+	done: boolean;
+	/** ms timestamp when ticked off. */
+	completedAt?: number;
+	createdAt: number;
+	/** Vault paths of linked notes. Never parsed or modified. */
+	links: string[];
+}
+
+export interface TaskData {
+	lists: TaskList[];
+	items: Task[];
+}
+
+export type SmartListId = "today" | "tomorrow" | "upcoming" | "overdue" | "nodate" | "all" | "done";

@@ -54,10 +54,13 @@ npm test             # build + tests/sync (Node) + tests/ui (headless Chromium) 
 | `views/CalendarView.ts` | Full calendar: month (grid, or compact grid when narrow), week/day time grid (swipe mode when narrow), agenda, toolbar, drag & drop, touch gestures, responsive layout |
 | `views/MiniCalendarView.ts` | Sidebar mini calendar |
 | `views/shared.ts` | Event chips, context menu, open event |
+| `tasks.ts` | Task data layer (`TaskStore`): lists, smart lists, grouping/sorting, link rename/delete, `normalizeTaskData` |
+| `views/TasksView.ts` | Tasks page (`omni-calendar-tasks`): list nav (bar when narrow), groups, quick add, task rows, menus, `ListModal` |
+| `modals/TaskModal.ts`, `NotePickerModal.ts` | Task dialog (priority, date, time range, subtasks, linked notes); vault note search with "create note" |
 | `modals/EventModal.ts` | Create/edit dialog (local + remote, multi-calendar "Save to") |
 | `modals/SignInModal.ts` | Account connection (quick sign-in or own app registration, setup guides) |
 | `modals/EventDetailsModal.ts`, `ConfirmModal.ts` | Read-only details, confirmations |
-| `settings.ts` | Settings tab with four tabs: Calendars, Google & Outlook, Display, Notes |
+| `settings.ts` | Settings tab with five tabs: Calendars, Google & Outlook, Display, Tasks, Notes |
 | `notes.ts`, `dateUtils.ts` | Event notes + template, date helpers |
 
 CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS variables only, so it supports light/dark mode and themes.
@@ -120,7 +123,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - automatic lists: Today, Tomorrow, Upcoming (7 days), Overdue, No date, All, Done;
     - sorting is priority, then time;
     - event tasks also appear in the lists, marked with their event.
-  - **Storage:** a **separate file** in the plugin folder (not `data.json`), with a migration-safe shape.
+  - **Storage:** `data.json` → `tasks: { lists, items }`, next to `events`. This was changed from the "separate file" idea because it's unclear whether Obsidian Sync copies extra plugin files. Everything is validated in `normalizeTaskData`.
   - **Main switch:** "Tasks" on/off hides everything but deletes nothing.
   - **Naming:** the UI name is **Tasks** everywhere. Suggested view type: `omni-calendar-tasks` (full page + compact sidebar version).
     The sidebar toggle for Tasks is **separate** from the mini calendar / day planner.
@@ -133,7 +136,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - notes are never parsed or modified;
     - update paths on vault rename/move, and drop them on delete.
     - Events: migrate the existing single `notePath` into the list. Remote events store their links locally, keyed by remote ID.
-  - **1.7:** Tasks page (full + sidebar), lists, task editing, subtasks, quick add, **linked notes on tasks**, Tasks settings tab, menu entry and commands.
+  - **1.7 (done):** Tasks page (full + sidebar), lists, task editing, subtasks, quick add, **linked notes on tasks**, Tasks settings tab, menu entry and commands.
   - **1.8:** calendar integration, tasks on events (dialog section, "2/5" hint), **linked notes on events** (local + remote), "Tasks today" in the mini calendar.
   - **1.9:** repeating tasks, and per-occurrence tasks on repeating events.
   - **Later:** Microsoft To Do sync (`Tasks.ReadWrite`, re-consent needed), Google Tasks, task reminders.

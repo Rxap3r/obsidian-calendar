@@ -6,6 +6,7 @@ import { confirmAction } from "./modals/ConfirmModal";
 import { providerFor } from "./sync/providers";
 import { uid } from "./dateUtils";
 import { DEFAULT_NOTE_TEMPLATE } from "./notes";
+import { DEFAULT_TASK_LIST, PRIORITY_NAMES } from "./tasks";
 
 export const PALETTE = ["#7c5cff", "#2f9e44", "#e8590c", "#1c7ed6", "#d6336c", "#f59f00", "#0ca678", "#ae3ec9", "#495057"];
 
@@ -24,6 +25,11 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	sidebarCalendarMode: "day",
 	sidebarOnExpand: "mini",
 	sidebarAfterClose: "",
+	tasksEnabled: true,
+	tasksSidebar: false,
+	tasksShowCompleted: true,
+	tasksDefaultPriority: 0,
+	tasksDefaultListId: "tasks",
 	notesFolder: "Calendar",
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,
 	defaultCalendarId: "personal",
@@ -66,7 +72,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 	}
 
 	/** Last opened settings tab (kept while Obsidian runs). */
-	private static tab: "calendars" | "accounts" | "display" | "notes" = "calendars";
+	private static tab: "calendars" | "accounts" | "display" | "tasks" | "notes" = "calendars";
 
 	display(): void {
 		const { containerEl } = this;
@@ -81,6 +87,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 			["calendars", "calendar-days", "Calendars"],
 			["accounts", "refresh-cw", "Google & Outlook"],
 			["display", "layout-panel-left", "Display"],
+			["tasks", "check-square", "Tasks"],
 			["notes", "file-text", "Notes"],
 		];
 		const barWrap = containerEl.createDiv({ cls: "ch-settings-tabs-wrap" });
@@ -123,6 +130,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 			case "calendars": this.calendarsTab(body); break;
 			case "accounts": this.accountsTab(body); break;
 			case "display": this.displayTab(body); break;
+			case "tasks": this.tasksTab(body); break;
 			case "notes": this.notesTab(body); break;
 		}
 		if (scroller) scroller.scrollTop = keepScroll;
@@ -298,6 +306,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 						s.sidebarSide = v as "left" | "right";
 						await this.save(true);
 						await this.plugin.applySidebar(false);
+						await this.plugin.applyTasksSidebar(false);
 					})
 			);
 		new Setting(el)
@@ -340,6 +349,104 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 					await this.save();
 				});
 			});
+	}
+
+	// ------------------------------------------------------------------ tab: Tasks
+
+	private tasksTab(el: HTMLElement) {
+		const s = this.plugin.settings;
+		const store = this.plugin.tasks;
+		new Setting(el).setName("Tasks").setHeading();
+		new Setting(el)
+			.setName("Use tasks")
+			.setDesc("Turns the Tasks page, its menu entries and commands on or off. Turning it off deletes nothing.")
+			.addToggle((t) =>
+				t.setValue(s.tasksEnabled).onChange(async (v) => {
+					s.tasksEnabled = v;
+					await this.save(true);
+					await this.plugin.applyTasksSidebar(false);
+					store.trigger("changed");
+				})
+			);
+		if (!s.tasksEnabled) return;
+
+		new Setting(el)
+			.setName("Tasks in sidebar")
+			.setDesc(`Shows the Tasks page in the ${s.sidebarSide} sidebar, next to the mini calendar or day planner. The side follows “Calendar in sidebar” (Display tab).`)
+			.addToggle((t) =>
+				t.setValue(s.tasksSidebar).onChange(async (v) => {
+					s.tasksSidebar = v;
+					await this.save();
+					await this.plugin.applyTasksSidebar(false);
+				})
+			);
+		new Setting(el)
+			.setName("Show completed tasks")
+			.setDesc("Adds a collapsed “Done” section to the lists. The “Done” list always shows them.")
+			.addToggle((t) =>
+				t.setValue(s.tasksShowCompleted).onChange(async (v) => {
+					s.tasksShowCompleted = v;
+					await this.save();
+					store.trigger("changed");
+				})
+			);
+		new Setting(el).setName("Default priority").addDropdown((d) =>
+			d
+				.addOptions({ 0: PRIORITY_NAMES[0], 1: PRIORITY_NAMES[1], 2: PRIORITY_NAMES[2], 3: PRIORITY_NAMES[3] })
+				.setValue(String(s.tasksDefaultPriority))
+				.onChange(async (v) => {
+					s.tasksDefaultPriority = Number(v) as 0 | 1 | 2 | 3;
+					await this.save();
+				})
+		);
+		new Setting(el)
+			.setName("Default list")
+			.setDesc("Used for new tasks that aren't created inside a specific list.")
+			.addDropdown((d) => {
+				for (const l of store.lists) d.addOption(l.id, l.name);
+				d.setValue(s.tasksDefaultListId).onChange(async (v) => {
+					s.tasksDefaultListId = v;
+					await this.save();
+				});
+			});
+
+		new Setting(el).setName("Lists").setDesc("Your task lists. Deleting a list moves its tasks to “Tasks”.").setHeading();
+		for (const l of store.lists) {
+			const row = new Setting(el).setClass("ch-task-list-setting");
+			row.addColorPicker((c) =>
+				c.setValue(l.color).onChange(async (v) => {
+					await store.updateList(l.id, { color: v });
+				})
+			);
+			row.addText((t) =>
+				t.setValue(l.name).onChange(async (v) => {
+					if (v.trim()) await store.updateList(l.id, { name: v.trim() });
+				})
+			);
+			row.setDesc(`${store.items.filter((x) => x.listId === l.id && !x.done).length} open tasks${l.id === DEFAULT_TASK_LIST.id ? " · default list, can't be deleted" : ""}`);
+			if (l.id !== DEFAULT_TASK_LIST.id) {
+				row.addExtraButton((b) =>
+					b.setIcon("trash").setTooltip("Delete list").onClick(async () => {
+						const n = store.items.filter((x) => x.listId === l.id).length;
+						const ok = await confirmAction(this.app, "Delete list", n ? `Delete “${l.name}”? Its ${n} task${n === 1 ? "" : "s"} will move to “${DEFAULT_TASK_LIST.name}”.` : `Delete “${l.name}”?`);
+						if (!ok) return;
+						await store.removeList(l.id);
+						this.display();
+					})
+				);
+			}
+		}
+		new Setting(el).addButton((b) =>
+			b.setButtonText("Add list").onClick(async () => {
+				await store.addList("New list", this.nextTaskColor());
+				this.display();
+			})
+		);
+	}
+
+	private nextTaskColor(): string {
+		const used = new Set(this.plugin.tasks.lists.map((l) => l.color));
+		return PALETTE.find((c) => !used.has(c)) ?? PALETTE[this.plugin.tasks.lists.length % PALETTE.length];
 	}
 
 	// ------------------------------------------------------------------ tab: Notes

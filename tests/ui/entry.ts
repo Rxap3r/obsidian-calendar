@@ -17,6 +17,9 @@ import { CalendarView } from "../../src/views/CalendarView";
 import { MiniCalendarView } from "../../src/views/MiniCalendarView";
 import { OmniCalendarSettingTab } from "../../src/settings";
 import { IcsCalendar } from "../../src/ics";
+import { TasksView } from "../../src/views/TasksView";
+import { TaskModal } from "../../src/modals/TaskModal";
+import { TFile } from "obsidian";
 
 function fakeWorkspace() {
 	const leftSplit = { name: "left", collapsed: false };
@@ -30,6 +33,7 @@ function fakeWorkspace() {
 		const l: any = {
 			root, vs: { type: null, state: {} }, parent: tabs,
 			getRoot() { return this.root; },
+			async openFile(f: any) { (window as any).openedFile = f.path; },
 			getDisplayText() { return this.title ?? this.vs.type; },
 			getViewState() { return this.vs; },
 			async setViewState(v: any) { this.vs = v; },
@@ -61,6 +65,10 @@ function fakeWorkspace() {
 	(window as any).__Platform.isMobile = !!opts.mobile;
 	const files: Record<string, string> = {};
 	const secrets: Record<string, string> = {};
+	const notes: any[] = ["Projects/Website relaunch.md", "Projects/Website notes.md", "Meetings/Weekly.md", "Inbox.md"].map((p, i) => {
+		const f: any = new TFile(p); f.stat.mtime = i; return f;
+	});
+	(window as any).vaultNotes = notes;
 	const ws = fakeWorkspace();
 	const app: any = {
 		vault: {
@@ -68,7 +76,11 @@ function fakeWorkspace() {
 				exists: async (p: string) => p in files, read: async (p: string) => files[p],
 				write: async (p: string, d: string) => { files[p] = d; }, mkdir: async () => {}, remove: async () => {},
 			},
-			on: () => ({}), getAbstractFileByPath: () => null,
+			on: () => ({}),
+			getAbstractFileByPath: (p: string) => notes.find((n) => n.path === p) ?? null,
+			getMarkdownFiles: () => notes,
+			create: async (p: string) => { const f = new TFile(p); notes.push(f); return f; },
+			createFolder: async () => {},
 		},
 		secretStorage: {
 			getSecret: (id: string) => secrets[id] ?? null,
@@ -135,4 +147,19 @@ function fakeWorkspace() {
 	(window as any).view = view;
 	(window as any).mini = mini;
 	(window as any).tab = new OmniCalendarSettingTab(app, plugin);
+	(window as any).TaskModal = TaskModal;
+	// Tasks page: mountTasks() replaces the calendar in #main (or puts it in #side with { side: true }).
+	(window as any).mountTasks = async (o: { side?: boolean } = {}) => {
+		const leaf: any = ws.mk(o.side ? ws.rightSplit : ws.rootSplit);
+		leaf.app = app;
+		const tv = new TasksView(leaf, plugin);
+		leaf.vs = { type: "omni-calendar-tasks", state: {} };
+		leaf.view = tv;
+		const host = document.getElementById(o.side ? "side" : "main")!;
+		host.innerHTML = "";
+		host.appendChild(tv.contentEl);
+		await tv.onOpen();
+		(window as any).tasksView = tv;
+		return tv;
+	};
 };
