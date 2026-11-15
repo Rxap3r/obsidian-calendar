@@ -459,7 +459,60 @@ release tag must exactly match `version` in `manifest.json` (for example `1.0.1`
 
 ## Roadmap ideas
 
-### Planned: event reminders and notifications
+### Planned next: Tasks (in three releases)
+
+A to-do system that lives **inside Omni Calendar**: tasks are created in the plugin, not read from notes. Reading checkboxes from notes was rejected, because formats vary and too many lines would be picked up as tasks by mistake.
+
+**Basics agreed for all steps**
+- **Events stay events.** An event, such as a meeting, can **have tasks** ("prepare slides", "send summary"). Tasks can also exist **on their own**.
+- **A task has:**
+  - title, notes;
+  - **list**, **priority** (none / low / medium / high);
+  - **date** (optional) and **time or time range** (optional, but usually set, e.g. 10:30–11:00);
+  - **subtasks** (one level, like Microsoft To Do's steps);
+  - done/open, and *Create note*.
+- **Task lists** like Microsoft To Do: your own lists (e.g. *Work*, *Home*, *Project X*) with a colour, plus a default list "Tasks".
+- **Automatic lists:**
+  - Today, Tomorrow;
+  - Upcoming (next 7 days), Overdue;
+  - No date, All, Done.
+
+  Each is sorted by priority, then by time.
+- **Event tasks appear in the task lists too**, with a small note saying which event they belong to.
+- **As little clutter as possible:** done tasks are struck through, and a setting can hide them. A general **Tasks on/off switch** hides everything task-related without deleting anything.
+- The name **"Tasks"** is used everywhere (page, menu, settings, tab title).
+- Tasks are stored in a **separate file** in the plugin folder, not in the settings file. That keeps sync conflicts between phone and computer less likely.
+
+**Step 1 – version 1.7: the basics**
+- A dedicated **Tasks page** (full page):
+  - automatic lists and your own lists on the left (on the phone, a dropdown or swipe bar at the top);
+  - the tasks of the selected list on the right;
+  - a **quick-add** box.
+- **Tasks in the sidebar**, as a compact version with its **own toggle**, independent of the mini calendar / day planner.
+- Creating and editing a task: title, notes, list, priority, date, time / time range, subtasks. Tick off with a checkbox.
+- Managing lists: create, rename, colour, delete.
+- New **Tasks** settings tab: on/off, show completed tasks, default priority, default list. Ribbon menu entry **Open tasks** and commands.
+
+**Step 2 – version 1.8: tasks in the calendar and on events**
+- **Tasks with a time range** show as light time blocks in Week/Day, looking clearly different from events.
+- **Tasks with only a date** don't get their own entry. Each day shows one small **counter** ("☑ 3"); tapping it lists the tasks. Month view shows just a small badge.
+- Tick tasks off and drag them to another day directly in the calendar.
+- **Tasks on events:**
+  - a "Tasks" section in the event dialog;
+  - a progress hint ("2/5") on the event;
+  - this also works for Google/Outlook events, but those tasks are stored only in Obsidian.
+- The mini calendar gets a small **"Tasks today"** section.
+
+**Step 3 – version 1.9: repeating**
+- **Repeating tasks**, each occurrence ticked off separately.
+- **Tasks on repeating events:** the event's task list works as a template, and each occurrence has its own ticks. Ticking one off on 14 Nov doesn't tick it off on 21 Nov.
+
+**Later, maybe:**
+- **Microsoft To Do** sync: lists map 1:1. It needs an extra permission (`Tasks.ReadWrite`) and signing in once more.
+- Google Tasks.
+- Reminders for tasks, together with the notifications feature below.
+
+### Planned after Tasks: event reminders and notifications
 
 - **Reminder field** in the event dialog (none, at start, 5/10/15/30 minutes, 1 hour, 1 day before) and a **default reminder** in settings, plus an on/off switch for each device so two computers don't both notify.
 - **Desktop:** system notifications from Obsidian, clicking one opens the event. They work while Obsidian is running (even minimised). Reminders missed while it was closed are shown on the next start.

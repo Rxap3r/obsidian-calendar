@@ -104,7 +104,34 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Roadmap / open topics
 
-- **Planned next feature: reminders and notifications.** See the README roadmap for the agreed design:
+- **Planned next feature: Tasks, in three releases (agreed with the maintainer; the full design is in the README roadmap).**
+  Build them strictly step by step. The maintainer tests each release before the next one starts.
+  - **Plugin-owned tasks only.** Never parse checkboxes from notes; that was rejected.
+  - **Events stay events, but they can *have* tasks.** Tasks can also stand alone.
+  - **Task fields:**
+    - title, notes;
+    - list, priority (none/low/medium/high);
+    - optional date and optional time or time range (most tasks will have one);
+    - subtasks, **one level only**;
+    - done, plus an optional link to an event (local or remote ID + occurrence).
+  - **Lists:**
+    - user lists with a colour, like Microsoft To Do, plus a default list "Tasks";
+    - automatic lists: Today, Tomorrow, Upcoming (7 days), Overdue, No date, All, Done;
+    - sorting is priority, then time;
+    - event tasks also appear in the lists, marked with their event.
+  - **Storage:** a **separate file** in the plugin folder (not `data.json`), with a migration-safe shape.
+  - **Main switch:** "Tasks" on/off hides everything but deletes nothing.
+  - **Naming:** the UI name is **Tasks** everywhere. Suggested view type: `omni-calendar-tasks` (full page + compact sidebar version).
+    The sidebar toggle for Tasks is **separate** from the mini calendar / day planner.
+  - **Calendar display must stay uncluttered:**
+    - timed tasks as light blocks;
+    - date-only tasks as **one counter per day** ("☑ 3");
+    - done tasks struck through, with a setting to hide them.
+  - **1.7:** Tasks page (full + sidebar), lists, task editing, subtasks, quick add, Tasks settings tab, menu entry and commands.
+  - **1.8:** calendar integration, tasks on events (dialog section, "2/5" hint), "Tasks today" in the mini calendar.
+  - **1.9:** repeating tasks, and per-occurrence tasks on repeating events.
+  - **Later:** Microsoft To Do sync (`Tasks.ReadWrite`, re-consent needed), Google Tasks, task reminders.
+- **After Tasks: reminders and notifications.** See the README roadmap for the agreed design:
   - a reminder field and a default reminder;
   - desktop system notifications;
   - an in-app pop-up on mobile;
