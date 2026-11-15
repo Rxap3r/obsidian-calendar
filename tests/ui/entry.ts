@@ -20,6 +20,8 @@ import { IcsCalendar } from "../../src/ics";
 import { TasksView } from "../../src/views/TasksView";
 import { TaskModal } from "../../src/modals/TaskModal";
 import { TFile } from "obsidian";
+import * as timeMod from "../../src/timePicker";
+import * as eventMod from "../../src/modals/EventModal";
 
 function fakeWorkspace() {
 	const leftSplit = { name: "left", collapsed: false };
@@ -148,6 +150,8 @@ function fakeWorkspace() {
 	(window as any).mini = mini;
 	(window as any).tab = new OmniCalendarSettingTab(app, plugin);
 	(window as any).TaskModal = TaskModal;
+	(window as any).__timeMod = timeMod;
+	(window as any).__eventMod = eventMod;
 	// Tasks page: mountTasks() replaces the calendar in #main (or puts it in #side with { side: true }).
 	(window as any).mountTasks = async (o: { side?: boolean } = {}) => {
 		const leaf: any = ws.mk(o.side ? ws.rightSplit : ws.rootSplit);

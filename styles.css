@@ -644,3 +644,24 @@
 .ch-note-suggestion-path { font-size: 0.8em; color: var(--text-muted); }
 .ch-task-list-setting .setting-item-control { gap: 6px; }
 .ch-task-modal .ch-task-sub-row .ch-input, .ch-task-modal .ch-task-add-sub { max-width: none; }
+
+/* ---------------------------------------------------------------- our own time picker (same on every device) */
+.ch-timefield { position: relative; display: inline-flex; flex: 1 1 100px; max-width: 140px; min-width: 0; }
+.ch-timefield-input { width: 100%; max-width: none !important; min-width: 0; box-sizing: border-box; cursor: pointer; font-variant-numeric: tabular-nums; }
+.ch-timefield.ch-invalid .ch-timefield-input { border-color: var(--text-error); box-shadow: 0 0 0 1px var(--text-error); }
+.ch-time-list {
+	position: fixed; z-index: calc(var(--layer-menu, 65) + 1); box-sizing: border-box;
+	display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; padding: 4px;
+	background: var(--background-primary); border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m); box-shadow: var(--shadow-s);
+}
+.ch-time-item {
+	flex: none; display: block; width: 100%; height: auto; min-height: 0; padding: 6px 10px; margin: 0; text-align: left;
+	background: transparent; box-shadow: none; border: none; border-radius: var(--radius-s); cursor: pointer;
+	color: var(--text-normal); white-space: pre; font-variant-numeric: tabular-nums;
+}
+.ch-time-item:hover, .ch-time-item.is-active { background: var(--background-modifier-hover); }
+.ch-time-item.is-selected { color: var(--text-accent); font-weight: 600; }
+.ch-time-type, .ch-time-clear { color: var(--text-muted); border-bottom: 1px solid var(--background-modifier-border); border-radius: 0; }
+.ch-time-head { position: sticky; top: -4px; z-index: 1; margin: -4px -4px 2px; padding: 4px 4px 0; background: var(--background-primary); border-bottom: 1px solid var(--background-modifier-border); }
+.ch-time-head .ch-time-item { border-bottom: none; }

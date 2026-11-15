@@ -3,6 +3,7 @@ import type OmniCalendarPlugin from "../main";
 import { CalendarStore } from "../store";
 import { CalendarOccurrence, EventInput, LocalEvent, Recurrence, RecurrenceFreq } from "../types";
 import { confirmAction } from "./ConfirmModal";
+import { TimeField } from "../timePicker";
 import { addDays, addMinutes, isValidDate, parseLocal, toDateKey, toTimeKey } from "../dateUtils";
 
 export interface EventModalInit {
@@ -47,6 +48,7 @@ export class EventModal extends Modal {
 	private count: number;
 
 	private timeEls: HTMLElement[] = [];
+	private timeFields: Partial<Record<"start" | "end", TimeField>> = {};
 	private recurEls: HTMLElement[] = [];
 	private busy = false;
 
@@ -291,10 +293,17 @@ export class EventModal extends Modal {
 		const s = new Setting(container).setName(label);
 		const date = s.controlEl.createEl("input", { type: "date", cls: "ch-input" });
 		date.value = which === "start" ? this.startDate : this.endDate;
-		const time = s.controlEl.createEl("input", { type: "time", cls: "ch-input" });
-		time.value = which === "start" ? this.startTime : this.endTime;
-		time.step = "300";
-		this.timeEls.push(time);
+		const time = new TimeField(s.controlEl, {
+			value: which === "start" ? this.startTime : this.endTime,
+			placeholder: which === "start" ? "Start" : "End",
+			use24h: this.plugin.settings.use24h,
+			cls: `ch-event-${which}-time`,
+			// End on the same day: list times after the start, with durations.
+			after: which === "end" ? () => (this.endDate === this.startDate ? this.startTime : undefined) : undefined,
+			onChange: () => onChange(),
+		});
+		this.timeFields[which] = time;
+		this.timeEls.push(time.el);
 
 		const onChange = () => {
 			if (which === "start") {
@@ -303,23 +312,22 @@ export class EventModal extends Modal {
 				const oldEnd = parseLocal(`${this.endDate}T${this.endTime}`);
 				const durMs = oldEnd.getTime() - oldStart.getTime();
 				this.startDate = date.value;
-				this.startTime = time.value || this.startTime;
+				this.startTime = time.getValue() || this.startTime;
 				const ns = parseLocal(`${this.startDate}T${this.startTime}`);
 				if (isValidDate(ns) && isValidDate(oldStart) && durMs >= 0) {
 					const ne = new Date(ns.getTime() + durMs);
 					this.endDate = toDateKey(ne);
 					this.endTime = toTimeKey(ne);
-					const endInputs = this.contentEl.querySelectorAll<HTMLInputElement>(".ch-end-row input");
-					if (endInputs[0]) endInputs[0].value = this.endDate;
-					if (endInputs[1]) endInputs[1].value = this.endTime;
+					const endDate = this.contentEl.querySelector<HTMLInputElement>(".ch-end-row input[type=date]");
+					if (endDate) endDate.value = this.endDate;
+					this.timeFields.end?.setValue(this.endTime);
 				}
 			} else {
 				this.endDate = date.value;
-				this.endTime = time.value || this.endTime;
+				this.endTime = time.getValue() || this.endTime;
 			}
 		};
 		date.addEventListener("change", onChange);
-		time.addEventListener("change", onChange);
 		s.settingEl.addClass(which === "start" ? "ch-start-row" : "ch-end-row");
 	}
 

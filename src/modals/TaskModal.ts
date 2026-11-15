@@ -6,6 +6,7 @@ import { addDays, toDateKey } from "../dateUtils";
 import { confirmAction } from "./ConfirmModal";
 import { NotePickerModal } from "./NotePickerModal";
 import { openLinkedNote } from "../views/TasksView";
+import { TimeField } from "../timePicker";
 
 /** Create / edit a task: title, list, priority, date, time (range), subtasks, linked notes, notes. */
 export class TaskModal extends Modal {
@@ -82,29 +83,31 @@ export class TaskModal extends Modal {
 		// Time or time range.
 		const time = new Setting(contentEl).setName("Time").setDesc("Optional. Leave “to” empty for a single time.").setClass("ch-task-time-setting");
 		this.timeRow = time.settingEl;
-		const from = placeholderInput(time.controlEl, "time", "Start", "ch-task-start");
-		from.value = t.start ?? "";
-		time.controlEl.createSpan({ cls: "ch-task-time-sep", text: "to" });
-		const to = placeholderInput(time.controlEl, "time", "End", "ch-task-end");
-		to.value = t.end ?? "";
-		syncEmpty(from);
-		syncEmpty(to);
-		from.addEventListener("change", () => {
-			t.start = from.value || undefined;
-			if (!t.start) {
-				t.end = undefined;
-				to.value = "";
-				syncEmpty(to);
-			}
+		const use24h = this.plugin.settings.use24h;
+		let to: TimeField;
+		const from = new TimeField(time.controlEl, {
+			value: t.start, placeholder: "Start", use24h, cls: "ch-task-start",
+			onChange: (v) => {
+				t.start = v;
+				// No start → no end; an end before the new start is dropped.
+				if (!v || (t.end && t.end <= v)) {
+					t.end = undefined;
+					to.setValue(undefined);
+				}
+			},
 		});
-		to.addEventListener("change", () => (t.end = to.value || undefined));
+		time.controlEl.createSpan({ cls: "ch-task-time-sep", text: "to" });
+		to = new TimeField(time.controlEl, {
+			value: t.end, placeholder: "End", use24h, cls: "ch-task-end",
+			after: () => t.start,
+			onChange: (v) => (t.end = v),
+		});
 		const clear = time.controlEl.createEl("button", { cls: "ch-icon-btn", attr: { "aria-label": "Clear time" } });
 		setIcon(clear, "x");
 		clear.onclick = () => {
 			t.start = t.end = undefined;
-			from.value = to.value = "";
-			syncEmpty(from);
-			syncEmpty(to);
+			from.setValue(undefined);
+			to.setValue(undefined);
 		};
 		this.updateTimeVisibility();
 
@@ -238,7 +241,7 @@ export class TaskModal extends Modal {
  * Date / time input with a visible hint while it is empty ("Select date"). Phones show an
  * empty date field as a blank box, and browsers don't support placeholders on these inputs.
  */
-function placeholderInput(parent: HTMLElement, type: "date" | "time", hint: string, cls: string): HTMLInputElement {
+function placeholderInput(parent: HTMLElement, type: "date", hint: string, cls: string): HTMLInputElement {
 	const wrap = parent.createDiv({ cls: `ch-ph-wrap ch-ph-${type}` });
 	const input = wrap.createEl("input", { type, cls: `ch-input ${cls}` });
 	wrap.createSpan({ cls: "ch-ph-hint", text: hint });

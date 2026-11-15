@@ -385,10 +385,15 @@ test("desktop: task dialog – priority, date, time range, subtasks, linked note
 	await page.click(".ch-prio-seg .ch-prio-3");
 	await page.click('.ch-task-quick button:text("Tomorrow")');
 	expect(await page.isVisible(".ch-task-time-setting"), "time row visible once a date is set");
-	await page.fill(".ch-task-start", "10:30");
-	await page.dispatchEvent(".ch-task-start", "change");
-	await page.fill(".ch-task-end", "11:45");
-	await page.dispatchEvent(".ch-task-end", "change");
+	// Our own time picker: type a start, pick the end from the list (shows durations).
+	await page.click(".ch-task-start input");
+	await page.keyboard.type("1030");
+	await page.keyboard.press("Enter");
+	await page.click(".ch-task-end input");
+	const endItems = await page.$$eval(".ch-time-list [data-value]", (e) => e.slice(0, 3).map((x) => x.textContent));
+	eq(endItems, ["10:45  ·  15 min", "11:00  ·  30 min", "11:15  ·  45 min"], "end list starts after the start, with durations");
+	await page.click('.ch-time-list [data-value="11:45"]');
+	eq(await page.$$eval(".ch-time-list", (e) => e.length), 0, "list closes after picking");
 	await page.fill(".ch-task-add-sub", "Book room");
 	await page.press(".ch-task-add-sub", "Enter");
 	await page.fill(".ch-task-add-sub", "Print handouts");
@@ -422,6 +427,54 @@ test("desktop: task dialog – priority, date, time range, subtasks, linked note
 	await page.evaluate(() => { plugin.tasks.renameLink("Projects/Website notes.md", "Archive/Website notes.md"); plugin.tasks.removeLink("Calendar/Workshop plan.md"); });
 	eq(await page.evaluate(() => plugin.tasks.items.find((x) => x.title === "Prepare workshop").links), ["Archive/Website notes.md"], "links follow rename/delete");
 	await page.screenshot({ path: path.join(SHOTS, "tasks-desktop-tomorrow.png") });
+});
+
+test("time picker: typing, list, 12-hour clock, invalid input, phone mode", {}, async ({ page }) => {
+	const r = await page.evaluate(async () => {
+		const { parseTimeInput } = window.__timeMod;
+		return ["1030", "10:30", "9", "930", "2:30pm", "12am", "12 pm", "7.15", "25:00", "abc", "10:75"].map((s) => parseTimeInput(s));
+	});
+	eq(r, ["10:30", "10:30", "09:00", "09:30", "14:30", "00:00", "12:00", "07:15", null, null, null], "parsing");
+	await page.evaluate(() => { plugin.settings.use24h = false; new TaskModal(plugin, undefined, { date: "2026-11-14" }).open(); });
+	await page.waitForTimeout(100);
+	await page.click(".ch-task-start input");
+	eq(await page.$$eval(".ch-time-list [data-value]", (e) => e.length), 96, "96 quarter-hour steps");
+	eq(await page.$eval('.ch-time-list [data-value="14:30"]', (e) => e.textContent), "2:30 PM", "12-hour labels");
+	await page.keyboard.type("nonsense");
+	await page.keyboard.press("Enter");
+	eq(await page.inputValue(".ch-task-start input"), "", "invalid input is rejected");
+	await page.click(".ch-task-start input");
+	await page.keyboard.type("9:05pm");
+	await page.keyboard.press("Enter");
+	eq(await page.inputValue(".ch-task-start input"), "9:05 PM", "exact minutes can be typed");
+	await page.screenshot({ path: path.join(SHOTS, "time-picker-desktop.png") });
+});
+
+test("mobile: time picker list first, 'Type a time', event dialog keeps duration", { mobile: true }, async ({ page }) => {
+	await page.evaluate(() => new TaskModal(plugin, undefined, { date: "2026-11-14" }).open());
+	await page.waitForTimeout(100);
+	eq(await page.$eval(".ch-task-start input", (e) => e.readOnly), true, "no keyboard by default on phones");
+	await page.tap(".ch-task-start input");
+	await page.waitForTimeout(80);
+	const box = await page.evaluate(() => {
+		const list = document.querySelector(".ch-time-list"); const l = list.getBoundingClientRect();
+		const type = list.querySelector(".ch-time-type").getBoundingClientRect();
+		return { inside: l.left >= 0 && l.right <= innerWidth && l.top >= 0 && l.bottom <= innerHeight, typeVisible: type.top >= l.top - 1 && type.bottom <= l.bottom, scrolled: list.scrollTop > 0 };
+	});
+	eq(box, { inside: true, typeVisible: true, scrolled: true }, "list fully on screen; 'Type a time' stays visible while scrolled to the current time");
+	await page.screenshot({ path: path.join(SHOTS, "time-picker-mobile.png") });
+	await page.tap('.ch-time-list [data-value="09:30"]');
+	eq(await page.inputValue(".ch-task-start input"), "09:30", "tap picks a time");
+	await page.evaluate(() => window.lastModal.close());
+	// Event dialog: moving the start keeps the duration (end follows)
+	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "week"));
+	await page.evaluate(() => { const { EventModal } = window.__eventMod; new EventModal(plugin, { start: new Date(2026, 10, 14, 10, 0), end: new Date(2026, 10, 14, 11, 0) }).open(); });
+	await page.waitForTimeout(100);
+	await page.tap(".ch-event-start-time input");
+	await page.tap('.ch-time-list [data-value="13:00"]');
+	eq(await page.inputValue(".ch-event-end-time input"), "14:00", "end moved with the start");
+	await page.tap(".ch-event-end-time input");
+	eq(await page.$eval('.ch-time-list [data-value="14:30"]', (e) => e.textContent), "14:30  ·  1 h 30 min", "event end list shows durations");
 });
 
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {
