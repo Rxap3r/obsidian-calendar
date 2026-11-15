@@ -243,6 +243,9 @@ export default class OmniCalendarPlugin extends Plugin {
 		const { workspace } = this.app;
 		let leaf: WorkspaceLeaf | null = workspace.getLeavesOfType(VIEW_TYPE_CALENDAR).find((l) => !this.isInSidebar(l)) ?? null;
 		if (!leaf) {
+			// Make sure the new tab is created in the main area, even if a sidebar view had focus.
+			const recent = workspace.getMostRecentLeaf(workspace.rootSplit);
+			if (recent && recent !== workspace.activeLeaf) workspace.setActiveLeaf(recent, { focus: false });
 			leaf = workspace.getLeaf("tab");
 			const state: Record<string, unknown> = {};
 			if (mode) state.mode = mode;
@@ -335,13 +338,27 @@ export default class OmniCalendarPlugin extends Plugin {
 	 * ⤢ button of the Day planner: open the full page, then (per setting) switch the sidebar
 	 * to the mini calendar, close it, or keep the Day planner.
 	 */
-	async expandFromSidebar(date: Date, mode: ViewMode) {
-		await this.openCalendar(date, mode);
+	async expandFromSidebar(planner: WorkspaceLeaf, date: Date, mode: ViewMode) {
 		const after = this.settings.sidebarOnExpand;
-		if (after === "keep") return;
-		this.settings.sidebarView = after === "mini" ? "mini" : "none";
-		await this.persist();
-		await this.applySidebar(false);
+		if (after !== "keep") {
+			// Change the sidebar first, in place: the Day planner's own tab becomes the mini
+			// calendar, so it stays the visible tab (instead of Obsidian showing e.g. Bookmarks).
+			this.applyingSidebar = true;
+			try {
+				this.settings.sidebarView = after === "mini" ? "mini" : "none";
+				await this.persist();
+				for (const leaf of this.sidebarLeaves(VIEW_TYPE_CALENDAR)) if (leaf !== planner) leaf.detach();
+				if (after === "mini") {
+					for (const leaf of this.sidebarLeaves(VIEW_TYPE_MINI)) leaf.detach();
+					await planner.setViewState({ type: VIEW_TYPE_MINI, active: false, state: {} });
+				} else {
+					planner.detach();
+				}
+			} finally {
+				window.setTimeout(() => (this.applyingSidebar = false), 300);
+			}
+		}
+		await this.openCalendar(date, mode);
 	}
 
 	/** Show the mini / full calendar in the sidebar, or hide it if it is already shown. */

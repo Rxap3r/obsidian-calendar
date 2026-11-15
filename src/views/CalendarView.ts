@@ -201,7 +201,7 @@ export class CalendarView extends ItemView {
 	/** Sidebar → open the full page in the main area. Main area → move this calendar into the sidebar. */
 	private async toggleLocation() {
 		if (this.plugin.isInSidebar(this.leaf)) {
-			await this.plugin.expandFromSidebar(this.cursor, this.mode);
+			await this.plugin.expandFromSidebar(this.leaf, this.cursor, this.mode);
 			return;
 		}
 		await this.plugin.moveToSidebar({ mode: this.mode, date: toDateKey(this.cursor) });

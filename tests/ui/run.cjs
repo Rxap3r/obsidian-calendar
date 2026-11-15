@@ -224,16 +224,18 @@ test("desktop: ⤢ in the Day planner – switch to mini (default), close, or ke
 			const btn = V.contentEl.querySelector('[aria-label^="Open full page"]');
 			const label = btn.getAttribute("aria-label");
 			btn.click(); await new Promise((r) => setTimeout(r, 50));
+			ws.fireLayoutChange(); // Obsidian fires this right after; must not undo the change
 			const main = ws.leaves.filter((l) => l.root === ws.rootSplit && l.vs.type === "omni-calendar-view").length;
-			return { label, setting: plugin.settings.sidebarView, mini: plugin.sidebarLeaves("omni-calendar-mini").length,
+			const miniLeaves = plugin.sidebarLeaves("omni-calendar-mini");
+			return { label, setting: plugin.settings.sidebarView, mini: miniLeaves.length, sameTab: miniLeaves[0] === L,
 				planner: plugin.sidebarLeaves("omni-calendar-view").length, main: main > 0 };
 		};
 		return { def: plugin.settings.sidebarOnExpand, mini: await run(), close: await run("close"), keep: await run("keep") };
 	});
 	eq(r.def, "mini", "default");
-	eq(r.mini, { label: "Open full page (sidebar switches to the mini calendar)", setting: "mini", mini: 1, planner: 0, main: true }, "switch to mini");
-	eq(r.close, { label: "Open full page (closes this sidebar calendar)", setting: "none", mini: 0, planner: 0, main: true }, "close");
-	eq(r.keep, { label: "Open full page (keeps this sidebar calendar)", setting: "full", mini: 0, planner: 1, main: true }, "keep");
+	eq(r.mini, { label: "Open full page (sidebar switches to the mini calendar)", setting: "mini", mini: 1, sameTab: true, planner: 0, main: true }, "switch to mini");
+	eq(r.close, { label: "Open full page (closes this sidebar calendar)", setting: "none", mini: 0, sameTab: false, planner: 0, main: true }, "close");
+	eq(r.keep, { label: "Open full page (keeps this sidebar calendar)", setting: "full", mini: 0, sameTab: false, planner: 1, main: true }, "keep");
 });
 
 test("desktop: responsive month/week at narrow widths", { width: 360 }, async ({ page }) => {
