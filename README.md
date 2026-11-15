@@ -18,7 +18,7 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 
 ### Quick start
 
-1. Install with **BRAT**: add `rxap3r/obsidian-calendar` ([details](#installation-with-brat-beta)).
+1. Install with **BRAT**: add `rxap3r/omni-calendar` ([details](#installation-with-brat-beta)).
 2. Click the 📅 icon in the left ribbon to open the calendar. Double-click a day, or click **+ New**, to create an event.
 3. Optional: in *Settings → Omni Calendar → **Google & Outlook***, click **Connect** to see and edit your Google / Outlook events.
 
@@ -38,7 +38,7 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 
 1. Install **BRAT** ("Obsidian42 - BRAT") from *Settings → Community plugins → Browse*, then enable it.
 2. Open *Settings → BRAT → "Add Beta plugin"* (or run the command **BRAT: Add a beta plugin for testing**).
-3. Enter the repository: `rxap3r/obsidian-calendar`
+3. Enter the repository: `rxap3r/omni-calendar`
 4. Click **Add Plugin**. BRAT downloads the latest release.
 5. Enable **Omni Calendar** under *Settings → Community plugins*.
 
@@ -52,7 +52,7 @@ BRAT checks for updates automatically. You can also run **BRAT: Check for update
 ### Manual installation
 
 Download `main.js`, `manifest.json` and `styles.css` from the
-[latest release](https://github.com/rxap3r/obsidian-calendar/releases) and put them in
+[latest release](https://github.com/rxap3r/omni-calendar/releases) and put them in
 `<your vault>/.obsidian/plugins/omni-calendar/`. Then reload Obsidian and enable the plugin.
 
 ---
