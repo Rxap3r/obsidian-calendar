@@ -197,6 +197,8 @@ test("desktop: day planner in sidebar opens in Day view and remembers its own vi
 		await plugin.toggleSidebar("full");
 		const leaf = plugin.sidebarLeaves("omni-calendar-view")[0];
 		out.opens = leaf.getViewState().state.mode;
+		const L0 = ws.mk(ws.rightSplit); L0.app = plugin.app; const V0 = new view.constructor(L0, plugin);
+		out.titles = [view.getDisplayText(), V0.getDisplayText(), mini.getDisplayText()];
 		// a real view inside a sidebar leaf: switching to Week is remembered, the main view is not affected
 		const L = ws.mk(ws.rightSplit); L.app = plugin.app;
 		const V = new view.constructor(L, plugin); await V.onOpen();
@@ -211,7 +213,9 @@ test("desktop: day planner in sidebar opens in Day view and remembers its own vi
 		out.label = [...tab.containerEl.querySelectorAll("option")].find((o) => o.value === "full")?.text ?? null;
 		return out;
 	});
-	eq(r, { opens: "day", remembered: "week", afterMain: "week", reopens: "week", label: "Day planner (timeline)" }, "day planner");
+	eq(r.titles, ["Calendar", "Day planner", "Mini calendar"], "tab titles match the names in menus and settings");
+	delete r.titles;
+	eq(r, { opens: "day", remembered: "week", afterMain: "week", reopens: "week", label: "Day planner" }, "day planner");
 });
 
 test("desktop: ⤢ in the Day planner – switch to mini (default), close, or keep", {}, async ({ page }) => {
@@ -221,7 +225,7 @@ test("desktop: ⤢ in the Day planner – switch to mini (default), close, or ke
 			plugin.settings.sidebarView = "full"; await plugin.applySidebar(false);
 			const L = plugin.sidebarLeaves("omni-calendar-view")[0]; L.app = plugin.app;
 			const V = new view.constructor(L, plugin); await V.onOpen();
-			const btn = V.contentEl.querySelector('[aria-label^="Open full page"]');
+			const btn = V.contentEl.querySelector('[aria-label^="Open calendar"]');
 			const label = btn.getAttribute("aria-label");
 			btn.click(); await new Promise((r) => setTimeout(r, 50));
 			ws.fireLayoutChange(); // Obsidian fires this right after; must not undo the change
@@ -233,9 +237,9 @@ test("desktop: ⤢ in the Day planner – switch to mini (default), close, or ke
 		return { def: plugin.settings.sidebarOnExpand, mini: await run(), close: await run("close"), keep: await run("keep") };
 	});
 	eq(r.def, "mini", "default");
-	eq(r.mini, { label: "Open full page (sidebar switches to the mini calendar)", setting: "mini", mini: 1, sameTab: true, planner: 0, main: true }, "switch to mini");
-	eq(r.close, { label: "Open full page (closes this sidebar calendar)", setting: "none", mini: 0, sameTab: false, planner: 0, main: true }, "close");
-	eq(r.keep, { label: "Open full page (keeps this sidebar calendar)", setting: "full", mini: 0, sameTab: false, planner: 1, main: true }, "keep");
+	eq(r.mini, { label: "Open calendar (the sidebar switches to the mini calendar)", setting: "mini", mini: 1, sameTab: true, planner: 0, main: true }, "switch to mini");
+	eq(r.close, { label: "Open calendar (closes the day planner)", setting: "none", mini: 0, sameTab: false, planner: 0, main: true }, "close");
+	eq(r.keep, { label: "Open calendar (keeps the day planner)", setting: "full", mini: 0, sameTab: false, planner: 1, main: true }, "keep");
 });
 
 test("desktop: Day planner 'Close' → chosen sidebar tab is shown (left and right)", {}, async ({ page }) => {
@@ -254,7 +258,7 @@ test("desktop: Day planner 'Close' → chosen sidebar tab is shown (left and rig
 			plugin.settings.sidebarView = "full"; await plugin.applySidebar(false);
 			const L = plugin.sidebarLeaves("omni-calendar-view")[0]; L.app = plugin.app;
 			const V = new view.constructor(L, plugin); await V.onOpen();
-			V.contentEl.querySelector('[aria-label^="Open full page"]').click(); await new Promise((r) => setTimeout(r, 50));
+			V.contentEl.querySelector('[aria-label^="Open calendar"]').click(); await new Promise((r) => setTimeout(r, 50));
 		};
 		plugin.settings.sidebarSide = "right"; out.rightOpts = settingRows();
 		plugin.settings.sidebarAfterClose = "bookmarks"; await press();
@@ -283,7 +287,7 @@ test("desktop: settings keep their scroll position, don't reveal the sidebar, de
 		tab.containerEl.style.padding = "24px 32px";
 		box.scrollTop = 400; const before = box.scrollTop;
 		const row = (re) => [...tab.containerEl.querySelectorAll(".setting-item")].find((x) => re.test(x.textContent));
-		const sel = row(/When the Day planner opens/).querySelector("select");
+		const sel = row(/When the day planner opens/).querySelector("select");
 		sel.value = "close"; sel.dispatchEvent(new Event("change")); await new Promise((r) => setTimeout(r, 50));
 		out.kept = Math.abs(box.scrollTop - before) < 2 && before > 0;
 		out.subShown = !!row(/Then show this sidebar tab/);
@@ -360,7 +364,7 @@ test("mobile: ribbon tap opens the menu (not the calendar)", { mobile: true }, a
 		window.menuShows = 0; window.ribbonEl.click();
 		return { opened, menus: window.menuShows, title: window.ribbonEl.title, first: window.lastMenu.items[0].t };
 	});
-	eq(r, { opened: 0, menus: 1, title: "Omni Calendar", first: "Open full calendar" }, "ribbon");
+	eq(r, { opened: 0, menus: 1, title: "Omni Calendar", first: "Open calendar" }, "ribbon");
 });
 
 test("mobile touch: tap, long-press drag, double tap, cancelled gesture", { mobile: true }, async ({ page, ctx }) => {

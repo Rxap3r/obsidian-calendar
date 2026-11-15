@@ -278,10 +278,10 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		new Setting(el).setName("Sidebar").setHeading();
 		new Setting(el)
 			.setName("Calendar in sidebar")
-			.setDesc("Mini calendar: month overview with your upcoming events. Day planner: the full calendar as a timeline next to your notes (opens in Day view, remembers the view you pick there). Applies right away and after restarts. Closing it yourself sets this to Off.")
+			.setDesc("Mini calendar: month overview with your upcoming events. Day planner: the calendar as a timeline next to your notes (opens in Day view, remembers the view you pick there). Applies right away and after restarts. Closing it yourself sets this to Off.")
 			.addDropdown((d) =>
 				d
-					.addOptions({ none: "Off", mini: "Mini calendar", full: "Day planner (timeline)" })
+					.addOptions({ none: "Off", mini: "Mini calendar", full: "Day planner" })
 					.setValue(s.sidebarView)
 					.onChange(async (v) => {
 						s.sidebarView = v as SidebarView;
@@ -301,11 +301,11 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 					})
 			);
 		new Setting(el)
-			.setName("When the Day planner opens the full page")
-			.setDesc("What happens in the sidebar when you press ⤢ in the Day planner to open the full calendar.")
+			.setName("When the day planner opens the calendar")
+			.setDesc("What happens in the sidebar when you press ⤢ in the day planner to open the calendar.")
 			.addDropdown((d) =>
 				d
-					.addOptions({ mini: "Switch to the mini calendar", close: "Close the sidebar calendar", keep: "Keep the Day planner" })
+					.addOptions({ mini: "Switch to the mini calendar", close: "Close the day planner", keep: "Keep the day planner" })
 					.setValue(s.sidebarOnExpand)
 					.onChange(async (v) => {
 						s.sidebarOnExpand = v as "mini" | "close" | "keep";
@@ -319,7 +319,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 			if (s.sidebarAfterClose && !(s.sidebarAfterClose in opts)) opts[s.sidebarAfterClose] = `${CORE_TAB_NAMES[s.sidebarAfterClose] ?? s.sidebarAfterClose} (not in the ${side} sidebar right now)`;
 			new Setting(el)
 				.setName("Then show this sidebar tab")
-				.setDesc(`Which tab of the ${side} sidebar is shown after the Day planner closes. The list shows the tabs that are in the ${side} sidebar right now.`)
+				.setDesc(`Which tab of the ${side} sidebar is shown after the day planner closes. The list shows the tabs that are in the ${side} sidebar right now.`)
 				.setClass("ch-sub-setting")
 				.addDropdown((d) =>
 					d.addOptions(opts).setValue(s.sidebarAfterClose).onChange(async (v) => {
