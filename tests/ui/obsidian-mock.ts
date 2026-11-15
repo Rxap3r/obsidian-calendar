@@ -54,7 +54,15 @@ export function setIcon(el: HTMLElement, name: string) {
 }
 export function normalizePath(p: string) { return p.replace(/\/+/g, "/").replace(/^\/|\/$/g, "") || "/"; }
 export class Notice { constructor(m: string) { (window as any).notices.push(m); } }
-export class TFile {}
+export class TFile {
+	path = ""; basename = ""; extension = "md"; parent: any = null; stat = { mtime: 0 };
+	constructor(path = "") {
+		this.path = path;
+		this.basename = path.replace(/\.md$/, "").split("/").pop() ?? path;
+		const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "/";
+		this.parent = { path: dir };
+	}
+}
 export class Component {
 	register(_cb?: () => void) {}
 	registerEvent() {}
@@ -90,6 +98,14 @@ export class Modal {
 		(window as any).lastModal = this;
 	}
 	close() { this.modalEl.parentElement?.remove(); (this as any).onClose?.(); }
+}
+
+export class SuggestModal<T> extends Modal {
+	placeholder = "";
+	setPlaceholder(p: string) { this.placeholder = p; }
+	setInstructions() {}
+	onOpen() {}
+	getSuggestions(_q: string): T[] { return []; }
 }
 
 // ---------------------------------------------------------------- Setting + components

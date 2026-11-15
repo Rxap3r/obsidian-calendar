@@ -157,8 +157,8 @@ test("desktop: new event saved to several calendars", {}, async ({ page }) => {
 
 test("desktop: settings tabs and calendar menu", {}, async ({ page }) => {
 	await page.evaluate(() => { const m = document.getElementById("main"); m.innerHTML = ""; tab.display(); m.appendChild(tab.containerEl); });
-	const expected = { 0: "New events", 1: "Google & Outlook accounts", 2: "Calendar", 3: "Event notes" };
-	for (let i = 0; i < 4; i++) {
+	const expected = { 0: "New events", 1: "Google & Outlook accounts", 2: "Calendar", 3: "Tasks", 4: "Event notes" };
+	for (let i = 0; i < 5; i++) {
 		await page.locator(".ch-settings-tab").nth(i).click();
 		await page.waitForTimeout(80);
 		const first = await page.$eval(".ch-settings-body .setting-item-heading .setting-item-name", (e) => e.textContent);
@@ -312,6 +312,195 @@ test("desktop: settings keep their scroll position, don't reveal the sidebar, de
 	eq([r.reveals, r.miniSelected], [0, true], "sidebar changed without revealing / closing settings");
 	eq(r.bg, "rgb(250, 250, 250)", "tab bar background covers its surroundings");
 	eq(r.tabSwitchTop, true, "switching tabs starts at the top");
+});
+
+// ======================================================================== tasks (1.7)
+
+/** Create tasks around "today" (2026-11-14) for the tasks tests. */
+const seedTasks = () => page => page.evaluate(async () => {
+	const S = plugin.tasks;
+	const add = (o) => S.upsert(S.draft(o));
+	await add({ title: "Low prio today", date: "2026-11-14", priority: 1 });
+	await add({ title: "High prio today", date: "2026-11-14", priority: 3, start: "10:30", end: "11:00" });
+	await add({ title: "Untimed medium today", date: "2026-11-14", priority: 2 });
+	await add({ title: "Overdue thing", date: "2026-11-10" });
+	await add({ title: "Tomorrow thing", date: "2026-11-15", start: "09:00" });
+	await add({ title: "Next week thing", date: "2026-11-19" });
+	await add({ title: "Far away", date: "2026-12-24" });
+	await add({ title: "Someday", subtasks: [{ id: "s1", title: "Step one", done: true }, { id: "s2", title: "Step two", done: false }] });
+});
+
+test("desktop: tasks page – smart lists, sorting, quick add, tick off", {}, async ({ page }) => {
+	await seedTasks()(page);
+	await page.evaluate(() => mountTasks());
+	await page.waitForTimeout(150);
+	const titles = () => page.$$eval(".ch-tasks-main .ch-tasks-group:not(.ch-tasks-done-group) .ch-task-title", (e) => e.map((x) => x.textContent));
+	const groups = () => page.$$eval(".ch-tasks-main .ch-tasks-group-head > span:first-child", (e) => e.map((x) => x.textContent));
+	// Today: overdue first, then today's tasks by priority
+	eq(await groups(), ["Overdue", "Today"], "today groups");
+	eq(await titles(), ["Overdue thing", "High prio today", "Untimed medium today", "Low prio today"], "today order (priority, then time)");
+	eq(await page.$eval('[data-list="overdue"] .ch-tasks-nav-count', (e) => e.textContent), "1", "overdue count");
+	const meta = await page.$eval('.ch-task:has(.ch-task-title:text("High prio today"))', (e) => e.textContent).catch(() => null)
+		?? await page.evaluate(() => [...document.querySelectorAll(".ch-task")].find((x) => x.textContent.includes("High prio"))?.textContent);
+	expect(/10:30–11:00/.test(meta) && /!!!/.test(meta), "time range + priority shown: " + meta);
+	await shot(page, "tasks-desktop-today");
+	// Quick add into Today
+	await page.fill(".ch-tasks-quick", "Quick one");
+	await page.press(".ch-tasks-quick", "Enter");
+	await page.waitForTimeout(150);
+	eq(await page.evaluate(() => plugin.tasks.items.find((t) => t.title === "Quick one")?.date), "2026-11-14", "quick add gets today's date");
+	// Tick off → moves to collapsed Done
+	await page.evaluate(() => [...document.querySelectorAll(".ch-task")].find((x) => x.textContent.includes("Low prio today")).querySelector(".ch-task-checkbox").click());
+	await page.waitForTimeout(150);
+	expect(!(await titles()).includes("Low prio today"), "done task left the open list");
+	eq(await page.$eval(".ch-tasks-done-group .ch-tasks-group-count", (e) => e.textContent).catch(() => null), null, "smart list Today has no Done section (only user lists / All)");
+	// Upcoming: one heading per day
+	await page.click('[data-list="upcoming"]');
+	await page.waitForTimeout(100);
+	eq(await groups(), ["Today", "Tomorrow", "Thursday, November 19"], "upcoming grouped by day");
+	await shot(page, "tasks-desktop-upcoming");
+	// No date + subtasks inline, All with Done section
+	await page.click('[data-list="nodate"]');
+	await page.waitForTimeout(100);
+	eq(await titles(), ["Someday"], "no date list");
+	eq(await page.$$eval(".ch-task-sub-title", (e) => e.map((x) => x.textContent)), ["Step one", "Step two"], "subtasks inline");
+	await page.click(".ch-task-sub .ch-task-checkbox >> nth=1");
+	await page.waitForTimeout(100);
+	eq(await page.evaluate(() => plugin.tasks.items.find((t) => t.title === "Someday").subtasks.map((s) => s.done)), [true, true], "subtask ticked");
+	await page.click('[data-list="all"]');
+	await page.waitForTimeout(100);
+	eq(await groups(), ["Overdue", "Today", "Tomorrow", "Thursday, November 19", "Later", "No date", "Done"], "all: groups incl. collapsed Done");
+	eq(await page.evaluate(() => document.querySelector(".ch-tasks-done-group").open), false, "Done collapsed");
+	await page.click('[data-list="done"]');
+	await page.waitForTimeout(100);
+	eq(await titles(), ["Low prio today"], "done list");
+});
+
+test("desktop: task dialog – priority, date, time range, subtasks, linked notes", {}, async ({ page }) => {
+	await page.evaluate(() => mountTasks());
+	await page.waitForTimeout(100);
+	await page.click(".ch-tasks-new");
+	await page.waitForTimeout(100);
+	await page.fill(".ch-task-modal .ch-title-input", "Prepare workshop");
+	await page.click(".ch-prio-seg .ch-prio-3");
+	await page.click('.ch-task-quick button:text("Tomorrow")');
+	expect(await page.isVisible(".ch-task-time-setting"), "time row visible once a date is set");
+	await page.fill(".ch-task-start", "10:30");
+	await page.dispatchEvent(".ch-task-start", "change");
+	await page.fill(".ch-task-end", "11:45");
+	await page.dispatchEvent(".ch-task-end", "change");
+	await page.fill(".ch-task-add-sub", "Book room");
+	await page.press(".ch-task-add-sub", "Enter");
+	await page.fill(".ch-task-add-sub", "Print handouts");
+	await page.press(".ch-task-add-sub", "Enter");
+	// link two notes: search + create
+	const pick = async (q, pickCreate) => page.evaluate(async ([q, pickCreate]) => {
+		const m = window.lastModal; const s = m.getSuggestions(q);
+		await m.onChooseSuggestion(pickCreate ? s.find((x) => x.create) : s[0]);
+		return s.map((x) => x.create ? `+${x.create}` : x.basename);
+	}, [q, pickCreate]);
+	await page.click(".ch-task-link-btn");
+	eq(await pick("website", false), ["Website notes", "Website relaunch", "+website"], "note search (+ create option)");
+	await page.evaluate(() => window.lastModal.close());
+	await page.evaluate(() => [...document.querySelectorAll(".ch-task-link-btn")].pop().click());
+	await pick("Workshop plan", true);
+	await page.evaluate(() => window.lastModal.close());
+	eq(await page.$$eval(".ch-task-link-name", (e) => e.map((x) => x.textContent)), ["Website notes", "Workshop plan"], "links listed in dialog");
+	await page.screenshot({ path: path.join(SHOTS, "task-dialog.png") });
+	await page.evaluate(() => [...document.querySelectorAll(".ch-task-modal .ch-modal-buttons button.mod-cta")].pop().click());
+	await page.waitForTimeout(150);
+	const t = await page.evaluate(() => plugin.tasks.items.find((x) => x.title === "Prepare workshop"));
+	eq([t.priority, t.date, t.start, t.end, t.subtasks.map((s) => s.title), t.links], [3, "2026-11-15", "10:30", "11:45", ["Book room", "Print handouts"], ["Projects/Website notes.md", "Calendar/Workshop plan.md"]], "saved task");
+	// shown in Tomorrow with link chips; chip opens the note
+	await page.click('[data-list="tomorrow"]');
+	await page.waitForTimeout(100);
+	eq(await page.$$eval(".ch-task-linkchip", (e) => e.map((x) => x.textContent)), ["Website notes", "Workshop plan"], "link chips");
+	await page.click(".ch-task-linkchip >> nth=0");
+	eq(await page.evaluate(() => window.openedFile), "Projects/Website notes.md", "chip opens note");
+	expect((await page.textContent(".ch-task-meta")).includes("0/2"), "subtask progress");
+	// rename / delete follow
+	await page.evaluate(() => { plugin.tasks.renameLink("Projects/Website notes.md", "Archive/Website notes.md"); plugin.tasks.removeLink("Calendar/Workshop plan.md"); });
+	eq(await page.evaluate(() => plugin.tasks.items.find((x) => x.title === "Prepare workshop").links), ["Archive/Website notes.md"], "links follow rename/delete");
+	await page.screenshot({ path: path.join(SHOTS, "tasks-desktop-tomorrow.png") });
+});
+
+test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {
+	await page.evaluate(() => mountTasks());
+	await page.waitForTimeout(100);
+	await page.click('.ch-tasks-nav-head button');
+	await page.fill(".ch-list-modal input:not([type=color])", "Work");
+	await page.evaluate(() => [...document.querySelectorAll(".ch-list-modal .mod-cta")].pop().click());
+	await page.waitForTimeout(150);
+	eq(await page.textContent(".ch-tasks-title"), "Work", "new list selected");
+	await page.fill(".ch-tasks-quick", "Write report");
+	await page.press(".ch-tasks-quick", "Enter");
+	await page.waitForTimeout(150);
+	const r = await page.evaluate(() => { const l = plugin.tasks.lists.find((x) => x.name === "Work"); const t = plugin.tasks.items.find((x) => x.title === "Write report"); return { inList: t.listId === l.id, date: t.date ?? null, id: l.id }; });
+	eq([r.inList, r.date], [true, null], "quick add in a list: that list, no date");
+	await page.evaluate((id) => plugin.tasks.removeList(id), r.id);
+	await page.waitForTimeout(150);
+	eq(await page.evaluate(() => [plugin.tasks.items.find((x) => x.title === "Write report").listId, document.querySelector(".ch-tasks-title").textContent]), ["tasks", "Today"], "tasks moved to default list, view back to Today");
+	eq(await page.evaluate(() => plugin._data.tasks.lists.map((l) => l.name)), ["Tasks"], "saved in data.json");
+});
+
+test("desktop: tasks sidebar toggle, main switch, menu entries, settings tab", {}, async ({ page }) => {
+	const r = await page.evaluate(async () => {
+		const out = {};
+		const menu = () => { plugin.showCalendarMenu({ x: 1, y: 1 }); return window.lastMenu.items.map((i) => i.t); };
+		window.__ts = 0; // reset ribbon double-show guard
+		plugin.ribbonMenuShownAt = 0; out.menuOn = menu().filter((t) => /task/i.test(t));
+		await plugin.toggleTasksSidebar();
+		out.sidebar = plugin.sidebarLeaves("omni-calendar-tasks").map((l) => l.getRoot().name);
+		out.setting = plugin.settings.tasksSidebar;
+		plugin.settings.tasksEnabled = false; await plugin.applyTasksSidebar(false);
+		out.afterOff = plugin.app.workspace.getLeavesOfType("omni-calendar-tasks").length;
+		plugin.ribbonMenuShownAt = 0; out.menuOff = menu().filter((t) => /task/i.test(t));
+		tab.constructor.tab = "tasks"; tab.display();
+		out.offRows = [...tab.containerEl.querySelectorAll(".setting-item-name")].map((e) => e.textContent);
+		out.kept = plugin.tasks.lists.length;
+		return out;
+	});
+	eq(r.menuOn, ["Open tasks", "Show tasks in sidebar", "New task"], "menu with tasks on");
+	eq([r.sidebar, r.setting], [["right"], true], "tasks in right sidebar");
+	eq(r.afterOff, 0, "main switch off closes tasks pages");
+	eq(r.menuOff, [], "no task menu entries when off");
+	eq(r.offRows, ["Tasks", "Use tasks"], "settings tab shows only the switch when off");
+	await page.evaluate(() => { plugin.settings.tasksEnabled = true; const m = document.getElementById("main"); m.innerHTML = ""; tab.display(); m.appendChild(tab.containerEl); });
+	await shot(page, "settings-tab-tasks");
+});
+
+test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mobile: true }, async ({ page }) => {
+	await seedTasks()(page);
+	await page.evaluate(() => mountTasks());
+	await page.waitForTimeout(200);
+	const r = await page.evaluate(() => {
+		const main = document.querySelector(".ch-tasks-main");
+		return { bar: !!document.querySelector(".ch-tasks-bar"), nav: !!document.querySelector(".ch-tasks-nav"),
+			overflow: main.scrollWidth > main.clientWidth + 1, barScrolls: document.querySelector(".ch-tasks-bar").scrollWidth > document.querySelector(".ch-tasks-bar").clientWidth };
+	});
+	eq(r, { bar: true, nav: false, overflow: false, barScrolls: true }, "narrow layout");
+	await page.screenshot({ path: path.join(SHOTS, "tasks-mobile.png") });
+	await page.tap('[data-list="nodate"]');
+	await page.waitForTimeout(100);
+	eq(await page.textContent(".ch-tasks-title"), "No date", "tap selects list");
+	await page.tap(".ch-task .ch-task-title");
+	await page.waitForTimeout(150);
+	eq(await page.evaluate(() => { const m = document.querySelector(".ch-task-modal"); return m && m.scrollWidth <= m.clientWidth + 1; }), true, "dialog opens without sideways overflow");
+	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile.png") });
+});
+
+test("data: task data is normalised on load", {}, async ({ page }) => {
+	const r = await page.evaluate(async () => {
+		const { normalizeTaskData } = window.__tasksMod ?? {};
+		plugin._data = { settings: plugin.settings, events: [], tasks: { lists: [{ id: "w", name: "Work", color: "#123456" }], items: [
+			{ id: "a", title: "ok", listId: "w", priority: 9, date: "2026-11-14", start: "10:00", end: "09:00", subtasks: [{ id: "x", title: "s" }, null], links: ["a.md", 3] },
+			{ id: "b", title: "orphan", listId: "gone", start: "10:00" }, null ] } };
+		await plugin.loadPluginData();
+		return { lists: plugin.data.tasks.lists.map((l) => l.id), a: plugin.data.tasks.items[0], b: plugin.data.tasks.items[1] };
+	});
+	eq(r.lists, ["tasks", "w"], "default list added");
+	eq([r.a.priority, r.a.subtasks.length, r.a.links], [0, 1, ["a.md"]], "bad fields fixed");
+	eq([r.b.listId, r.b.start ?? null], ["tasks", null], "orphan → default list, time without date dropped");
 });
 
 test("desktop: responsive month/week at narrow widths", { width: 360 }, async ({ page }) => {

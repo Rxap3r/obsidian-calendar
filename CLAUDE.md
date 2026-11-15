@@ -54,10 +54,13 @@ npm test             # build + tests/sync (Node) + tests/ui (headless Chromium) 
 | `views/CalendarView.ts` | Full calendar: month (grid, or compact grid when narrow), week/day time grid (swipe mode when narrow), agenda, toolbar, drag & drop, touch gestures, responsive layout |
 | `views/MiniCalendarView.ts` | Sidebar mini calendar |
 | `views/shared.ts` | Event chips, context menu, open event |
+| `tasks.ts` | Task data layer (`TaskStore`): lists, smart lists, grouping/sorting, link rename/delete, `normalizeTaskData` |
+| `views/TasksView.ts` | Tasks page (`omni-calendar-tasks`): list nav (bar when narrow), groups, quick add, task rows, menus, `ListModal` |
+| `modals/TaskModal.ts`, `NotePickerModal.ts` | Task dialog (priority, date, time range, subtasks, linked notes); vault note search with "create note" |
 | `modals/EventModal.ts` | Create/edit dialog (local + remote, multi-calendar "Save to") |
 | `modals/SignInModal.ts` | Account connection (quick sign-in or own app registration, setup guides) |
 | `modals/EventDetailsModal.ts`, `ConfirmModal.ts` | Read-only details, confirmations |
-| `settings.ts` | Settings tab with four tabs: Calendars, Google & Outlook, Display, Notes |
+| `settings.ts` | Settings tab with five tabs: Calendars, Google & Outlook, Display, Tasks, Notes |
 | `notes.ts`, `dateUtils.ts` | Event notes + template, date helpers |
 
 CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS variables only, so it supports light/dark mode and themes.
@@ -104,7 +107,40 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Roadmap / open topics
 
-- **Planned next feature: reminders and notifications.** See the README roadmap for the agreed design:
+- **Planned next feature: Tasks, in three releases (agreed with the maintainer; the full design is in the README roadmap).**
+  Build them strictly step by step. The maintainer tests each release before the next one starts.
+  - **Plugin-owned tasks only.** Never parse checkboxes from notes; that was rejected.
+  - **Events stay events, but they can *have* tasks.** Tasks can also stand alone.
+  - **Task fields:**
+    - title, notes;
+    - list, priority (none/low/medium/high);
+    - optional date and optional time or time range (most tasks will have one);
+    - subtasks, **one level only**;
+    - done, plus an optional link to an event (local or remote ID + occurrence);
+    - **linked notes:** several vault paths per task.
+  - **Lists:**
+    - user lists with a colour, like Microsoft To Do, plus a default list "Tasks";
+    - automatic lists: Today, Tomorrow, Upcoming (7 days), Overdue, No date, All, Done;
+    - sorting is priority, then time;
+    - event tasks also appear in the lists, marked with their event.
+  - **Storage:** `data.json` → `tasks: { lists, items }`, next to `events`. This was changed from the "separate file" idea because it's unclear whether Obsidian Sync copies extra plugin files. Everything is validated in `normalizeTaskData`.
+  - **Main switch:** "Tasks" on/off hides everything but deletes nothing.
+  - **Naming:** the UI name is **Tasks** everywhere. Suggested view type: `omni-calendar-tasks` (full page + compact sidebar version).
+    The sidebar toggle for Tasks is **separate** from the mini calendar / day planner.
+  - **Calendar display must stay uncluttered:**
+    - timed tasks as light blocks;
+    - date-only tasks as **one counter per day** ("☑ 3");
+    - done tasks struck through, with a setting to hide them.
+  - **Linked notes (tasks and events):**
+    - several existing notes can be linked via a fuzzy note picker, then listed and opened with a click;
+    - notes are never parsed or modified;
+    - update paths on vault rename/move, and drop them on delete.
+    - Events: migrate the existing single `notePath` into the list. Remote events store their links locally, keyed by remote ID.
+  - **1.7 (done):** Tasks page (full + sidebar), lists, task editing, subtasks, quick add, **linked notes on tasks**, Tasks settings tab, menu entry and commands.
+  - **1.8:** calendar integration, tasks on events (dialog section, "2/5" hint), **linked notes on events** (local + remote), "Tasks today" in the mini calendar.
+  - **1.9:** repeating tasks, and per-occurrence tasks on repeating events.
+  - **Later:** Microsoft To Do sync (`Tasks.ReadWrite`, re-consent needed), Google Tasks, task reminders.
+- **After Tasks: reminders and notifications.** See the README roadmap for the agreed design:
   - a reminder field and a default reminder;
   - desktop system notifications;
   - an in-app pop-up on mobile;

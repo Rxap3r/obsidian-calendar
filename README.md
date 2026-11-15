@@ -12,6 +12,7 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 - 🌐 **External calendars (read-only)**: subscribe to ICS / iCal links from Google, Outlook, Proton, iCloud, Fastmail, Nextcloud and others. Recurring events, exceptions and time zones are supported
 - 📝 **Notes for events**: create a note from any event using a template you can change. Local events stay linked to their note
 - 🎨 Several local calendars, each with its own colour, and a filter to show or hide calendars
+- ☑️ **Tasks** (new in 1.7): your own to-do lists with priorities, dates, time blocks, subtasks and linked notes, on a separate **Tasks** page or in the sidebar
 - 📋 **Embed an agenda in any note** with an `omni-calendar` code block
 - 📤 **Export** your local events to an `.ics` file, which you can import into Google, Outlook or Proton
 - 📱 Works on desktop and mobile. It follows your light/dark theme
@@ -26,6 +27,7 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 
 - [Installation](#installation-with-brat-beta)
 - [Using the calendar](#using-the-calendar): views, sidebar, creating events, notes, agenda in notes
+- [Tasks](#tasks): lists, priorities, subtasks, linked notes
 - [Which connection method should I use?](#which-connection-method-should-i-use)
 - [Google & Outlook (two-way)](#two-way-sync-with-google-calendar-and-outlook--microsoft-365): sign-in, editing, security
 - [Read-only ICS subscriptions](#read-only-subscriptions-via-ics-link-proton-icloud-google-outlook-) (Proton, iCloud, …)
@@ -149,6 +151,58 @@ calendars: Personal, Work
 The embedded agenda updates when events change. Click an entry to open it.
 
 ---
+
+## Tasks
+
+Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You create them in the plugin. Nothing is read out of your notes, but you can **link notes** to a task.
+
+**Opening it:**
+- ribbon menu → **Open tasks**, or the command **Open tasks**;
+- **In the sidebar:** ribbon menu → **Show tasks in sidebar**, or *Settings → Omni Calendar → **Tasks** → Tasks in sidebar*.
+  - This is independent of the mini calendar / day planner, so you can have both.
+  - It uses the same side as "Calendar in sidebar".
+
+**The Tasks page:**
+- **Lists on the left.** On the phone and in the sidebar, they become a bar at the top that you swipe sideways.
+  - **Today:** due today, plus anything overdue.
+  - **Tomorrow.**
+  - **Upcoming:** today and the next 7 days, one heading per day.
+  - **Overdue:** only shown in the bar when something is overdue.
+  - **No date.**
+  - **All:** every open task, grouped by when it's due.
+  - **Done.**
+  - **My lists:** your own lists, e.g. *Work* or *Home*, each with a colour. "Tasks" is the default list. Click **+** next to *My lists* to add one; right-click a list (or use ⋯) to rename, recolour or delete it. Deleting a list moves its tasks to "Tasks".
+- **Sorting:** inside each group, **priority** first (high → low), then **time** (tasks with a time before tasks without).
+- **Quick add:** type into the field at the top and press **Enter**.
+  - In *Today*, *Upcoming* and *Overdue* the task gets today's date; in *Tomorrow*, tomorrow's.
+  - In your own list it goes into that list without a date.
+- **+ New task** opens the full dialog.
+- **Tick the circle** to complete a task. Completed tasks are struck through and move to a collapsed **Done** section (in your own lists and *All*) and to the *Done* list. You can hide that section in the settings.
+- **Click a task** to edit it. **Right-click** it for quick actions:
+  - done / not done;
+  - Today / Tomorrow / Next week / No date;
+  - priority;
+  - delete.
+- **Shown under each task:** the time or time range (e.g. *10:30–11:45*), the list (when you have more than one), subtask progress (*1/3*, click to show or hide the subtasks), and **linked notes** as small chips that open the note.
+
+**The task dialog:**
+- **Title, list and priority:** *None / Low / Medium / High*, shown as `!`, `!!`, `!!!`.
+- **Date:** with quick buttons *Today*, *Tomorrow*, *Next week* and *No date*.
+- **Time:** optional, once a date is set. Either a single time or a range (*from … to …*).
+- **Subtasks:** one level. Type and press Enter to add one. You can also tick them off directly on the Tasks page.
+- **Linked notes:**
+  - **Link note** searches your vault, and you can link as many notes as you like.
+  - If no note matches, you can create a new one; it goes into your notes folder (*Notes* tab).
+  - Links follow when a note is renamed or moved, and disappear when it's deleted. The notes themselves are never changed.
+- **Notes:** free text for the task.
+
+**Turning tasks off:** *Settings → Omni Calendar → Tasks → Use tasks*. When it's off, the Tasks page, its menu entries and commands disappear. Your tasks are kept.
+
+Tasks are stored with your local events in the plugin's `data.json`, so they sync the same way (see [Where data is stored](#where-data-is-stored)).
+
+Coming next (see the [roadmap](#roadmap-ideas)):
+- **1.8:** tasks in the calendar, tasks on events, and linked notes for events;
+- **1.9:** repeating tasks.
 
 ## Which connection method should I use?
 
@@ -386,6 +440,11 @@ The settings are split into four tabs. Longer explanations sit in collapsible **
 | | When the day planner opens the calendar | What ⤢ in the day planner does to the sidebar: **switch to the mini calendar** (default), close the day planner, or keep it |
 | | Then show this sidebar tab | Only with *close it*: which tab of the calendar's sidebar (left or right) is shown afterwards, e.g. *Files* or *Bookmarks*. The list shows the tabs that are in that sidebar right now. *Let Obsidian decide* keeps Obsidian's choice |
 | | Upcoming list in the mini calendar | How far ahead "Upcoming" looks (Hidden … 90 days, or *Same as agenda length*) |
+| **Tasks** | Use tasks | Main switch for everything task-related. Off hides it but deletes nothing |
+| | Tasks in sidebar | Shows the Tasks page in the sidebar (same side as the calendar), independent of mini calendar / day planner |
+| | Show completed tasks | Collapsed "Done" section in the lists |
+| | Default priority / Default list | Used for new tasks |
+| | Lists | Rename, recolour, add or delete task lists ("Tasks" is the default list and can't be deleted) |
 | **Notes** | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
 
 ## Commands
@@ -399,10 +458,11 @@ The settings are split into four tabs. Longer explanations sit in collapsible **
 - Create event linked to current note
 - Refresh external calendars
 - Export local events to .ics file
+- Open tasks / Toggle tasks in sidebar / Create new task (only while tasks are turned on)
 
 ## Where data is stored
 
-- **Local events and settings:** `.obsidian/plugins/omni-calendar/data.json`. Obsidian Sync and other sync tools carry them to your other devices. The plugin reloads automatically when Sync changes this file.
+- **Local events, tasks and settings:** `.obsidian/plugins/omni-calendar/data.json`. Obsidian Sync and other sync tools carry them to your other devices. The plugin reloads automatically when Sync changes this file.
 - **Cached ICS calendars:** `.obsidian/plugins/omni-calendar/cache/*.ics`
 - **Google / Outlook:** account settings (client ID, account label, chosen calendars) are in `data.json`. Sign-in tokens and the Google client secret are **only** in Obsidian's secure storage on each device. Events are kept in memory.
 - **Event notes:** ordinary Markdown files in your notes folder
@@ -459,7 +519,67 @@ release tag must exactly match `version` in `manifest.json` (for example `1.0.1`
 
 ## Roadmap ideas
 
-### Planned: event reminders and notifications
+### Tasks (in three releases – step 1 is done in 1.7)
+
+A to-do system that lives **inside Omni Calendar**: tasks are created in the plugin, not read from notes. Reading checkboxes from notes was rejected, because formats vary and too many lines would be picked up as tasks by mistake.
+
+**Basics agreed for all steps**
+- **Events stay events.** An event, such as a meeting, can **have tasks** ("prepare slides", "send summary"). Tasks can also exist **on their own**.
+- **A task has:**
+  - title, notes;
+  - **list**, **priority** (none / low / medium / high);
+  - **date** (optional) and **time or time range** (optional, but usually set, e.g. 10:30–11:00);
+  - **subtasks** (one level, like Microsoft To Do's steps);
+  - done/open, and *Create note*.
+- **Task lists** like Microsoft To Do: your own lists (e.g. *Work*, *Home*, *Project X*) with a colour, plus a default list "Tasks".
+- **Automatic lists:**
+  - Today, Tomorrow;
+  - Upcoming (next 7 days), Overdue;
+  - No date, All, Done.
+
+  Each is sorted by priority, then by time.
+- **Event tasks appear in the task lists too**, with a small note saying which event they belong to.
+- **Linked notes:** you can link **several existing notes** to a task, and later to any event, for example notes you prepared for a piece of work.
+  - They're listed neatly under the task or event, and one click opens them.
+  - "Link note" opens a quick search over your vault.
+  - The notes themselves stay exactly as they are; nothing is read out of them or changed.
+  - If you rename or move a linked note, the link follows. If you delete it, the link disappears.
+- **As little clutter as possible:** done tasks are struck through, and a setting can hide them. A general **Tasks on/off switch** hides everything task-related without deleting anything.
+- The name **"Tasks"** is used everywhere (page, menu, settings, tab title).
+- Tasks are stored in the plugin's `data.json`, together with local events. A separate file was the first idea, but it's not certain that Obsidian Sync copies extra files in a plugin folder, and `data.json` demonstrably syncs.
+
+**Step 1 – version 1.7: the basics ✅**
+- A dedicated **Tasks page** (full page):
+  - automatic lists and your own lists on the left (on the phone, a dropdown or swipe bar at the top);
+  - the tasks of the selected list on the right;
+  - a **quick-add** box.
+- **Tasks in the sidebar**, as a compact version with its **own toggle**, independent of the mini calendar / day planner.
+- Creating and editing a task: title, notes, list, priority, date, time / time range, subtasks. Tick off with a checkbox.
+- **Linked notes on tasks:** link several notes via a quick search, see them listed under the task, open them with one click, and remove links again.
+- Managing lists: create, rename, colour, delete.
+- New **Tasks** settings tab: on/off, show completed tasks, default priority, default list. Ribbon menu entry **Open tasks** and commands.
+
+**Step 2 – version 1.8: tasks in the calendar and on events**
+- **Tasks with a time range** show as light time blocks in Week/Day, looking clearly different from events.
+- **Tasks with only a date** don't get their own entry. Each day shows one small **counter** ("☑ 3"); tapping it lists the tasks. Month view shows just a small badge.
+- Tick tasks off and drag them to another day directly in the calendar.
+- **Tasks on events:**
+  - a "Tasks" section in the event dialog;
+  - a progress hint ("2/5") on the event;
+  - this also works for Google/Outlook events, but those tasks are stored only in Obsidian.
+- The mini calendar gets a small **"Tasks today"** section.
+- **Linked notes on events:** the same as on tasks, for local and Google/Outlook events. For Google/Outlook events the links are stored only in Obsidian. The existing single "Create note" becomes one of the linked notes, and older events with a note keep it.
+
+**Step 3 – version 1.9: repeating**
+- **Repeating tasks**, each occurrence ticked off separately.
+- **Tasks on repeating events:** the event's task list works as a template, and each occurrence has its own ticks. Ticking one off on 14 Nov doesn't tick it off on 21 Nov.
+
+**Later, maybe:**
+- **Microsoft To Do** sync: lists map 1:1. It needs an extra permission (`Tasks.ReadWrite`) and signing in once more.
+- Google Tasks.
+- Reminders for tasks, together with the notifications feature below.
+
+### Planned after Tasks: event reminders and notifications
 
 - **Reminder field** in the event dialog (none, at start, 5/10/15/30 minutes, 1 hour, 1 day before) and a **default reminder** in settings, plus an on/off switch for each device so two computers don't both notify.
 - **Desktop:** system notifications from Obsidian, clicking one opens the event. They work while Obsidian is running (even minimised). Reminders missed while it was closed are shown on the next start.
