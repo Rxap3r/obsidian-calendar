@@ -8,6 +8,10 @@ Read it for the feature set.
 The maintainer (repo owner) tests on a **desktop computer and a phone** (Obsidian mobile) and prefers explanations in
 plain language: what changed, why, and what to check. Avoid jargon. Be honest about what was and wasn't tested.
 
+**Repository:** `Rxap3r/omni-calendar` on GitHub. It was renamed from `obsidian-calendar`; GitHub redirects the old name,
+but use the new one for pull requests and in docs.
+The maintainer merges PRs and pushes the release tag themselves.
+
 ## Workflow rules (important)
 
 1. **Branch:** always work on **`dev-branch`**. Before starting, update it from `main`:
@@ -66,6 +70,7 @@ npm test             # build + tests/sync (Node) + tests/ui (headless Chromium) 
 | `tasks.ts` | Task data layer (`TaskStore`): lists, smart lists, grouping/sorting, link rename/delete, `normalizeTaskData` |
 | `views/TasksView.ts` | Tasks page (`omni-calendar-tasks`): list nav (bar when narrow), groups, quick add, task rows, menus, `ListModal` |
 | `modals/TaskModal.ts`, `NotePickerModal.ts` | Task dialog (priority, date, time range, subtasks, linked notes); vault note search with "create note" |
+| `timePicker.ts` | Own `DateField` (month calendar) and `TimeField` (15-minute list, typing), shared pop-up helpers, `keepFocusOnTap` |
 | `modals/EventModal.ts` | Create/edit dialog (local + remote, multi-calendar "Save to") |
 | `modals/SignInModal.ts` | Account connection (quick sign-in or own app registration, setup guides) |
 | `modals/EventDetailsModal.ts`, `ConfirmModal.ts` | Read-only details, confirmations |
@@ -102,12 +107,64 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
   `omni-calendar-<accountId>-rt|cs`.
 - `data.json` shape. When changing settings, add a migration in `loadPluginData` (see `sidebarOnStartup` → `sidebarView`).
 
+## Dialog and picker rules (learned from tablet bugs – don't regress)
+
+- **Dates and times** in any dialog use the plugin's own `DateField` and `TimeField` (`src/timePicker.ts`), never
+  `<input type="date|time">`. Native pickers differ per device, and Android's clock dialog was cut off on a tablet.
+  New date or time fields must use them too.
+  - The `TimeField` list uses 15-minute steps. End fields get `after:` (times after the start, with durations).
+  - On mobile the list opens without a keyboard; "Type a time" is offered on request.
+  - Both follow `use24h` and `firstDayOfWeek`.
+- **Focus:** Obsidian pulls the focus back to a dialog's first field (the title) when it leaves the dialog, which opens
+  the keyboard on tablets. So:
+  - pop-ups are created **inside** the `.modal-container` (`createPopup`) and never take the focus;
+  - dialogs call `keepFocusOnTap(modalEl)`: buttons don't take the focus, and an active text field is released to the
+    dialog itself, so the keyboard closes.
+  - The UI tests simulate this focus trap. Keep those tests passing.
+- Pop-ups use `z-index: calc(var(--layer-menu) + 1)` (Obsidian: modal layer 50, menu layer 65). The test page uses the same values.
+- Task checkboxes have a fixed square size, because Obsidian's mobile button styles (padding, min-width) made them oval.
+
+## Undocumented Obsidian internals in use (check first if something breaks after an Obsidian update)
+
+| What | Where | Fallback |
+| --- | --- | --- |
+| `leaf.parent.selectTab(leaf)` to show a sidebar tab without opening the sidebar | `main.ts` `selectSidebarTab` | `revealLeaf` on desktop |
+| `leaf.updateHeader()` to refresh the tab title ("Calendar" ↔ "Day planner") | `CalendarView.updateLocationButton` | – |
+| `app.setting.open()` / `openTabById()` for the menu's "Settings" entry | `main.ts` `openSettings` | – |
+
+## Sidebar behaviour (settings in Display)
+
+- **Day planner ⤢** (`sidebarOnExpand`):
+  - default: the planner's own tab turns into the mini calendar, in place (so Obsidian doesn't show another tab);
+  - "close": optionally shows the sidebar tab chosen in `sidebarAfterClose`;
+  - "keep".
+- Settings changes never reveal or focus sidebar views, which would close the settings window. They select the tab
+  quietly instead. Settings re-render keeps the scroll position.
+- **Tasks in the sidebar** is a separate tab next to the mini calendar or day planner (`tasksSidebar`), not a toggle.
+  This was the maintainer's choice.
+
+## Keeping the built-in app registrations free (maintainer)
+
+- **Azure (Microsoft sign-in):**
+  - keep the spending limit on;
+  - never upgrade to pay-as-you-go;
+  - optionally set a budget alert;
+  - **never delete the directory**, because the built-in client ID lives there.
+
+  App registrations themselves cost nothing.
+- **Google Cloud project:**
+  - don't link a billing account and don't start the paid trial;
+  - the Calendar API is free for this use;
+  - the app is "unverified" (warning screen, 100-user cap) until the verification is done.
+
 ## Mobile notes (Obsidian Android/iOS)
 
 - Plugins can't run in the background or send system notifications.
 - Ribbon buttons on mobile only receive **taps**: no long-press and no right-click. A tap opens the calendar menu.
 - Touch on the time grid: swipe scrolls, tap creates an event, long-press + drag selects a range. Handle `pointercancel` and
   never open more than one dialog (`EventModal.openCount`).
+- iOS may not fire `contextmenu` on a long-press. Every action in a right-click menu (e.g. on tasks) must also be
+  reachable by tapping, for example through the dialog.
 - **UI names (use them everywhere, incl. tab titles via `getDisplayText`):** **Calendar** = full page in the main area, **Mini calendar** = `omni-calendar-mini`, **Day planner** = `omni-calendar-view` in a sidebar (setting value `full`; opens in `sidebarCalendarMode`, default Day). Avoid "full calendar".
 - Narrow layouts:
   - month → compact 7-column grid (bars, or dots when very narrow) + the selected day's list (`renderMonthCompact`);

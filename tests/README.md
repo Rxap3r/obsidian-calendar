@@ -52,8 +52,17 @@ test("mobile: my feature", { mobile: true }, async ({ page, ctx }) => {
 });
 ```
 
-Globals in the page: `plugin`, `view` (full calendar), `mini` (sidebar calendar), `tab` (settings tab),
-`ws` (fake workspace with `leaves`, `fireLayoutChange()`), `lastModal`, `lastMenu`, `notices`, `__Platform`.
+Globals in the page:
+- `plugin`, `view` (calendar), `mini` (mini calendar), `tab` (settings tab);
+- `ws` (fake workspace with `leaves`, `fireLayoutChange()`, `tabGroups`, `reveals`);
+- `lastModal`, `lastMenu`, `notices`, `__Platform`;
+- **tasks:** `mountTasks({ side? })` creates a Tasks page in `#main` or `#side` and sets `tasksView`; `TaskModal`;
+  `vaultNotes` (fake notes for linking); `openedFile` (the last note opened);
+- **modules:** `__timeMod` (date/time pickers, `parseTimeInput`), `__eventMod` (`EventModal`), `__dateMod` (date helpers).
+
+The test page uses Obsidian's real layer values: modal 50, menu 65.
+Some tests imitate Obsidian's dialog focus trap: focus that leaves the dialog is pulled back to the title. Use them
+for any change to dialogs or pop-ups.
 If the plugin starts using a new Obsidian API, add it to `obsidian-mock.ts`.
 
 ### Limits

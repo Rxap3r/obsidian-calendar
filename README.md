@@ -443,7 +443,7 @@ ICS links can only be read. For Google and Outlook, use the two-way account conn
 
 ## Settings reference
 
-The settings are split into four tabs. Longer explanations sit in collapsible **ℹ** sections.
+The settings are split into five tabs. Longer explanations sit in collapsible **ℹ** sections.
 
 | Tab | Setting | Description |
 | --- | --- | --- |
@@ -617,6 +617,8 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 - Each reminder fires only once, and timing stays reliable across sleep mode and restarts.
 
 ### Other ideas
+
+- **Tasks below the mini calendar:** show the Tasks list under the mini calendar in the same sidebar (split top/bottom), so both are visible without switching tabs. Possible in Obsidian, but harder to make reliable, especially on phones.
 
 - CalDAV write support (iCloud, Fastmail, Nextcloud, …)
 - Editing the repeat rule of Google / Outlook series
