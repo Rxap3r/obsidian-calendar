@@ -120,7 +120,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - **linked notes:** several vault paths per task.
   - **Lists:**
     - user lists with a colour, like Microsoft To Do, plus a default list "Tasks";
-    - automatic lists: Today, Tomorrow, Upcoming (7 days), Overdue, No date, All, Done;
+    - automatic lists: Today, Tomorrow, Upcoming (`tasksUpcomingDays`, default 7), Overdue, No date, All, Done;
     - sorting is priority, then time;
     - event tasks also appear in the lists, marked with their event.
   - **Storage:** `data.json` → `tasks: { lists, items }`, next to `events`. This was changed from the "separate file" idea because it's unclear whether Obsidian Sync copies extra plugin files. Everything is validated in `normalizeTaskData`.

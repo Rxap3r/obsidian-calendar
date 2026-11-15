@@ -585,6 +585,58 @@ test("mobile: event dialog – date/time pickers never jump to the title field",
 	eq(r, { titleFocus: 0, start: "Thu, Dec 3, 2026", end: "Fri, Dec 4, 2026" }, "title never refocused in the event dialog");
 });
 
+test("mobile: after typing in notes/subtasks, tapping buttons closes the keyboard (no jump back)", { mobile: true }, async ({ page }) => {
+	await page.evaluate(() => {
+		new TaskModal(plugin).open();
+		window.titleFocus = 0;
+		const title = () => document.querySelector(".ch-task-modal .ch-title-input");
+		document.addEventListener("focusin", (e) => { if (!e.target.closest(".modal-container")) title().focus(); }, true);
+		setTimeout(() => { title().blur(); title().addEventListener("focus", () => window.titleFocus++); }, 50);
+	});
+	await page.waitForTimeout(120);
+	const active = () => page.evaluate(() => { const a = document.activeElement; return a.classList.contains("ch-task-modal") ? "dialog" : a.tagName.toLowerCase() + "." + [...a.classList].join("."); });
+	// type in Notes, then pick a date
+	await page.tap(".ch-description-setting textarea");
+	await page.keyboard.type("Bring laptop");
+	await page.tap(".ch-task-date button");
+	eq(await active(), "dialog", "notes field let go when tapping the date");
+	await page.tap('.ch-date-nav[aria-label="Next month"]');
+	await page.tap('.ch-date-day[data-date="2026-12-24"]');
+	// type in a subtask, then tap a priority button
+	await page.tap(".ch-task-add-sub");
+	await page.keyboard.type("Step");
+	await page.tap(".ch-prio-seg .ch-prio-2");
+	eq(await active(), "dialog", "subtask field let go when tapping a priority");
+	// type in Notes again, then pick a time from the list
+	await page.tap(".ch-description-setting textarea");
+	await page.tap(".ch-task-start input");
+	eq(await active(), "input.ch-input.ch-timefield-input", "time field (read-only on phones, no keyboard) has the focus");
+	await page.tap('.ch-time-list [data-value="10:00"]');
+	const r = await page.evaluate(() => ({ titleFocus: window.titleFocus, t: [window.lastModal.task.date, window.lastModal.task.start, window.lastModal.task.priority, window.lastModal.task.notes] }));
+	eq(r, { titleFocus: 0, t: ["2026-12-24", "10:00", 2, "Bring laptop"] }, "no jump to the title; values kept");
+});
+
+test("tasks: 'Upcoming' range follows the setting", {}, async ({ page }) => {
+	await page.evaluate(async () => {
+		const S = plugin.tasks;
+		await S.upsert(S.draft({ title: "In 5 days", date: "2026-11-19" }));
+		await S.upsert(S.draft({ title: "Christmas", date: "2026-12-24" }));
+		await mountTasks();
+		tasksView.select("upcoming");
+	});
+	const titles = () => page.$$eval(".ch-tasks-main .ch-task-title", (e) => e.map((x) => x.textContent));
+	eq(await titles(), ["In 5 days"], "default 7 days");
+	expect((await page.textContent(".ch-tasks-title")).includes("next 7 days"), "range shown in the title");
+	await page.evaluate(() => { plugin.settings.tasksUpcomingDays = 60; plugin.tasks.trigger("changed"); });
+	await page.waitForTimeout(100);
+	eq(await titles(), ["In 5 days", "Christmas"], "60 days includes 24 Dec");
+	eq(await page.$eval('[data-list="upcoming"] .ch-tasks-nav-count', (e) => e.textContent), "2", "count follows");
+	const opts = await page.evaluate(() => { tab.constructor.tab = "tasks"; tab.display();
+		const row = [...tab.containerEl.querySelectorAll(".setting-item")].find((x) => /Upcoming list/.test(x.textContent));
+		return [...row.querySelectorAll("option")].map((o) => o.value); });
+	eq(opts, ["3", "7", "14", "30", "60", "90", "180", "365"], "setting options");
+});
+
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {
 	await page.evaluate(() => mountTasks());
 	await page.waitForTimeout(100);

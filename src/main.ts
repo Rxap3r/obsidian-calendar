@@ -170,6 +170,8 @@ export default class OmniCalendarPlugin extends Plugin {
 		const up = Number(settings.sidebarUpcomingDays);
 		settings.sidebarUpcomingDays = Number.isFinite(up) ? Math.max(-1, Math.min(365, Math.round(up))) : DEFAULT_SETTINGS.sidebarUpcomingDays;
 		if (![0, 1, 2, 3].includes(Number(settings.tasksDefaultPriority))) settings.tasksDefaultPriority = 0;
+		const upT = Number(settings.tasksUpcomingDays);
+		settings.tasksUpcomingDays = Number.isFinite(upT) ? Math.max(1, Math.min(365, Math.round(upT))) : DEFAULT_SETTINGS.tasksUpcomingDays;
 		const tasks = normalizeTaskData(raw.tasks);
 		if (!tasks.lists.some((l) => l.id === settings.tasksDefaultListId)) settings.tasksDefaultListId = tasks.lists[0].id;
 		this.data = { settings, events: Array.isArray(raw.events) ? raw.events : [], tasks };

@@ -30,6 +30,7 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	tasksShowCompleted: true,
 	tasksDefaultPriority: 0,
 	tasksDefaultListId: "tasks",
+	tasksUpcomingDays: 7,
 	notesFolder: "Calendar",
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,
 	defaultCalendarId: "personal",
@@ -390,6 +391,19 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 					store.trigger("changed");
 				})
 			);
+		new Setting(el)
+			.setName("Upcoming list")
+			.setDesc("How far ahead the “Upcoming” task list looks (today plus this many days). Later tasks are under “All”.")
+			.addDropdown((d) => {
+				const opts: Record<string, string> = { "3": "3 days", "7": "7 days", "14": "2 weeks", "30": "30 days", "60": "60 days", "90": "90 days", "180": "6 months", "365": "1 year" };
+				const cur = String(s.tasksUpcomingDays);
+				if (!(cur in opts)) opts[cur] = `${cur} days`;
+				d.addOptions(opts).setValue(cur).onChange(async (v) => {
+					s.tasksUpcomingDays = parseInt(v);
+					await this.save();
+					store.trigger("changed");
+				});
+			});
 		new Setting(el).setName("Default priority").addDropdown((d) =>
 			d
 				.addOptions({ 0: PRIORITY_NAMES[0], 1: PRIORITY_NAMES[1], 2: PRIORITY_NAMES[2], 3: PRIORITY_NAMES[3] })
