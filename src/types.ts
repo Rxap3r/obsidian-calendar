@@ -160,6 +160,8 @@ export interface OmniCalendarSettings {
 	sidebarView: SidebarView;
 	/** View the sidebar "Day planner" (full calendar in the sidebar) opens in; remembered separately from the main calendar. */
 	sidebarCalendarMode: ViewMode;
+	/** What happens to the Day planner in the sidebar when its "open full page" button is used. */
+	sidebarOnExpand: "mini" | "close" | "keep";
 	/** @deprecated replaced by sidebarView (migrated on load). */
 	sidebarOnStartup?: SidebarView;
 	notesFolder: string;

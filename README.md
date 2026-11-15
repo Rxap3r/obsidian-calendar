@@ -18,7 +18,7 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 
 ### Quick start
 
-1. Install with **BRAT**: add `rxap3r/obsidian-calendar` ([details](#installation-with-brat-beta)).
+1. Install with **BRAT**: add `rxap3r/omni-calendar` ([details](#installation-with-brat-beta)).
 2. Click the 📅 icon in the left ribbon to open the calendar. Double-click a day, or click **+ New**, to create an event.
 3. Optional: in *Settings → Omni Calendar → **Google & Outlook***, click **Connect** to see and edit your Google / Outlook events.
 
@@ -38,7 +38,7 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 
 1. Install **BRAT** ("Obsidian42 - BRAT") from *Settings → Community plugins → Browse*, then enable it.
 2. Open *Settings → BRAT → "Add Beta plugin"* (or run the command **BRAT: Add a beta plugin for testing**).
-3. Enter the repository: `rxap3r/obsidian-calendar`
+3. Enter the repository: `rxap3r/omni-calendar`
 4. Click **Add Plugin**. BRAT downloads the latest release.
 5. Enable **Omni Calendar** under *Settings → Community plugins*.
 
@@ -52,7 +52,7 @@ BRAT checks for updates automatically. You can also run **BRAT: Check for update
 ### Manual installation
 
 Download `main.js`, `manifest.json` and `styles.css` from the
-[latest release](https://github.com/rxap3r/obsidian-calendar/releases) and put them in
+[latest release](https://github.com/rxap3r/omni-calendar/releases) and put them in
 `<your vault>/.obsidian/plugins/omni-calendar/`. Then reload Obsidian and enable the plugin.
 
 ---
@@ -70,7 +70,7 @@ Download `main.js`, `manifest.json` and `styles.css` from the
 | Command **Toggle mini calendar in sidebar** | Shows the mini calendar in the sidebar, or hides it if it's already there |
 | Command **Toggle day planner in sidebar** | The same for the **day planner**: the full calendar in the sidebar, opening in Day view as a timeline next to your notes. Month/Week/Agenda are one tap away, and the view you pick there is remembered |
 | Commands **Open month / week / day / agenda view** | The full calendar in that view |
-| Button ⤢ / ⇥ in the calendar's toolbar | In the sidebar: **open the full page** (the sidebar calendar stays). In the main area: **move this calendar to the sidebar** |
+| Button ⤢ / ⇥ in the calendar's toolbar | In the sidebar: **open the full page**. The sidebar then switches to the mini calendar, or, depending on *Settings → Omni Calendar → Display → When the Day planner opens the full page*, closes or keeps the Day planner. In the main area: **move this calendar to the sidebar** |
 
 You never have to drag anything. *Open calendar* always opens in the main area, even if a calendar already sits in a sidebar.
 
@@ -383,6 +383,7 @@ The settings are split into four tabs. Longer explanations sit in collapsible **
 | | Default event length | Length of a new event, in minutes |
 | | Agenda length | Number of days in the Agenda view |
 | | Calendar in sidebar | Off / mini calendar / day planner, and left or right side. Applied immediately and kept after restarts |
+| | When the Day planner opens the full page | What ⤢ in the Day planner does to the sidebar: **switch to the mini calendar** (default), close it, or keep the Day planner |
 | | Upcoming list in the mini calendar | How far ahead "Upcoming" looks (Hidden … 90 days, or *Same as agenda length*) |
 | **Notes** | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
 
