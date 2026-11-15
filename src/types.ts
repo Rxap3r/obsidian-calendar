@@ -158,6 +158,8 @@ export interface OmniCalendarSettings {
 	 * user closes or drags the sidebar calendar themselves.
 	 */
 	sidebarView: SidebarView;
+	/** View the sidebar "Day planner" (full calendar in the sidebar) opens in; remembered separately from the main calendar. */
+	sidebarCalendarMode: ViewMode;
 	/** @deprecated replaced by sidebarView (migrated on load). */
 	sidebarOnStartup?: SidebarView;
 	notesFolder: string;

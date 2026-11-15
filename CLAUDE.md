@@ -51,7 +51,7 @@ npm test             # build + tests/sync (Node) + tests/ui (headless Chromium) 
 | `sync/providers.ts` | Google Calendar API + Microsoft Graph connectors (list/create/update/delete events) |
 | `sync/http.ts` | Authenticated requests (host allow-list, 401 retry, readable errors) |
 | `sync/builtin.ts` | Built-in app registrations (see Security) |
-| `views/CalendarView.ts` | Full calendar: month (grid or day cards), week/day time grid (swipe mode when narrow), agenda, toolbar, drag & drop, touch gestures, responsive layout |
+| `views/CalendarView.ts` | Full calendar: month (grid, or compact grid when narrow), week/day time grid (swipe mode when narrow), agenda, toolbar, drag & drop, touch gestures, responsive layout |
 | `views/MiniCalendarView.ts` | Sidebar mini calendar |
 | `views/shared.ts` | Event chips, context menu, open event |
 | `modals/EventModal.ts` | Create/edit dialog (local + remote, multi-calendar "Save to") |
@@ -96,8 +96,9 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 - Ribbon buttons on mobile only receive **taps**: no long-press and no right-click. A tap opens the calendar menu.
 - Touch on the time grid: swipe scrolls, tap creates an event, long-press + drag selects a range. Handle `pointercancel` and
   never open more than one dialog (`EventModal.openCount`).
+- The full calendar in the sidebar is called **Day planner** in the UI (setting value `full`). It opens in `sidebarCalendarMode` (default Day).
 - Narrow layouts:
-  - month → day cards;
+  - month → compact 7-column grid (bars, or dots when very narrow) + the selected day's list (`renderMonthCompact`);
   - week → the whole week, swiped day by day (`.ch-tg-hscroll`, header cells shifted via `--ch-sx`) with a week bar;
   - the settings tab bar scrolls sideways.
 
