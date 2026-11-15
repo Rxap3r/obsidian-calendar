@@ -17,8 +17,6 @@ export const SMART_LISTS: { id: SmartListId; name: string; icon: string }[] = [
 
 export const PRIORITY_NAMES: Record<TaskPriority, string> = { 0: "None", 1: "Low", 2: "Medium", 3: "High" };
 
-/** Days covered by the "Upcoming" list (today + the next 7 days). */
-export const UPCOMING_DAYS = 7;
 
 export interface TaskGroup {
 	key: string;
@@ -81,6 +79,11 @@ export function compareTasks(a: Task, b: Task): number {
 export class TaskStore extends Events {
 	constructor(private plugin: OmniCalendarPlugin) {
 		super();
+	}
+
+	/** Days after today covered by "Upcoming" (setting, default 7). */
+	get upcomingDays(): number {
+		return this.plugin.settings.tasksUpcomingDays || 7;
 	}
 
 	get data(): TaskData {
@@ -225,7 +228,7 @@ export class TaskStore extends Events {
 	tasksFor(listId: string, today = new Date()): Task[] {
 		const t0 = toDateKey(startOfDay(today));
 		const t1 = toDateKey(addDays(startOfDay(today), 1));
-		const tN = toDateKey(addDays(startOfDay(today), UPCOMING_DAYS));
+		const tN = toDateKey(addDays(startOfDay(today), this.upcomingDays));
 		const open = this.items.filter((t) => !t.done);
 		switch (listId as SmartListId) {
 			case "today": return open.filter((t) => t.date && t.date <= t0);
@@ -260,7 +263,7 @@ export class TaskStore extends Events {
 	group(tasks: Task[], done: Task[], today = new Date()): TaskGroup[] {
 		const base = startOfDay(today);
 		const t0 = toDateKey(base);
-		const tN = toDateKey(addDays(base, UPCOMING_DAYS));
+		const tN = toDateKey(addDays(base, this.upcomingDays));
 		const groups = new Map<string, TaskGroup>();
 		const add = (key: string, title: string, t: Task, extra: Partial<TaskGroup> = {}) => {
 			let g = groups.get(key);

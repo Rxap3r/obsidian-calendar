@@ -185,7 +185,7 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
 - **Lists on the left.** On the phone and in the sidebar, they become a bar at the top that you swipe sideways.
   - **Today:** due today, plus anything overdue.
   - **Tomorrow.**
-  - **Upcoming:** today and the next 7 days, one heading per day.
+  - **Upcoming:** today and the next days, one heading per day. It covers 7 days by default; change it in *Settings → Omni Calendar → Tasks → Upcoming list* (3 days up to 1 year). Later tasks are under *All*.
   - **Overdue:** only shown in the bar when something is overdue.
   - **No date.**
   - **All:** every open task, grouped by when it's due.
@@ -462,6 +462,7 @@ The settings are split into four tabs. Longer explanations sit in collapsible **
 | **Tasks** | Use tasks | Main switch for everything task-related. Off hides it but deletes nothing |
 | | Tasks in sidebar | Shows the Tasks page in the sidebar (same side as the calendar), independent of mini calendar / day planner |
 | | Show completed tasks | Collapsed "Done" section in the lists |
+| | Upcoming list | How far ahead the "Upcoming" list looks: 3, 7 (default), 14, 30, 60 or 90 days, 6 months or 1 year |
 | | Default priority / Default list | Used for new tasks |
 | | Lists | Rename, recolour, add or delete task lists ("Tasks" is the default list and can't be deleted) |
 | **Notes** | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |

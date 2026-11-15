@@ -690,3 +690,4 @@
 .ch-date-day.is-selected { background: var(--interactive-accent); color: var(--text-on-accent); font-weight: 600; }
 .ch-date-foot { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--background-modifier-border); }
 .ch-date-foot button { font-size: 0.85em; padding: 3px 10px; height: auto; }
+.ch-tasks-title-sub { font-size: 0.55em; font-weight: normal; color: var(--text-muted); align-self: flex-end; margin-bottom: 4px; }

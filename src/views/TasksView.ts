@@ -197,6 +197,11 @@ export class TasksView extends ItemView {
 		const title = head.createDiv({ cls: "ch-tasks-title" });
 		if (userList) title.createSpan({ cls: "ch-tasks-nav-dot" }).style.setProperty("--ch-event-color", userList.color);
 		title.createSpan({ text: this.listName(id) });
+		if (id === "upcoming") {
+			const n = store.upcomingDays;
+			const range = n === 7 ? "next 7 days" : n === 14 ? "next 2 weeks" : n === 30 ? "next 30 days" : n === 180 ? "next 6 months" : n === 365 ? "next year" : `next ${n} days`;
+			title.createSpan({ cls: "ch-tasks-title-sub", text: range });
+		}
 		if (userList) {
 			const more = head.createEl("button", { cls: "ch-icon-btn", attr: { "aria-label": "List options" } });
 			setIcon(more, "more-horizontal");

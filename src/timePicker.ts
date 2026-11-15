@@ -245,7 +245,9 @@ function createPopup(field: HTMLElement, cls: string, attr: Record<string, strin
 	const popup = host.createDiv({ cls, attr });
 	// Keep the focus where it is (buttons in the pop-up would take it); clicks still work.
 	popup.addEventListener("pointerdown", (e) => {
-		if (!(e.target as HTMLElement).closest("input, textarea")) e.preventDefault();
+		if ((e.target as HTMLElement).closest("input, textarea")) return;
+		e.preventDefault();
+		releaseTextField(field.closest(".modal") as HTMLElement | null, field);
 	});
 	popup.addEventListener("mousedown", (e) => e.preventDefault());
 	return popup;
@@ -441,8 +443,27 @@ export class DateField {
  * focuses the first field (the title), which opens the keyboard on tablets and phones.
  */
 export function keepFocusOnTap(container: HTMLElement) {
+	// The dialog itself can hold the focus (so the keyboard can close without the focus leaving it).
+	if (!container.hasAttribute("tabindex")) container.tabIndex = -1;
 	container.addEventListener("pointerdown", (e) => {
 		const t = e.target as HTMLElement;
-		if (t.closest("button, .ch-target-chip") && !t.closest("input, textarea, select")) e.preventDefault();
+		if (t.closest("button, .ch-target-chip") && !t.closest("input, textarea, select")) {
+			e.preventDefault();
+			releaseTextField(container);
+		}
 	});
+}
+
+/**
+ * If a text field (notes, subtask, title, …) is being typed in, hand the focus to the dialog
+ * itself: the keyboard closes, and the focus stays inside the dialog. `except` is a field that
+ * should keep its own input focused (e.g. a time field while typing).
+ */
+function releaseTextField(dialog: HTMLElement | null, except?: HTMLElement) {
+	const ae = document.activeElement as HTMLElement | null;
+	if (!dialog || !ae || !dialog.contains(ae) || (except && except.contains(ae))) return;
+	const typing = ae.tagName === "TEXTAREA" || (ae.tagName === "INPUT" && !(ae as HTMLInputElement).readOnly && !["checkbox", "radio", "color", "button"].includes((ae as HTMLInputElement).type));
+	if (!typing) return;
+	if (!dialog.hasAttribute("tabindex")) dialog.tabIndex = -1;
+	dialog.focus({ preventScroll: true });
 }
