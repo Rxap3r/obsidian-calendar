@@ -391,7 +391,7 @@ export class CalendarView extends ItemView {
 		const dayOccs = occs.filter((o) => overlapsDay(o.start, o.end, selected));
 		if (!dayOccs.length) list.createDiv({ cls: "ch-empty", text: "No events" });
 		for (const o of dayOccs) {
-			const chip = createChip(this.plugin, list, o, { showTime: true, draggable: true });
+			const chip = createChip(this.plugin, list, o, { showTime: true, draggable: true, day: selected });
 			chip.addClass("ch-mc-item");
 		}
 	}
@@ -446,7 +446,7 @@ export class CalendarView extends ItemView {
 				const dayOccs = occs.filter((o) => overlapsDay(o.start, o.end, day));
 				const shown = dayOccs.length > MONTH_MAX_CHIPS ? MONTH_MAX_CHIPS - 1 : MONTH_MAX_CHIPS;
 				dayOccs.slice(0, shown).forEach((o) => {
-					const chip = createChip(this.plugin, list, o, { showTime: true, draggable: true });
+					const chip = createChip(this.plugin, list, o, { showTime: true, draggable: true, day });
 					if (o.allDay && !isSameDay(o.start, day)) chip.addClass("ch-continued");
 				});
 				if (dayOccs.length > shown) {

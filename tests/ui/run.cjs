@@ -760,6 +760,28 @@ test("events: all-day event created late in the evening covers one day only", {}
 	eq(d, [23, 16, 23, 59], "23:00 suggestion ends 23:59 the same day");
 });
 
+test("month view shows start and end time", {}, async ({ page }) => {
+	await page.evaluate(async () => {
+		await plugin.store.addEvent({ calendarId: "personal", allDay: false, exdates: [], title: "Night shift", start: "2026-11-18T22:00", end: "2026-11-19T02:00" });
+		view.goTo(new Date(2026, 10, 14), "month");
+	});
+	await page.waitForTimeout(150);
+	const chip = (title, day) => page.evaluate(([title, day]) => {
+		const cell = [...document.querySelectorAll(".ch-month-cell")].find((c) => c.querySelector(".ch-day-num")?.textContent === day && !c.classList.contains("ch-other-month"));
+		const ch = [...cell.querySelectorAll(".ch-chip")].find((x) => x.textContent.includes(title));
+		return ch?.querySelector(".ch-chip-time")?.textContent ?? null;
+	}, [title, day]);
+	eq(await chip("Design review", "14"), "10:00–11:30", "same-day range");
+	eq(await chip("Night shift", "18"), "22:00 →", "first day of an overnight event");
+	eq(await chip("Night shift", "19"), "→ 02:00", "last day");
+	await page.evaluate(() => { plugin.settings.use24h = false; view.goTo(new Date(2026, 10, 14), "month"); });
+	await page.waitForTimeout(100);
+	eq(await chip("Design review", "14"), "10am–11:30am", "12-hour clock");
+	await page.evaluate(() => { plugin.settings.use24h = true; view.goTo(new Date(2026, 10, 14), "month"); });
+	await page.waitForTimeout(100);
+	await page.screenshot({ path: path.join(SHOTS, "month-time-ranges.png"), clip: { x: 0, y: 0, width: 1120, height: 620 } });
+});
+
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {
 	await page.evaluate(() => mountTasks());
 	await page.waitForTimeout(100);

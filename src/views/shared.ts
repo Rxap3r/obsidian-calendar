@@ -2,7 +2,7 @@ import { Menu, Notice } from "obsidian";
 import { confirmAction } from "../modals/ConfirmModal";
 import type OmniCalendarPlugin from "../main";
 import { CalendarOccurrence } from "../types";
-import { formatTime } from "../dateUtils";
+import { formatTime, isSameDay } from "../dateUtils";
 import { EventModal } from "../modals/EventModal";
 import { EventDetailsModal } from "../modals/EventDetailsModal";
 
@@ -82,7 +82,8 @@ export function createChip(
 	plugin: OmniCalendarPlugin,
 	parent: HTMLElement,
 	occ: CalendarOccurrence,
-	opts: { showTime?: boolean; draggable?: boolean } = {}
+	/** showTime: start time; with `day` it shows the range ("10:00–11:30") for that day. */
+	opts: { showTime?: boolean; draggable?: boolean; day?: Date } = {}
 ): HTMLElement {
 	const chip = parent.createDiv({ cls: "ch-chip" });
 	chip.style.setProperty("--ch-event-color", occ.color);
@@ -91,7 +92,7 @@ export function createChip(
 	if (occ.end < new Date()) chip.addClass("ch-past");
 	if (!occ.allDay) chip.createSpan({ cls: "ch-chip-dot" });
 	if (opts.showTime && !occ.allDay) {
-		chip.createSpan({ cls: "ch-chip-time", text: formatTime(occ.start, plugin.settings.use24h) });
+		chip.createSpan({ cls: "ch-chip-time", text: opts.day ? timeRangeForDay(occ, opts.day, plugin.settings.use24h) : formatTime(occ.start, plugin.settings.use24h) });
 	}
 	chip.createSpan({ cls: "ch-chip-title", text: occ.title });
 	chip.setAttr("title", tooltip(plugin, occ));
@@ -128,4 +129,22 @@ export function tooltip(plugin: OmniCalendarPlugin, occ: CalendarOccurrence): st
 /** Local or writable remote events that are not part of a recurring series can be dragged. */
 export function canDrag(occ: CalendarOccurrence): boolean {
 	return !occ.readOnly && !occ.recurring && (!!occ.eventId || !!occ.remote);
+}
+
+/**
+ * Time label of a timed event on one day of the month view:
+ * "10:00–11:30" (same day), "22:00 →" (first day of a multi-day event), "→ 02:00" (last day),
+ * "→" (a day in between).
+ */
+export function timeRangeForDay(occ: CalendarOccurrence, day: Date, use24h: boolean): string {
+	const startsToday = isSameDay(occ.start, day);
+	// An end at exactly midnight belongs to the day before.
+	const lastDay = new Date(occ.end.getTime() - 1);
+	const endsToday = isSameDay(lastDay, day);
+	const s = formatTime(occ.start, use24h);
+	const e = formatTime(occ.end, use24h);
+	if (startsToday && endsToday) return occ.end.getTime() === occ.start.getTime() ? s : `${s}–${e}`;
+	if (startsToday) return `${s} →`;
+	if (endsToday) return `→ ${e}`;
+	return "→";
 }
