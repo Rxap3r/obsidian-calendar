@@ -54,7 +54,7 @@ export default class OmniCalendarPlugin extends Plugin {
 			this.showCalendarMenu({ x: e.clientX, y: e.clientY });
 		});
 
-		this.addCommand({ id: "open-calendar", name: "Open calendar (full page)", callback: () => void this.openCalendar() });
+		this.addCommand({ id: "open-calendar", name: "Open calendar", callback: () => void this.openCalendar() });
 		this.addCommand({
 			id: "calendar-menu",
 			name: "Calendar menu (open, sidebar, new event, settings)",
@@ -183,7 +183,7 @@ export default class OmniCalendarPlugin extends Plugin {
 		if (Date.now() - this.ribbonMenuShownAt < 800) return;
 		this.ribbonMenuShownAt = Date.now();
 		const menu = new Menu();
-		menu.addItem((i) => i.setTitle("Open full calendar").setIcon("calendar-days").onClick(() => void this.openCalendar()));
+		menu.addItem((i) => i.setTitle("Open calendar").setIcon("calendar-days").onClick(() => void this.openCalendar()));
 		menu.addItem((i) =>
 			i.setTitle(this.settings.sidebarView === "mini" ? "Hide mini calendar in sidebar" : "Show mini calendar in sidebar")
 				.setIcon("panel-right").onClick(() => void this.toggleSidebar("mini"))

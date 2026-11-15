@@ -96,7 +96,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 - Ribbon buttons on mobile only receive **taps**: no long-press and no right-click. A tap opens the calendar menu.
 - Touch on the time grid: swipe scrolls, tap creates an event, long-press + drag selects a range. Handle `pointercancel` and
   never open more than one dialog (`EventModal.openCount`).
-- The full calendar in the sidebar is called **Day planner** in the UI (setting value `full`). It opens in `sidebarCalendarMode` (default Day).
+- **UI names (use them everywhere, incl. tab titles via `getDisplayText`):** **Calendar** = full page in the main area, **Mini calendar** = `omni-calendar-mini`, **Day planner** = `omni-calendar-view` in a sidebar (setting value `full`; opens in `sidebarCalendarMode`, default Day). Avoid "full calendar".
 - Narrow layouts:
   - month → compact 7-column grid (bars, or dots when very narrow) + the selected day's list (`renderMonthCompact`);
   - week → the whole week, swiped day by day (`.ch-tg-hscroll`, header cells shifted via `--ch-sx`) with a week bar;

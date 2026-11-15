@@ -62,11 +62,19 @@ export class CalendarView extends ItemView {
 	getViewType() {
 		return VIEW_TYPE_CALENDAR;
 	}
+	/** "Day planner" in a sidebar, "Calendar" in the main area – the same names as in menus and settings. */
 	getDisplayText() {
-		return "Calendar";
+		return this.inSidebar() ? "Day planner" : "Calendar";
 	}
 	getIcon() {
-		return "calendar-days";
+		return this.inSidebar() ? "calendar-clock" : "calendar-days";
+	}
+	private inSidebar(): boolean {
+		try {
+			return this.plugin.isInSidebar(this.leaf);
+		} catch {
+			return false;
+		}
 	}
 
 	getState(): Record<string, unknown> {
@@ -193,9 +201,12 @@ export class CalendarView extends ItemView {
 		const inSidebar = this.plugin.isInSidebar(this.leaf);
 		btn.empty();
 		setIcon(btn, inSidebar ? "maximize-2" : "panel-right-open");
-		const after = { mini: " (sidebar switches to the mini calendar)", close: " (closes this sidebar calendar)", keep: " (keeps this sidebar calendar)" }[this.plugin.settings.sidebarOnExpand];
-		btn.setAttr("aria-label", inSidebar ? `Open full page${after}` : "Move to sidebar");
+		const after = { mini: " (the sidebar switches to the mini calendar)", close: " (closes the day planner)", keep: " (keeps the day planner)" }[this.plugin.settings.sidebarOnExpand];
+		btn.setAttr("aria-label", inSidebar ? `Open calendar${after}` : "Move to sidebar as day planner");
 		this.contentEl.toggleClass("ch-in-sidebar", inSidebar);
+		// Tab title and icon depend on where the view is ("Calendar" vs "Day planner").
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(this.leaf as any).updateHeader?.();
 	}
 
 	/** Sidebar → open the full page in the main area. Main area → move this calendar into the sidebar. */

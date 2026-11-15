@@ -25,7 +25,7 @@ export class MiniCalendarView extends ItemView {
 		return VIEW_TYPE_MINI;
 	}
 	getDisplayText() {
-		return "Calendar (mini)";
+		return "Mini calendar";
 	}
 	getIcon() {
 		return "calendar";
@@ -70,7 +70,7 @@ export class MiniCalendarView extends ItemView {
 		const head = el.createDiv({ cls: "ch-mini-head" });
 		const title = head.createDiv({ cls: "ch-mini-title", text: formatDate(this.month, { month: "long", year: "numeric" }) });
 		title.onclick = () => void this.plugin.openCalendar(this.month, "month");
-		title.setAttr("aria-label", "Open in full calendar");
+		title.setAttr("aria-label", "Open in calendar");
 		const btns = head.createDiv({ cls: "ch-mini-nav" });
 		const mk = (icon: string, label: string, fn: () => void) => {
 			const b = btns.createEl("button", { cls: "ch-icon-btn clickable-icon", attr: { "aria-label": label } });
@@ -91,7 +91,7 @@ export class MiniCalendarView extends ItemView {
 			this.render();
 		});
 		mk("plus", "New event", () => new EventModal(this.plugin, { start: this.selected }).open());
-		mk("maximize-2", "Open full calendar", () => void this.plugin.openCalendar(this.selected));
+		mk("maximize-2", "Open calendar", () => void this.plugin.openCalendar(this.selected));
 
 		// Grid
 		const gridStart = startOfWeek(this.month, s.firstDayOfWeek);
