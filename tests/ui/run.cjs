@@ -526,6 +526,40 @@ test("mobile: date picker fits on screen; event dialog dates + until", { mobile:
 	eq(await page.evaluate(() => { const e = plugin.data.events.find((x) => x.title === "Weekly"); return [e.start, e.recurrence?.until]; }), ["2026-11-20T10:00", "2026-12-18"], "saved with picked dates");
 });
 
+test("mobile: picking dates/times never jumps to the title field (no keyboard)", { mobile: true }, async ({ page }) => {
+	await page.evaluate(() => {
+		new TaskModal(plugin).open();
+		// Mimic Obsidian: focus that leaves the open dialog is pulled back to its first field.
+		window.titleFocus = 0;
+		const title = () => document.querySelector(".ch-task-modal .ch-title-input");
+		document.addEventListener("focusin", (e) => { if (!e.target.closest(".modal-container")) title().focus(); }, true);
+		setTimeout(() => { title().blur(); title().addEventListener("focus", () => window.titleFocus++); }, 50);
+	});
+	await page.waitForTimeout(120);
+	await page.tap(".ch-task-date button");
+	await page.tap('.ch-date-nav[aria-label="Next month"]');
+	await page.tap('.ch-date-day[data-date="2026-12-03"]');
+	await page.tap(".ch-task-start input");
+	await page.tap('.ch-time-list [data-value="09:00"]');
+	await page.tap(".ch-task-end input");
+	const inside = await page.$eval(".ch-time-list", (e) => !!e.closest(".modal-container"));
+	await page.tap('.ch-time-list [data-value="10:00"]');
+	await page.waitForTimeout(100);
+	const pickFocus = await page.evaluate(() => window.titleFocus);
+	await page.fill(".ch-task-add-sub", "Sub"); await page.press(".ch-task-add-sub", "Enter");
+	await page.evaluate(() => document.activeElement.blur());
+	await page.evaluate(() => (window.titleFocus = 0));
+	await page.tap(".ch-task-sub-row .ch-icon-btn");
+	await page.waitForTimeout(100);
+	const r = await page.evaluate(() => ({ titleFocus: window.titleFocus, active: document.activeElement.className, task: [window.lastModal.task.date, window.lastModal.task.start, window.lastModal.task.end] }));
+	eq([inside, pickFocus, r.titleFocus, r.task], [true, 0, 0, ["2026-12-03", "09:00", "10:00"]], "pop-ups live in the dialog, title never refocused (pickers, subtask delete), values picked");
+	// "Type a time" fully visible
+	await page.tap(".ch-task-start input");
+	const tw = await page.$eval(".ch-time-type", (e) => e.scrollWidth <= e.clientWidth + 1);
+	eq(tw, true, "'Type a time' not cut off");
+	await page.screenshot({ path: path.join(SHOTS, "time-picker-mobile-type.png") });
+});
+
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {
 	await page.evaluate(() => mountTasks());
 	await page.waitForTimeout(100);

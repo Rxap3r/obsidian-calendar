@@ -655,6 +655,7 @@
 .ch-time-type, .ch-time-clear { color: var(--text-muted); border-bottom: 1px solid var(--background-modifier-border); border-radius: 0; }
 .ch-time-head { position: sticky; top: -4px; z-index: 1; margin: -4px -4px 2px; padding: 4px 4px 0; background: var(--background-primary); border-bottom: 1px solid var(--background-modifier-border); }
 .ch-time-head .ch-time-item { border-bottom: none; }
+.ch-time-type, .ch-time-clear { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------------------------------------------------------------- our own date picker (same on every device) */
 .ch-datefield { display: inline-flex; min-width: 0; flex: 0 1 190px; }

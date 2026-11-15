@@ -3,7 +3,7 @@ import type OmniCalendarPlugin from "../main";
 import { CalendarStore } from "../store";
 import { CalendarOccurrence, EventInput, LocalEvent, Recurrence, RecurrenceFreq } from "../types";
 import { confirmAction } from "./ConfirmModal";
-import { DateField, TimeField } from "../timePicker";
+import { DateField, TimeField, keepFocusOnTap } from "../timePicker";
 import { addDays, addMinutes, isValidDate, parseLocal, toDateKey, toTimeKey } from "../dateUtils";
 
 export interface EventModalInit {
@@ -126,6 +126,7 @@ export class EventModal extends Modal {
 		EventModal.openCount++;
 		const { contentEl } = this;
 		this.modalEl.addClass("ch-event-modal");
+		keepFocusOnTap(this.modalEl);
 		const remote = this.init.remote;
 		this.setTitle(this.init.event || remote ? "Edit event" : "New event");
 

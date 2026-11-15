@@ -161,7 +161,7 @@ export class TimeField {
 
 	open() {
 		if (this.list) return;
-		const list = document.body.createDiv({ cls: "ch-time-list", attr: { role: "listbox" } });
+		const list = createPopup(this.el, "ch-time-list", { role: "listbox" });
 		this.list = list;
 		// "Type a time" / "No time" stay visible at the top while the times scroll.
 		const head = this.input.readOnly || this.value ? list.createDiv({ cls: "ch-time-head" }) : null;
@@ -190,7 +190,8 @@ export class TimeField {
 				this.close();
 			};
 		}
-		placePopup(list, this.input, this.opts.after ? 190 : 140, 240);
+		// Wide enough for "⌨ Type a time" / durations.
+		placePopup(list, this.input, this.opts.after ? 190 : head ? 170 : 140, 240);
 		// Scroll so the chosen time (or the nearest one, or the current hour) is visible.
 		const target = this.value ?? (this.opts.after?.() ? undefined : fromMin(Math.floor((new Date().getHours() * 60) / STEP) * STEP));
 		const el = (target && list.querySelector<HTMLElement>(`[data-value="${target}"]`)) || list.querySelector<HTMLElement>("[data-value]");
@@ -233,6 +234,22 @@ export class TimeField {
 }
 
 // ====================================================================== shared pop-up helpers
+
+/**
+ * Create a pop-up inside the dialog that contains the field (not at the end of the page): Obsidian
+ * keeps the focus inside an open dialog and would otherwise move it to the dialog's first field
+ * (the title), which opened the keyboard on tablets. Tapping the pop-up also never takes the focus.
+ */
+function createPopup(field: HTMLElement, cls: string, attr: Record<string, string>): HTMLElement {
+	const host = (field.closest(".modal-container") as HTMLElement | null) ?? document.body;
+	const popup = host.createDiv({ cls, attr });
+	// Keep the focus where it is (buttons in the pop-up would take it); clicks still work.
+	popup.addEventListener("pointerdown", (e) => {
+		if (!(e.target as HTMLElement).closest("input, textarea")) e.preventDefault();
+	});
+	popup.addEventListener("mousedown", (e) => e.preventDefault());
+	return popup;
+}
 
 /** Put a fixed pop-up below the anchor (or above it when there's no room), on top of dialogs. */
 function placePopup(popup: HTMLElement, anchor: HTMLElement, width: number, maxHeight: number) {
@@ -348,7 +365,7 @@ export class DateField {
 		if (this.popup) return;
 		const base = this.value ? fromKey(this.value) : new Date();
 		this.month = new Date(base.getFullYear(), base.getMonth(), 1);
-		this.popup = document.body.createDiv({ cls: "ch-date-popup", attr: { role: "dialog", "aria-label": "Choose a date" } });
+		this.popup = createPopup(this.el, "ch-date-popup", { role: "dialog", "aria-label": "Choose a date" });
 		this.renderMonth();
 		placePopup(this.popup, this.button, 280, 400);
 		this.cleanup = closeOnOutside(this.popup, this.el, () => this.close());
@@ -416,4 +433,16 @@ export class DateField {
 		this.renderMonth();
 		if (this.popup) placePopup(this.popup, this.button, 280, 400);
 	}
+}
+
+/**
+ * Buttons in a dialog don't take the focus when tapped. Otherwise a button that disappears after
+ * the tap (re-rendered rows, closed pop-ups) leaves the dialog without focus, and Obsidian then
+ * focuses the first field (the title), which opens the keyboard on tablets and phones.
+ */
+export function keepFocusOnTap(container: HTMLElement) {
+	container.addEventListener("pointerdown", (e) => {
+		const t = e.target as HTMLElement;
+		if (t.closest("button, .ch-target-chip") && !t.closest("input, textarea, select")) e.preventDefault();
+	});
 }
