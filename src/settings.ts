@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	sidebarSide: "right",
 	sidebarView: "none",
 	sidebarCalendarMode: "day",
+	sidebarOnExpand: "mini",
 	notesFolder: "Calendar",
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,
 	defaultCalendarId: "personal",
@@ -283,6 +284,18 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 						s.sidebarSide = v as "left" | "right";
 						await this.save();
 						await this.plugin.applySidebar(s.sidebarView !== "none");
+					})
+			);
+		new Setting(el)
+			.setName("When the Day planner opens the full page")
+			.setDesc("What happens in the sidebar when you press ⤢ in the Day planner to open the full calendar.")
+			.addDropdown((d) =>
+				d
+					.addOptions({ mini: "Switch to the mini calendar", close: "Close the sidebar calendar", keep: "Keep the Day planner" })
+					.setValue(s.sidebarOnExpand)
+					.onChange(async (v) => {
+						s.sidebarOnExpand = v as "mini" | "close" | "keep";
+						await this.save();
 					})
 			);
 		new Setting(el)

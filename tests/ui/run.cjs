@@ -214,6 +214,28 @@ test("desktop: day planner in sidebar opens in Day view and remembers its own vi
 	eq(r, { opens: "day", remembered: "week", afterMain: "week", reopens: "week", label: "Day planner (timeline)" }, "day planner");
 });
 
+test("desktop: ⤢ in the Day planner – switch to mini (default), close, or keep", {}, async ({ page }) => {
+	const r = await page.evaluate(async () => {
+		const run = async (after) => {
+			if (after) plugin.settings.sidebarOnExpand = after;
+			plugin.settings.sidebarView = "full"; await plugin.applySidebar(false);
+			const L = plugin.sidebarLeaves("omni-calendar-view")[0]; L.app = plugin.app;
+			const V = new view.constructor(L, plugin); await V.onOpen();
+			const btn = V.contentEl.querySelector('[aria-label^="Open full page"]');
+			const label = btn.getAttribute("aria-label");
+			btn.click(); await new Promise((r) => setTimeout(r, 50));
+			const main = ws.leaves.filter((l) => l.root === ws.rootSplit && l.vs.type === "omni-calendar-view").length;
+			return { label, setting: plugin.settings.sidebarView, mini: plugin.sidebarLeaves("omni-calendar-mini").length,
+				planner: plugin.sidebarLeaves("omni-calendar-view").length, main: main > 0 };
+		};
+		return { def: plugin.settings.sidebarOnExpand, mini: await run(), close: await run("close"), keep: await run("keep") };
+	});
+	eq(r.def, "mini", "default");
+	eq(r.mini, { label: "Open full page (sidebar switches to the mini calendar)", setting: "mini", mini: 1, planner: 0, main: true }, "switch to mini");
+	eq(r.close, { label: "Open full page (closes this sidebar calendar)", setting: "none", mini: 0, planner: 0, main: true }, "close");
+	eq(r.keep, { label: "Open full page (keeps this sidebar calendar)", setting: "full", mini: 0, planner: 1, main: true }, "keep");
+});
+
 test("desktop: responsive month/week at narrow widths", { width: 360 }, async ({ page }) => {
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "month"));
 	await page.waitForTimeout(200);

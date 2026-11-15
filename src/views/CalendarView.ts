@@ -193,14 +193,15 @@ export class CalendarView extends ItemView {
 		const inSidebar = this.plugin.isInSidebar(this.leaf);
 		btn.empty();
 		setIcon(btn, inSidebar ? "maximize-2" : "panel-right-open");
-		btn.setAttr("aria-label", inSidebar ? "Open full page (keeps this sidebar calendar)" : "Move to sidebar");
+		const after = { mini: " (sidebar switches to the mini calendar)", close: " (closes this sidebar calendar)", keep: " (keeps this sidebar calendar)" }[this.plugin.settings.sidebarOnExpand];
+		btn.setAttr("aria-label", inSidebar ? `Open full page${after}` : "Move to sidebar");
 		this.contentEl.toggleClass("ch-in-sidebar", inSidebar);
 	}
 
 	/** Sidebar → open the full page in the main area. Main area → move this calendar into the sidebar. */
 	private async toggleLocation() {
 		if (this.plugin.isInSidebar(this.leaf)) {
-			await this.plugin.openCalendar(this.cursor, this.mode);
+			await this.plugin.expandFromSidebar(this.cursor, this.mode);
 			return;
 		}
 		await this.plugin.moveToSidebar({ mode: this.mode, date: toDateKey(this.cursor) });

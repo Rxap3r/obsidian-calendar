@@ -70,7 +70,7 @@ Download `main.js`, `manifest.json` and `styles.css` from the
 | Command **Toggle mini calendar in sidebar** | Shows the mini calendar in the sidebar, or hides it if it's already there |
 | Command **Toggle day planner in sidebar** | The same for the **day planner**: the full calendar in the sidebar, opening in Day view as a timeline next to your notes. Month/Week/Agenda are one tap away, and the view you pick there is remembered |
 | Commands **Open month / week / day / agenda view** | The full calendar in that view |
-| Button ⤢ / ⇥ in the calendar's toolbar | In the sidebar: **open the full page** (the sidebar calendar stays). In the main area: **move this calendar to the sidebar** |
+| Button ⤢ / ⇥ in the calendar's toolbar | In the sidebar: **open the full page**. The sidebar then switches to the mini calendar, or, depending on *Settings → Omni Calendar → Display → When the Day planner opens the full page*, closes or keeps the Day planner. In the main area: **move this calendar to the sidebar** |
 
 You never have to drag anything. *Open calendar* always opens in the main area, even if a calendar already sits in a sidebar.
 
@@ -383,6 +383,7 @@ The settings are split into four tabs. Longer explanations sit in collapsible **
 | | Default event length | Length of a new event, in minutes |
 | | Agenda length | Number of days in the Agenda view |
 | | Calendar in sidebar | Off / mini calendar / day planner, and left or right side. Applied immediately and kept after restarts |
+| | When the Day planner opens the full page | What ⤢ in the Day planner does to the sidebar: **switch to the mini calendar** (default), close it, or keep the Day planner |
 | | Upcoming list in the mini calendar | How far ahead "Upcoming" looks (Hidden … 90 days, or *Same as agenda length*) |
 | **Notes** | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
 

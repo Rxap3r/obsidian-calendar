@@ -147,6 +147,7 @@ export default class OmniCalendarPlugin extends Plugin {
 		}
 		delete settings.sidebarOnStartup;
 		if (!["month", "week", "day", "agenda"].includes(settings.sidebarCalendarMode)) settings.sidebarCalendarMode = "day";
+		if (!["mini", "close", "keep"].includes(settings.sidebarOnExpand)) settings.sidebarOnExpand = "mini";
 		const up = Number(settings.sidebarUpcomingDays);
 		settings.sidebarUpcomingDays = Number.isFinite(up) ? Math.max(-1, Math.min(365, Math.round(up))) : DEFAULT_SETTINGS.sidebarUpcomingDays;
 		this.data = { settings, events: Array.isArray(raw.events) ? raw.events : [] };
@@ -328,6 +329,19 @@ export default class OmniCalendarPlugin extends Plugin {
 		for (const leaf of this.sidebarLeaves(VIEW_TYPE_CALENDAR)) leaf.detach();
 		await this.showInSidebar("full", true, state);
 		window.setTimeout(() => (this.applyingSidebar = false), 300);
+	}
+
+	/**
+	 * ⤢ button of the Day planner: open the full page, then (per setting) switch the sidebar
+	 * to the mini calendar, close it, or keep the Day planner.
+	 */
+	async expandFromSidebar(date: Date, mode: ViewMode) {
+		await this.openCalendar(date, mode);
+		const after = this.settings.sidebarOnExpand;
+		if (after === "keep") return;
+		this.settings.sidebarView = after === "mini" ? "mini" : "none";
+		await this.persist();
+		await this.applySidebar(false);
 	}
 
 	/** Show the mini / full calendar in the sidebar, or hide it if it is already shown. */
