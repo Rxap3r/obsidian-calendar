@@ -162,6 +162,8 @@ export interface OmniCalendarSettings {
 	sidebarCalendarMode: ViewMode;
 	/** What happens to the Day planner in the sidebar when its "open full page" button is used. */
 	sidebarOnExpand: "mini" | "close" | "keep";
+	/** With sidebarOnExpand "close": view type of the sidebar tab to show afterwards (e.g. "file-explorer"); "" = Obsidian decides. */
+	sidebarAfterClose: string;
 	/** @deprecated replaced by sidebarView (migrated on load). */
 	sidebarOnStartup?: SidebarView;
 	notesFolder: string;

@@ -148,6 +148,7 @@ export default class OmniCalendarPlugin extends Plugin {
 		delete settings.sidebarOnStartup;
 		if (!["month", "week", "day", "agenda"].includes(settings.sidebarCalendarMode)) settings.sidebarCalendarMode = "day";
 		if (!["mini", "close", "keep"].includes(settings.sidebarOnExpand)) settings.sidebarOnExpand = "mini";
+		if (typeof settings.sidebarAfterClose !== "string") settings.sidebarAfterClose = "";
 		const up = Number(settings.sidebarUpcomingDays);
 		settings.sidebarUpcomingDays = Number.isFinite(up) ? Math.max(-1, Math.min(365, Math.round(up))) : DEFAULT_SETTINGS.sidebarUpcomingDays;
 		this.data = { settings, events: Array.isArray(raw.events) ? raw.events : [] };
@@ -352,13 +353,43 @@ export default class OmniCalendarPlugin extends Plugin {
 					for (const leaf of this.sidebarLeaves(VIEW_TYPE_MINI)) leaf.detach();
 					await planner.setViewState({ type: VIEW_TYPE_MINI, active: false, state: {} });
 				} else {
+					const root = planner.getRoot();
 					planner.detach();
+					this.showSidebarTab(root, this.settings.sidebarAfterClose);
 				}
 			} finally {
 				window.setTimeout(() => (this.applyingSidebar = false), 300);
 			}
 		}
 		await this.openCalendar(date, mode);
+	}
+
+	/** The tabs (views) currently in the configured sidebar, except our own – for the settings dropdown. */
+	sidebarTabs(): { type: string; name: string }[] {
+		const target = this.configuredSidebar();
+		const out: { type: string; name: string }[] = [];
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			const type = leaf.getViewState().type;
+			if (leaf.getRoot() !== target || !type || type === "empty" || type === VIEW_TYPE_MINI || type === VIEW_TYPE_CALENDAR) return;
+			if (out.some((o) => o.type === type)) return;
+			out.push({ type, name: leaf.getDisplayText() || type });
+		});
+		return out;
+	}
+
+	/** Make the sidebar tab of this view type the visible one, without opening a collapsed sidebar (or the mobile drawer). */
+	private showSidebarTab(root: unknown, type: string) {
+		if (!type) return;
+		let found: WorkspaceLeaf | null = null;
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			if (!found && leaf.getRoot() === root && leaf.getViewState().type === type) found = leaf;
+		});
+		if (!found) return;
+		const leaf: WorkspaceLeaf = found;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const tabs = (leaf as any).parent;
+		if (tabs && typeof tabs.selectTab === "function") tabs.selectTab(leaf);
+		else if (!Platform.isMobile && !(root as WorkspaceSidedock).collapsed) void this.app.workspace.revealLeaf(leaf);
 	}
 
 	/** Show the mini / full calendar in the sidebar, or hide it if it is already shown. */

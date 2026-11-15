@@ -23,6 +23,7 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	sidebarView: "none",
 	sidebarCalendarMode: "day",
 	sidebarOnExpand: "mini",
+	sidebarAfterClose: "",
 	notesFolder: "Calendar",
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,
 	defaultCalendarId: "personal",
@@ -282,7 +283,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 					.setValue(s.sidebarSide)
 					.onChange(async (v) => {
 						s.sidebarSide = v as "left" | "right";
-						await this.save();
+						await this.save(true);
 						await this.plugin.applySidebar(s.sidebarView !== "none");
 					})
 			);
@@ -295,9 +296,25 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 					.setValue(s.sidebarOnExpand)
 					.onChange(async (v) => {
 						s.sidebarOnExpand = v as "mini" | "close" | "keep";
-						await this.save();
+						await this.save(true);
 					})
 			);
+		if (s.sidebarOnExpand === "close") {
+			const side = s.sidebarSide === "left" ? "left" : "right";
+			const opts: Record<string, string> = { "": "Let Obsidian decide" };
+			for (const v of this.plugin.sidebarTabs()) opts[v.type] = v.name;
+			if (s.sidebarAfterClose && !(s.sidebarAfterClose in opts)) opts[s.sidebarAfterClose] = `${CORE_TAB_NAMES[s.sidebarAfterClose] ?? s.sidebarAfterClose} (not in the ${side} sidebar right now)`;
+			new Setting(el)
+				.setName("Then show this sidebar tab")
+				.setDesc(`Which tab of the ${side} sidebar is shown after the Day planner closes. The list shows the tabs that are in the ${side} sidebar right now.`)
+				.setClass("ch-sub-setting")
+				.addDropdown((d) =>
+					d.addOptions(opts).setValue(s.sidebarAfterClose).onChange(async (v) => {
+						s.sidebarAfterClose = v;
+						await this.save();
+					})
+				);
+		}
 		new Setting(el)
 			.setName("Upcoming list in the mini calendar")
 			.setDesc("How far ahead the “Upcoming” list below the mini calendar looks.")
@@ -619,3 +636,9 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 			});
 	}
 }
+
+/** Readable names of Obsidian's built-in sidebar tabs (used when a saved tab is not open right now). */
+const CORE_TAB_NAMES: Record<string, string> = {
+	"file-explorer": "Files", search: "Search", bookmarks: "Bookmarks", tag: "Tags", backlink: "Backlinks",
+	"outgoing-link": "Outgoing links", outline: "Outline", "all-properties": "All properties", "file-properties": "Properties",
+};

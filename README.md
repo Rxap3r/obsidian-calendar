@@ -384,6 +384,7 @@ The settings are split into four tabs. Longer explanations sit in collapsible **
 | | Agenda length | Number of days in the Agenda view |
 | | Calendar in sidebar | Off / mini calendar / day planner, and left or right side. Applied immediately and kept after restarts |
 | | When the Day planner opens the full page | What ⤢ in the Day planner does to the sidebar: **switch to the mini calendar** (default), close it, or keep the Day planner |
+| | Then show this sidebar tab | Only with *close it*: which tab of the calendar's sidebar (left or right) is shown afterwards, e.g. *Files* or *Bookmarks*. The list shows the tabs that are in that sidebar right now. *Let Obsidian decide* keeps Obsidian's choice |
 | | Upcoming list in the mini calendar | How far ahead "Upcoming" looks (Hidden … 90 days, or *Same as agenda length*) |
 | **Notes** | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
 
