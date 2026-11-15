@@ -6,7 +6,7 @@ import { addDays, toDateKey } from "../dateUtils";
 import { confirmAction } from "./ConfirmModal";
 import { NotePickerModal } from "./NotePickerModal";
 import { openLinkedNote } from "../views/TasksView";
-import { TimeField } from "../timePicker";
+import { DateField, TimeField } from "../timePicker";
 
 /** Create / edit a task: title, list, priority, date, time (range), subtasks, linked notes, notes. */
 export class TaskModal extends Modal {
@@ -16,7 +16,7 @@ export class TaskModal extends Modal {
 	private timeRow!: HTMLElement;
 	private subtasksEl!: HTMLElement;
 	private linksEl!: HTMLElement;
-	private dateInput!: HTMLInputElement;
+	private dateField!: DateField;
 
 	constructor(private plugin: OmniCalendarPlugin, task?: Task, init: Partial<Task> = {}) {
 		super(plugin.app);
@@ -65,10 +65,10 @@ export class TaskModal extends Modal {
 
 		// Date with quick buttons.
 		const date = new Setting(contentEl).setName("Date").setClass("ch-task-date-setting");
-		this.dateInput = placeholderInput(date.controlEl, "date", "Select date", "ch-task-date");
-		this.dateInput.value = t.date ?? "";
-		this.dateInput.addEventListener("change", () => this.setDate(this.dateInput.value || undefined));
-		syncEmpty(this.dateInput);
+		this.dateField = new DateField(date.controlEl, {
+			value: t.date, placeholder: "Select date", firstDayOfWeek: this.plugin.settings.firstDayOfWeek,
+			cls: "ch-task-date", allowEmpty: true, onChange: (v) => this.setDate(v),
+		});
 		const quick = date.controlEl.createDiv({ cls: "ch-task-quick" });
 		const today = new Date();
 		const q = (label: string, value: string | undefined) => {
@@ -160,8 +160,7 @@ export class TaskModal extends Modal {
 
 	private setDate(value: string | undefined) {
 		this.task.date = value;
-		this.dateInput.value = value ?? "";
-		syncEmpty(this.dateInput);
+		this.dateField.setValue(value);
 		this.updateTimeVisibility();
 	}
 
@@ -235,21 +234,4 @@ export class TaskModal extends Modal {
 		await this.plugin.tasks.remove(this.task.id);
 		this.close();
 	}
-}
-
-/**
- * Date / time input with a visible hint while it is empty ("Select date"). Phones show an
- * empty date field as a blank box, and browsers don't support placeholders on these inputs.
- */
-function placeholderInput(parent: HTMLElement, type: "date", hint: string, cls: string): HTMLInputElement {
-	const wrap = parent.createDiv({ cls: `ch-ph-wrap ch-ph-${type}` });
-	const input = wrap.createEl("input", { type, cls: `ch-input ${cls}` });
-	wrap.createSpan({ cls: "ch-ph-hint", text: hint });
-	input.addEventListener("input", () => syncEmpty(input));
-	input.addEventListener("change", () => syncEmpty(input));
-	return input;
-}
-
-function syncEmpty(input: HTMLInputElement) {
-	input.parentElement?.toggleClass("is-empty", !input.value);
 }

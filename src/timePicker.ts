@@ -190,28 +190,13 @@ export class TimeField {
 				this.close();
 			};
 		}
-		this.position();
+		placePopup(list, this.input, this.opts.after ? 190 : 140, 240);
 		// Scroll so the chosen time (or the nearest one, or the current hour) is visible.
 		const target = this.value ?? (this.opts.after?.() ? undefined : fromMin(Math.floor((new Date().getHours() * 60) / STEP) * STEP));
 		const el = (target && list.querySelector<HTMLElement>(`[data-value="${target}"]`)) || list.querySelector<HTMLElement>("[data-value]");
 		if (el) list.scrollTop = Math.max(0, el.offsetTop - (head?.offsetHeight ?? 0) - (list.clientHeight - (head?.offsetHeight ?? 0)) / 2 + el.offsetHeight / 2);
 		el?.addClass("is-active");
-
-		const onDown = (e: PointerEvent) => {
-			if (!list.contains(e.target as Node) && e.target !== this.input) this.close();
-		};
-		const onScroll = (e: Event) => {
-			if (!list.contains(e.target as Node)) this.close();
-		};
-		const onResize = () => this.close();
-		document.addEventListener("pointerdown", onDown, true);
-		document.addEventListener("scroll", onScroll, true);
-		window.addEventListener("resize", onResize);
-		this.cleanup = () => {
-			document.removeEventListener("pointerdown", onDown, true);
-			document.removeEventListener("scroll", onScroll, true);
-			window.removeEventListener("resize", onResize);
-		};
+		this.cleanup = closeOnOutside(list, this.el, () => this.close());
 	}
 
 	close() {
@@ -219,22 +204,6 @@ export class TimeField {
 		this.cleanup = null;
 		this.list?.remove();
 		this.list = null;
-	}
-
-	/** Below the field (or above it when there's no room), on top of the dialog. */
-	private position() {
-		const list = this.list;
-		if (!list) return;
-		const r = this.input.getBoundingClientRect();
-		const width = Math.max(r.width, this.opts.after ? 170 : 120);
-		const below = window.innerHeight - r.bottom - 8;
-		const above = r.top - 8;
-		const h = Math.min(240, Math.max(below, above));
-		list.style.width = `${width}px`;
-		list.style.maxHeight = `${h}px`;
-		list.style.left = `${Math.min(Math.max(8, r.left), window.innerWidth - width - 8)}px`;
-		if (below >= Math.min(240, above) || below >= 160) list.style.top = `${r.bottom + 4}px`;
-		else list.style.top = `${Math.max(8, r.top - 4 - Math.min(h, list.scrollHeight))}px`;
 	}
 
 	private moveActive(dir: number) {
@@ -260,5 +229,191 @@ export class TimeField {
 		const el = list.querySelector<HTMLElement>(`[data-value="${v}"]`) ?? list.querySelector<HTMLElement>(`[data-value="${near}"]`);
 		el?.addClass("is-active");
 		el?.scrollIntoView({ block: "nearest" });
+	}
+}
+
+// ====================================================================== shared pop-up helpers
+
+/** Put a fixed pop-up below the anchor (or above it when there's no room), on top of dialogs. */
+function placePopup(popup: HTMLElement, anchor: HTMLElement, width: number, maxHeight: number) {
+	const r = anchor.getBoundingClientRect();
+	const below = window.innerHeight - r.bottom - 8;
+	const above = r.top - 8;
+	const h = Math.min(maxHeight, Math.max(below, above));
+	popup.style.width = `${Math.min(width, window.innerWidth - 16)}px`;
+	popup.style.maxHeight = `${h}px`;
+	const w = popup.offsetWidth || width;
+	popup.style.left = `${Math.min(Math.max(8, r.left), window.innerWidth - w - 8)}px`;
+	const need = Math.min(h, popup.scrollHeight);
+	if (below >= need || below >= above) popup.style.top = `${r.bottom + 4}px`;
+	else popup.style.top = `${Math.max(8, r.top - 4 - need)}px`;
+}
+
+/** Close the pop-up when tapping outside it or scrolling the page behind it. Returns the cleanup. */
+function closeOnOutside(popup: HTMLElement, anchor: HTMLElement, close: () => void): () => void {
+	const onDown = (e: PointerEvent) => {
+		if (!popup.contains(e.target as Node) && !anchor.contains(e.target as Node)) close();
+	};
+	const onScroll = (e: Event) => {
+		if (!popup.contains(e.target as Node)) close();
+	};
+	const onKey = (e: KeyboardEvent) => {
+		if (e.key === "Escape") {
+			e.preventDefault();
+			e.stopPropagation();
+			close();
+		}
+	};
+	document.addEventListener("pointerdown", onDown, true);
+	document.addEventListener("scroll", onScroll, true);
+	document.addEventListener("keydown", onKey, true);
+	window.addEventListener("resize", close);
+	return () => {
+		document.removeEventListener("pointerdown", onDown, true);
+		document.removeEventListener("scroll", onScroll, true);
+		document.removeEventListener("keydown", onKey, true);
+		window.removeEventListener("resize", close);
+	};
+}
+
+// ====================================================================== date field
+
+export interface DateFieldOptions {
+	value?: string;
+	placeholder: string;
+	/** 0 = Sunday, 1 = Monday, … (the "First day of the week" setting). */
+	firstDayOfWeek: number;
+	cls?: string;
+	/** Show a "No date" button in the calendar. */
+	allowEmpty?: boolean;
+	onChange: (value: string | undefined) => void;
+}
+
+function pad(n: number) {
+	return String(n).padStart(2, "0");
+}
+function keyOf(d: Date) {
+	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function fromKey(k: string): Date {
+	const [y, m, d] = k.split("-").map(Number);
+	return new Date(y, m - 1, d);
+}
+
+/** "Sat, 14 Nov 2026" in the user's language. */
+export function formatDateValue(v: string): string {
+	return fromKey(v).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+}
+
+/**
+ * Our own date field with a small month calendar, identical on every device (instead of the
+ * browser's / Android's / iOS's date dialogs). Values are "YYYY-MM-DD" or undefined.
+ */
+export class DateField {
+	readonly el: HTMLElement;
+	readonly button: HTMLButtonElement;
+	private value: string | undefined;
+	private popup: HTMLElement | null = null;
+	private month: Date = new Date();
+	private cleanup: (() => void) | null = null;
+
+	constructor(parent: HTMLElement, private opts: DateFieldOptions) {
+		this.el = parent.createDiv({ cls: `ch-datefield ${opts.cls ?? ""}`.trim() });
+		this.button = this.el.createEl("button", { cls: "ch-input ch-datefield-btn", attr: { type: "button", "aria-haspopup": "dialog" } });
+		this.value = opts.value;
+		this.show();
+		this.button.addEventListener("click", (e) => {
+			e.preventDefault();
+			if (this.popup) this.close();
+			else this.open();
+		});
+	}
+
+	getValue(): string | undefined {
+		return this.value;
+	}
+
+	setValue(v: string | undefined, notify = false) {
+		this.value = v;
+		this.show();
+		if (notify) this.opts.onChange(v);
+	}
+
+	private show() {
+		this.button.setText(this.value ? formatDateValue(this.value) : this.opts.placeholder);
+		this.el.toggleClass("is-empty", !this.value);
+	}
+
+	open() {
+		if (this.popup) return;
+		const base = this.value ? fromKey(this.value) : new Date();
+		this.month = new Date(base.getFullYear(), base.getMonth(), 1);
+		this.popup = document.body.createDiv({ cls: "ch-date-popup", attr: { role: "dialog", "aria-label": "Choose a date" } });
+		this.renderMonth();
+		placePopup(this.popup, this.button, 280, 400);
+		this.cleanup = closeOnOutside(this.popup, this.el, () => this.close());
+	}
+
+	close() {
+		this.cleanup?.();
+		this.cleanup = null;
+		this.popup?.remove();
+		this.popup = null;
+	}
+
+	private renderMonth() {
+		const p = this.popup;
+		if (!p) return;
+		p.empty();
+		const head = p.createDiv({ cls: "ch-date-head" });
+		const prev = head.createEl("button", { cls: "ch-date-nav", text: "‹", attr: { "aria-label": "Previous month", type: "button" } });
+		head.createDiv({ cls: "ch-date-title", text: this.month.toLocaleDateString(undefined, { month: "long", year: "numeric" }) });
+		const next = head.createEl("button", { cls: "ch-date-nav", text: "›", attr: { "aria-label": "Next month", type: "button" } });
+		prev.onclick = () => this.shift(-1);
+		next.onclick = () => this.shift(1);
+
+		const grid = p.createDiv({ cls: "ch-date-grid" });
+		const fdw = this.opts.firstDayOfWeek;
+		for (let i = 0; i < 7; i++) {
+			const d = new Date(2026, 1, 1 + ((fdw + i) % 7)); // 1 Feb 2026 is a Sunday
+			grid.createDiv({ cls: "ch-date-wd", text: d.toLocaleDateString(undefined, { weekday: "narrow" }) });
+		}
+		const first = new Date(this.month);
+		const offset = (first.getDay() - fdw + 7) % 7;
+		const start = new Date(first.getFullYear(), first.getMonth(), 1 - offset);
+		const today = keyOf(new Date());
+		for (let i = 0; i < 42; i++) {
+			const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+			if (i === 35 && d.getMonth() !== this.month.getMonth()) break; // skip a 6th row that is entirely next month
+			const k = keyOf(d);
+			const b = grid.createEl("button", { cls: "ch-date-day", text: String(d.getDate()), attr: { type: "button", "data-date": k } });
+			if (d.getMonth() !== this.month.getMonth()) b.addClass("ch-other-month");
+			if (k === today) b.addClass("ch-today");
+			if (k === this.value) b.addClass("is-selected");
+			b.onclick = () => {
+				this.setValue(k, true);
+				this.close();
+			};
+		}
+
+		const foot = p.createDiv({ cls: "ch-date-foot" });
+		const todayBtn = foot.createEl("button", { text: "Today", attr: { type: "button" } });
+		todayBtn.onclick = () => {
+			this.setValue(today, true);
+			this.close();
+		};
+		if (this.opts.allowEmpty) {
+			const none = foot.createEl("button", { text: "No date", attr: { type: "button" } });
+			none.onclick = () => {
+				this.setValue(undefined, true);
+				this.close();
+			};
+		}
+	}
+
+	private shift(months: number) {
+		this.month = new Date(this.month.getFullYear(), this.month.getMonth() + months, 1);
+		this.renderMonth();
+		if (this.popup) placePopup(this.popup, this.button, 280, 400);
 	}
 }

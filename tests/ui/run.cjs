@@ -477,6 +477,55 @@ test("mobile: time picker list first, 'Type a time', event dialog keeps duration
 	eq(await page.$eval('.ch-time-list [data-value="14:30"]', (e) => e.textContent), "14:30  ·  1 h 30 min", "event end list shows durations");
 });
 
+test("date picker: month calendar, first day of week, navigation, no date", {}, async ({ page }) => {
+	await page.evaluate(() => { plugin.settings.firstDayOfWeek = 1; new TaskModal(plugin).open(); });
+	await page.waitForTimeout(100);
+	eq(await page.textContent(".ch-task-date"), "Select date", "empty");
+	await page.click(".ch-task-date button");
+	const r = await page.evaluate(() => {
+		const p = document.querySelector(".ch-date-popup");
+		return { title: p.querySelector(".ch-date-title").textContent, wd: [...p.querySelectorAll(".ch-date-wd")].map((e) => e.textContent).join(""),
+			first: p.querySelector(".ch-date-day").dataset.date, today: p.querySelector(".ch-today")?.dataset.date, days: p.querySelectorAll(".ch-date-day").length };
+	});
+	eq(r, { title: "November 2026", wd: "MTWTFSS", first: "2026-10-26", today: "2026-11-14", days: 42 }, "month grid (Monday first, 6 weeks)");
+	await page.screenshot({ path: path.join(SHOTS, "date-picker-desktop.png") });
+	await page.click('.ch-date-nav[aria-label="Next month"]');
+	eq(await page.textContent(".ch-date-title"), "December 2026", "next month");
+	await page.click('.ch-date-day[data-date="2026-12-24"]');
+	eq(await page.evaluate(() => [document.querySelector(".ch-task-date").textContent, !!document.querySelector(".ch-date-popup"), window.lastModal.task.date]), ["Thu, Dec 24, 2026", false, "2026-12-24"], "picked, popup closed");
+	expect(await page.isVisible(".ch-task-time-setting"), "time row appears once a date is set");
+	await page.click(".ch-task-date button");
+	await page.click('.ch-date-foot button:text("No date")');
+	eq(await page.evaluate(() => [document.querySelector(".ch-task-date").textContent, window.lastModal.task.date ?? null]), ["Select date", null], "No date clears");
+	// Sunday-first setting
+	await page.evaluate(() => { window.lastModal.close(); plugin.settings.firstDayOfWeek = 0; new TaskModal(plugin).open(); });
+	await page.click(".ch-task-date button");
+	eq(await page.$eval(".ch-date-popup", (p) => [...p.querySelectorAll(".ch-date-wd")].map((e) => e.textContent).join("")), "SMTWTFS", "Sunday first");
+});
+
+test("mobile: date picker fits on screen; event dialog dates + until", { mobile: true }, async ({ page }) => {
+	await page.evaluate(() => { const { EventModal } = window.__eventMod; new EventModal(plugin, { start: new Date(2026, 10, 14, 10, 0), end: new Date(2026, 10, 14, 11, 0) }).open(); });
+	await page.waitForTimeout(100);
+	await page.tap(".ch-event-start-date button");
+	await page.waitForTimeout(80);
+	const box = await page.evaluate(() => { const l = document.querySelector(".ch-date-popup").getBoundingClientRect(); return l.left >= 0 && l.right <= innerWidth && l.top >= 0 && l.bottom <= innerHeight; });
+	eq(box, true, "calendar fully on screen");
+	await page.screenshot({ path: path.join(SHOTS, "date-picker-mobile.png") });
+	await page.tap('.ch-date-day[data-date="2026-11-20"]');
+	eq(await page.evaluate(() => [document.querySelector(".ch-event-end-date").textContent, document.querySelector(".ch-event-end-time input").value]), ["Fri, Nov 20, 2026", "11:00"], "end date follows the start");
+	// repeat until
+	await page.selectOption(".ch-repeat-row select", "weekly");
+	await page.waitForTimeout(50);
+	await page.evaluate(() => { const s = [...document.querySelectorAll(".setting-item")].find((x) => x.textContent.startsWith("Ends") && x.querySelector("select")).querySelector("select"); s.value = "until"; s.dispatchEvent(new Event("change")); });
+	await page.tap(".ch-until button");
+	await page.tap('.ch-date-nav[aria-label="Next month"]');
+	await page.tap('.ch-date-day[data-date="2026-12-18"]');
+	await page.fill(".ch-title-input", "Weekly");
+	await page.evaluate(() => [...document.querySelectorAll(".ch-modal-buttons button.mod-cta")].pop().click());
+	await page.waitForTimeout(150);
+	eq(await page.evaluate(() => { const e = plugin.data.events.find((x) => x.title === "Weekly"); return [e.start, e.recurrence?.until]; }), ["2026-11-20T10:00", "2026-12-18"], "saved with picked dates");
+});
+
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {
 	await page.evaluate(() => mountTasks());
 	await page.waitForTimeout(100);
@@ -567,18 +616,18 @@ test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mo
 	const d = await page.evaluate(() => {
 		const date = document.querySelector(".ch-task-modal .ch-task-date-setting");
 		const name = date.querySelector(".setting-item-name");
-		const hint = document.querySelector(".ch-task-modal .ch-ph-date .ch-ph-hint");
-		return { labelFits: name.scrollWidth <= name.clientWidth + 1, hint: getComputedStyle(hint).display, hintText: hint.textContent };
+		const f = document.querySelector(".ch-task-modal .ch-task-date");
+		return { labelFits: name.scrollWidth <= name.clientWidth + 1, empty: f.classList.contains("is-empty"), hintText: f.textContent };
 	});
-	eq(d, { labelFits: true, hint: "block", hintText: "Select date" }, "date label not cut off, 'Select date' shown while empty");
+	eq(d, { labelFits: true, empty: true, hintText: "Select date" }, "date label not cut off, 'Select date' shown while empty");
 	await page.tap('.ch-task-quick button >> text=Today');
 	await page.waitForTimeout(80);
 	const t2 = await page.evaluate(() => {
 		const modal = document.querySelector(".ch-task-modal").getBoundingClientRect();
 		const right = Math.max(...[...document.querySelectorAll(".ch-task-modal .ch-task-time-setting .setting-item-control > *")].map((e) => e.getBoundingClientRect().right));
-		return { timeFits: right <= modal.right - 8, hintGone: getComputedStyle(document.querySelector(".ch-ph-date .ch-ph-hint")).display };
+		return { timeFits: right <= modal.right - 8, date: document.querySelector(".ch-task-date").textContent };
 	});
-	eq(t2, { timeFits: true, hintGone: "none" }, "time row fits inside the dialog; hint hidden once a date is set");
+	eq(t2, { timeFits: true, date: "Sat, Nov 14, 2026" }, "time row fits inside the dialog; chosen date shown");
 	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile-date.png") });
 	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile.png") });
 });
