@@ -6,7 +6,7 @@ import { addDays, toDateKey } from "../dateUtils";
 import { confirmAction } from "./ConfirmModal";
 import { NotePickerModal } from "./NotePickerModal";
 import { openLinkedNote } from "../views/TasksView";
-import { DateField, TimeField } from "../timePicker";
+import { DateField, TimeField, keepFocusOnTap } from "../timePicker";
 
 /** Create / edit a task: title, list, priority, date, time (range), subtasks, linked notes, notes. */
 export class TaskModal extends Modal {
@@ -30,6 +30,7 @@ export class TaskModal extends Modal {
 		const { contentEl } = this;
 		const t = this.task;
 		this.modalEl.addClass("ch-event-modal", "ch-task-modal");
+		keepFocusOnTap(this.modalEl);
 		this.setTitle(this.isNew ? "New task" : "Edit task");
 
 		new Setting(contentEl).setName("Title").addText((txt) => {
