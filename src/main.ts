@@ -132,6 +132,9 @@ export default class OmniCalendarPlugin extends Plugin {
 			this.registerEvent(this.app.workspace.on("layout-change", () => this.syncSidebarSetting()));
 			void this.store.refreshAll();
 			this.scheduleRefresh();
+			// Automatic clean-up of completed tasks (if turned on): now and every few hours.
+			void this.cleanUpDoneTasks();
+			this.registerInterval(window.setInterval(() => void this.cleanUpDoneTasks(), 6 * 60 * 60 * 1000));
 		});
 	}
 
@@ -171,7 +174,11 @@ export default class OmniCalendarPlugin extends Plugin {
 		settings.sidebarUpcomingDays = Number.isFinite(up) ? Math.max(-1, Math.min(365, Math.round(up))) : DEFAULT_SETTINGS.sidebarUpcomingDays;
 		if (![0, 1, 2, 3].includes(Number(settings.tasksDefaultPriority))) settings.tasksDefaultPriority = 0;
 		const upT = Number(settings.tasksUpcomingDays);
-		settings.tasksUpcomingDays = Number.isFinite(upT) ? Math.max(1, Math.min(365, Math.round(upT))) : DEFAULT_SETTINGS.tasksUpcomingDays;
+		settings.tasksUpcomingDays = Number.isFinite(upT) ? Math.max(1, Math.min(3650, Math.round(upT))) : DEFAULT_SETTINGS.tasksUpcomingDays;
+		const dv = Number(settings.tasksDoneVisibleDays);
+		settings.tasksDoneVisibleDays = dv === -1 ? -1 : Number.isFinite(dv) && dv >= 1 ? Math.min(3650, Math.round(dv)) : DEFAULT_SETTINGS.tasksDoneVisibleDays;
+		const da = Number(settings.tasksDeleteDoneAfterDays);
+		settings.tasksDeleteDoneAfterDays = Number.isFinite(da) && da >= 1 ? Math.min(3650, Math.round(da)) : 0;
 		const tasks = normalizeTaskData(raw.tasks);
 		if (!tasks.lists.some((l) => l.id === settings.tasksDefaultListId)) settings.tasksDefaultListId = tasks.lists[0].id;
 		this.data = { settings, events: Array.isArray(raw.events) ? raw.events : [], tasks };
@@ -270,6 +277,13 @@ export default class OmniCalendarPlugin extends Plugin {
 				if (sourceOpen) this.selectSidebarTab(moved);
 			}
 		}
+	}
+
+	/** Delete completed tasks older than the "Delete completed tasks after" setting (0 = never). */
+	async cleanUpDoneTasks(): Promise<number> {
+		const days = this.settings.tasksDeleteDoneAfterDays;
+		if (!days || days < 1) return 0;
+		return this.tasks.removeDoneBefore(Date.now() - days * 86400000);
 	}
 
 	/** A new tab in the main area, even if a sidebar view has focus. */

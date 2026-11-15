@@ -31,6 +31,8 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	tasksDefaultPriority: 0,
 	tasksDefaultListId: "tasks",
 	tasksUpcomingDays: 7,
+	tasksDoneVisibleDays: 30,
+	tasksDeleteDoneAfterDays: 0,
 	notesFolder: "Calendar",
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,
 	defaultCalendarId: "personal",
@@ -338,18 +340,9 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 					})
 				);
 		}
-		new Setting(el)
-			.setName("Upcoming list in the mini calendar")
-			.setDesc("How far ahead the “Upcoming” list below the mini calendar looks.")
-			.addDropdown((d) => {
-				const opts: Record<string, string> = { "0": "Hidden", "1": "Tomorrow only", "3": "3 days", "7": "7 days", "14": "2 weeks", "30": "30 days", "60": "60 days", "90": "90 days", "-1": "Same as agenda length" };
-				const cur = String(s.sidebarUpcomingDays);
-				if (!(cur in opts)) opts[cur] = `${cur} days`;
-				d.addOptions(opts).setValue(cur).onChange(async (v) => {
-					s.sidebarUpcomingDays = parseInt(v);
-					await this.save();
-				});
-			});
+		this.periodSetting(el, "Upcoming list in the mini calendar", "How far ahead the “Upcoming” list below the mini calendar looks.",
+			s.sidebarUpcomingDays, [[0, "Hidden"], [1, "Tomorrow only"], [3, "3 days"], [7, "7 days"], [14, "2 weeks"], [30, "30 days"], [60, "60 days"], [90, "90 days"], [-1, "Same as agenda length"]],
+			1, 365, (v) => (s.sidebarUpcomingDays = v));
 	}
 
 	// ------------------------------------------------------------------ tab: Tasks
@@ -382,8 +375,8 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 				})
 			);
 		new Setting(el)
-			.setName("Show completed tasks")
-			.setDesc("Adds a collapsed “Done” section to the lists. The “Done” list always shows them.")
+			.setName("Done section in lists")
+			.setDesc("Adds a collapsed “Done” section with completed tasks to your lists and “All”. The “Done” list always shows them.")
 			.addToggle((t) =>
 				t.setValue(s.tasksShowCompleted).onChange(async (v) => {
 					s.tasksShowCompleted = v;
@@ -391,19 +384,17 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 					store.trigger("changed");
 				})
 			);
-		new Setting(el)
-			.setName("Upcoming list")
-			.setDesc("How far ahead the “Upcoming” task list looks (today plus this many days). Later tasks are under “All”.")
-			.addDropdown((d) => {
-				const opts: Record<string, string> = { "3": "3 days", "7": "7 days", "14": "2 weeks", "30": "30 days", "60": "60 days", "90": "90 days", "180": "6 months", "365": "1 year" };
-				const cur = String(s.tasksUpcomingDays);
-				if (!(cur in opts)) opts[cur] = `${cur} days`;
-				d.addOptions(opts).setValue(cur).onChange(async (v) => {
-					s.tasksUpcomingDays = parseInt(v);
-					await this.save();
-					store.trigger("changed");
-				});
-			});
+		this.periodSetting(el, "Upcoming list", "How far ahead the “Upcoming” task list looks (today plus this many days). Later tasks are under “All”.",
+			s.tasksUpcomingDays, [[3, "3 days"], [7, "7 days"], [14, "2 weeks"], [30, "30 days"], [60, "60 days"], [90, "90 days"], [180, "6 months"], [365, "1 year"]],
+			1, 3650, (v) => { s.tasksUpcomingDays = v; store.trigger("changed"); });
+
+		new Setting(el).setName("Completed tasks").setHeading();
+		this.periodSetting(el, "Show completed tasks from the last", "The Done list and Done sections show tasks completed in this period. Older ones stay available behind “Show older”.",
+			s.tasksDoneVisibleDays, [[7, "7 days"], [30, "30 days"], [90, "90 days"], [-1, "Everything"]],
+			1, 3650, (v) => { s.tasksDoneVisibleDays = v; store.trigger("changed"); });
+		this.periodSetting(el, "Delete completed tasks after", "Completed tasks are deleted automatically this long after you ticked them off. Deleting can't be undone.",
+			s.tasksDeleteDoneAfterDays, [[0, "Never"], [30, "30 days"], [90, "90 days"], [180, "180 days"], [365, "1 year"]],
+			1, 3650, (v) => { s.tasksDeleteDoneAfterDays = v; void this.plugin.cleanUpDoneTasks(); });
 		new Setting(el).setName("Default priority").addDropdown((d) =>
 			d
 				.addOptions({ 0: PRIORITY_NAMES[0], 1: PRIORITY_NAMES[1], 2: PRIORITY_NAMES[2], 3: PRIORITY_NAMES[3] })
@@ -557,6 +548,62 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 	private nextColor(): string {
 		const used = new Set(this.plugin.settings.sources.map((x) => x.color));
 		return PALETTE.find((c) => !used.has(c)) ?? PALETTE[Math.floor(Math.random() * PALETTE.length)];
+	}
+
+	/**
+	 * A "how long / how far" setting: common choices in a dropdown plus "Custom…", which shows a
+	 * number and a unit (days, weeks, months, years). Values are stored in days (special values such
+	 * as 0 / -1 are presets). Custom values are limited to min…max days.
+	 */
+	private periodSetting(el: HTMLElement, name: string, desc: string, value: number, presets: [number, string][], min: number, max: number, set: (days: number) => void) {
+		const UNITS: [string, number][] = [["days", 1], ["weeks", 7], ["months", 30], ["years", 365]];
+		const isPreset = presets.some(([v]) => v === value);
+		const setting = new Setting(el).setName(name).setDesc(desc).setClass("ch-period-setting");
+		let customEl: HTMLElement;
+		let numInput: HTMLInputElement;
+		let unitSel: HTMLSelectElement;
+		const apply = async () => {
+			const n = parseInt(numInput.value);
+			if (isNaN(n) || n < 1) return;
+			const wanted = n * Number(unitSel.value);
+			const days = Math.max(min, Math.min(max, wanted));
+			if (days !== wanted) {
+				// Over the limit: show the value that is actually used.
+				const [, u] = [...UNITS].reverse().find(([, f]) => days % f === 0) ?? UNITS[0];
+				numInput.value = String(days / u);
+				unitSel.value = String(u);
+				new Notice(`${name}: the maximum is ${days === 365 ? "1 year" : `${days} days`}.`);
+			}
+			set(days);
+			await this.save();
+		};
+		setting.addDropdown((d) => {
+			for (const [v, label] of presets) d.addOption(String(v), label);
+			d.addOption("custom", "Custom…");
+			d.setValue(isPreset ? String(value) : "custom").onChange(async (v) => {
+				customEl.toggle(v === "custom");
+				if (v === "custom") {
+					numInput.focus();
+					await apply();
+				} else {
+					set(Number(v));
+					await this.save();
+				}
+			});
+		});
+		customEl = setting.controlEl.createDiv({ cls: "ch-period-custom" });
+		numInput = customEl.createEl("input", { type: "number", cls: "ch-input ch-period-num" });
+		numInput.min = "1";
+		unitSel = customEl.createEl("select", { cls: "dropdown ch-period-unit" });
+		for (const [label, f] of UNITS) unitSel.createEl("option", { text: label, value: String(f) });
+		// Show the current custom value in the largest unit that fits exactly.
+		const start = !isPreset && value > 0 ? value : 30;
+		const [, f] = [...UNITS].reverse().find(([, u]) => start % u === 0) ?? UNITS[0];
+		numInput.value = String(start / f);
+		unitSel.value = String(f);
+		numInput.addEventListener("change", () => void apply());
+		unitSel.addEventListener("change", () => void apply());
+		customEl.toggle(!isPreset);
 	}
 
 	private numberSetting(el: HTMLElement, name: string, desc: string, value: number, min: number, max: number, set: (v: number) => void) {

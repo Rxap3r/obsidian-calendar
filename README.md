@@ -197,6 +197,10 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   - In your own list it goes into that list without a date.
 - **+ New task** opens the full dialog.
 - **Tick the circle** to complete a task. Completed tasks are struck through and move to a collapsed **Done** section (in your own lists and *All*) and to the *Done* list. You can hide that section in the settings.
+- **Completed tasks don't pile up:**
+  - Done shows only tasks completed in the **last 30 days** (setting). Older ones are behind **Show older**; nothing is lost.
+  - **Clear completed** under the Done list (or a list's Done section) deletes completed tasks by hand, after asking.
+  - **Automatic clean-up** (off by default): *Settings → Omni Calendar → Tasks → Delete completed tasks after* (30, 90 or 180 days, 1 year, or a custom period).
 - **Click a task** to edit it. **Right-click** it for quick actions:
   - done / not done;
   - Today / Tomorrow / Next week / No date;
@@ -458,14 +462,18 @@ The settings are split into four tabs. Longer explanations sit in collapsible **
 | | Calendar in sidebar | Off / mini calendar / day planner, and left or right side. Applied immediately and kept after restarts |
 | | When the day planner opens the calendar | What ⤢ in the day planner does to the sidebar: **switch to the mini calendar** (default), close the day planner, or keep it |
 | | Then show this sidebar tab | Only with *close it*: which tab of the calendar's sidebar (left or right) is shown afterwards, e.g. *Files* or *Bookmarks*. The list shows the tabs that are in that sidebar right now. *Let Obsidian decide* keeps Obsidian's choice |
-| | Upcoming list in the mini calendar | How far ahead "Upcoming" looks (Hidden … 90 days, or *Same as agenda length*) |
+| | Upcoming list in the mini calendar | How far ahead "Upcoming" looks (Hidden … 90 days, *Same as agenda length*, or custom up to 1 year) |
 | **Tasks** | Use tasks | Main switch for everything task-related. Off hides it but deletes nothing |
 | | Tasks in sidebar | Shows the Tasks page in the sidebar (same side as the calendar), independent of mini calendar / day planner |
-| | Show completed tasks | Collapsed "Done" section in the lists |
-| | Upcoming list | How far ahead the "Upcoming" list looks: 3, 7 (default), 14, 30, 60 or 90 days, 6 months or 1 year |
+| | Done section in lists | Collapsed "Done" section in your lists and *All* |
+| | Upcoming list | How far ahead the "Upcoming" list looks: 3, 7 (default), 14, 30, 60 or 90 days, 6 months, 1 year, or custom |
+| | Show completed tasks from the last | Done shows tasks completed in this period (default 30 days, or *Everything*); older ones behind "Show older" |
+| | Delete completed tasks after | Automatic clean-up: **Never** (default), 30/90/180 days, 1 year or custom. Deleting can't be undone |
 | | Default priority / Default list | Used for new tasks |
 | | Lists | Rename, recolour, add or delete task lists ("Tasks" is the default list and can't be deleted) |
 | **Notes** | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
+
+**"Custom…" periods:** every "how long / how far" setting has a **Custom…** choice. It shows a number and a unit (days, weeks, months, years), for example *2 years* or *200 days*. Values over the maximum are limited, and the field then shows the value that is used.
 
 ## Commands
 
@@ -591,7 +599,7 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 - **Linked notes on events:** the same as on tasks, for local and Google/Outlook events. For Google/Outlook events the links are stored only in Obsidian. The existing single "Create note" becomes one of the linked notes, and older events with a note keep it.
 
 **Step 3 – version 1.9: repeating**
-- **Repeating tasks**, each occurrence ticked off separately.
+- **Repeating tasks**, each occurrence ticked off separately. A repeating task stays **one** task: each completed occurrence is only a small "done on …" entry, not a copy, so Done doesn't fill up with duplicates.
 - **Tasks on repeating events:** the event's task list works as a template, and each occurrence has its own ticks. Ticking one off on 14 Nov doesn't tick it off on 21 Nov.
 
 **Later, maybe:**

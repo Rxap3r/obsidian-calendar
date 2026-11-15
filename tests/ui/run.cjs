@@ -633,8 +633,87 @@ test("tasks: 'Upcoming' range follows the setting", {}, async ({ page }) => {
 	eq(await page.$eval('[data-list="upcoming"] .ch-tasks-nav-count', (e) => e.textContent), "2", "count follows");
 	const opts = await page.evaluate(() => { tab.constructor.tab = "tasks"; tab.display();
 		const row = [...tab.containerEl.querySelectorAll(".setting-item")].find((x) => /Upcoming list/.test(x.textContent));
-		return [...row.querySelectorAll("option")].map((o) => o.value); });
-	eq(opts, ["3", "7", "14", "30", "60", "90", "180", "365"], "setting options");
+		return [...row.querySelector("select").options].map((o) => o.value); });
+	eq(opts, ["3", "7", "14", "30", "60", "90", "180", "365", "custom"], "setting options (+ Custom…)");
+});
+
+test("tasks: completed tasks – recent only, show older, clear, automatic clean-up", {}, async ({ page }) => {
+	await page.evaluate(async () => {
+		const S = plugin.tasks; const day = 86400000; const now = Date.now();
+		const work = await S.addList("Work", "#2f9e44");
+		window.workId = work.id;
+		const add = (title, ago, listId) => S.upsert(S.draft({ title, done: true, completedAt: now - ago * day, listId: listId ?? "tasks" }));
+		await add("Done today", 0); await add("Done 10 days ago", 10, work.id); await add("Done 50 days ago", 50, work.id); await add("Done 400 days ago", 400);
+		await S.upsert(S.draft({ title: "Open work", listId: work.id }));
+		await mountTasks(); tasksView.select("done");
+	});
+	const titles = () => page.$$eval(".ch-tasks-main .ch-task-title", (e) => e.map((x) => x.textContent));
+	eq(await titles(), ["Done today", "Done 10 days ago"], "Done list: last 30 days");
+	expect((await page.textContent(".ch-tasks-title")).includes("last 30 days"), "range in title");
+	await page.click('.ch-tasks-link:text("Show 2 older")');
+	eq(await titles(), ["Done today", "Done 10 days ago", "Done 50 days ago", "Done 400 days ago"], "show older");
+	await page.screenshot({ path: path.join(SHOTS, "tasks-done.png") });
+	// User list: collapsed Done section, recent only + show older + clear (this list only)
+	await page.evaluate(() => tasksView.select(window.workId));
+	await page.click(".ch-tasks-done-group summary");
+	eq(await page.$$eval(".ch-tasks-done-group .ch-task-title", (e) => e.map((x) => x.textContent)), ["Done 10 days ago"], "list Done section: recent");
+	expect(await page.isVisible('.ch-tasks-done-group .ch-tasks-link:text("Show 1 older")'), "show older in section");
+	await page.click(".ch-tasks-done-group .ch-tasks-clear");
+	await page.evaluate(() => [...document.querySelectorAll(".modal .mod-warning")].pop().click());
+	await page.waitForTimeout(100);
+	eq(await page.evaluate(() => plugin.tasks.items.map((t) => t.title).sort()), ["Done 400 days ago", "Done today", "Open work"], "clear completed only in this list");
+	// Automatic clean-up
+	const r = await page.evaluate(async () => {
+		const off = await plugin.cleanUpDoneTasks();
+		plugin.settings.tasksDeleteDoneAfterDays = 365;
+		const on = await plugin.cleanUpDoneTasks();
+		return { off, on, left: plugin.tasks.items.map((t) => t.title).sort() };
+	});
+	eq(r, { off: 0, on: 1, left: ["Done today", "Open work"] }, "clean-up: never by default, then older than 1 year deleted");
+	// A done task without a completion time is kept (counts from now)
+	const k = await page.evaluate(async () => {
+		plugin._data = { settings: plugin.settings, events: [], tasks: { lists: [], items: [{ id: "x", title: "old done", done: true }] } };
+		await plugin.loadPluginData(); plugin.settings.tasksDeleteDoneAfterDays = 30;
+		return [await plugin.cleanUpDoneTasks(), plugin.tasks.items.length];
+	});
+	eq(k, [0, 1], "done task without completion time not deleted at once");
+});
+
+test("settings: 'Custom…' periods (days / weeks / months / years)", {}, async ({ page }) => {
+	const r = await page.evaluate(async () => {
+		const m = document.getElementById("main"); m.innerHTML = ""; tab.constructor.tab = "tasks"; tab.display(); m.appendChild(tab.containerEl);
+		const row = (re) => [...tab.containerEl.querySelectorAll(".setting-item")].find((x) => re.test(x.querySelector(".setting-item-name")?.textContent ?? ""));
+		const out = {};
+		const del = row(/Delete completed tasks after/);
+		out.delOpts = [...del.querySelector("select").options].map((o) => o.text);
+		out.customHidden = del.querySelector(".ch-period-custom").style.display;
+		const sel = del.querySelector("select"); sel.value = "custom"; sel.dispatchEvent(new Event("change"));
+		await new Promise((r) => setTimeout(r, 20));
+		const num = del.querySelector(".ch-period-num"), unit = del.querySelector(".ch-period-unit");
+		num.value = "2"; unit.value = "365"; unit.dispatchEvent(new Event("change"));
+		await new Promise((r) => setTimeout(r, 20));
+		out.del = plugin.settings.tasksDeleteDoneAfterDays;
+		const up = row(/Upcoming list$/); const us = up.querySelector("select"); us.value = "custom"; us.dispatchEvent(new Event("change"));
+		up.querySelector(".ch-period-num").value = "200"; up.querySelector(".ch-period-unit").value = "1"; up.querySelector(".ch-period-num").dispatchEvent(new Event("change"));
+		await new Promise((r) => setTimeout(r, 20));
+		out.up = plugin.settings.tasksUpcomingDays;
+		// re-render shows the custom values in the best unit
+		tab.display();
+		const del2 = row(/Delete completed tasks after/);
+		out.redisplay = [del2.querySelector("select").value, del2.querySelector(".ch-period-num").value, del2.querySelector(".ch-period-unit").selectedOptions[0].text];
+		// limits: mini calendar upcoming max 365
+		tab.constructor.tab = "display"; tab.display();
+		const mini = row(/Upcoming list in the mini calendar/); const ms = mini.querySelector("select"); ms.value = "custom"; ms.dispatchEvent(new Event("change"));
+		mini.querySelector(".ch-period-num").value = "5"; mini.querySelector(".ch-period-unit").value = "365"; mini.querySelector(".ch-period-num").dispatchEvent(new Event("change"));
+		await new Promise((r) => setTimeout(r, 20));
+		out.mini = plugin.settings.sidebarUpcomingDays;
+		out.miniShown = [mini.querySelector(".ch-period-num").value, mini.querySelector(".ch-period-unit").selectedOptions[0].text];
+		return out;
+	});
+	eq(r.delOpts, ["Never", "30 days", "90 days", "180 days", "1 year", "Custom…"], "presets");
+	eq(r.customHidden, "none", "custom field hidden for presets");
+	eq([r.del, r.up, r.redisplay, r.mini, r.miniShown], [730, 200, ["custom", "2", "years"], 365, ["1", "years"]], "custom values (2 years, 200 days), redisplay, limit shown");
+	await page.screenshot({ path: path.join(SHOTS, "settings-periods.png") });
 });
 
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {

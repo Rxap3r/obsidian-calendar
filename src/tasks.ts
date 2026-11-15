@@ -47,7 +47,8 @@ export function normalizeTaskData(raw: unknown): TaskData {
 			end: /^\d{2}:\d{2}$/.test(t.end ?? "") ? t.end : undefined,
 			subtasks: (Array.isArray(t.subtasks) ? t.subtasks : []).filter((s) => s && typeof s.id === "string").map((s) => ({ id: s.id, title: String(s.title ?? ""), done: !!s.done })),
 			done: !!t.done,
-			completedAt: typeof t.completedAt === "number" ? t.completedAt : undefined,
+			// A done task without a completion time counts from now (so a clean-up can't delete it at once).
+			completedAt: typeof t.completedAt === "number" ? t.completedAt : t.done ? Date.now() : undefined,
 			createdAt: typeof t.createdAt === "number" ? t.createdAt : Date.now(),
 			links: (Array.isArray(t.links) ? t.links : []).filter((p) => typeof p === "string"),
 		}));
@@ -165,6 +166,35 @@ export class TaskStore extends Events {
 		if (!t.date) t.start = undefined;
 		if (!t.start) t.end = undefined;
 		await this.save();
+	}
+
+	/** Delete completed tasks finished before this time. Returns how many were deleted. */
+	async removeDoneBefore(time: number): Promise<number> {
+		const before = this.items.length;
+		this.data.items = this.items.filter((t) => !t.done || (t.completedAt ?? Date.now()) >= time);
+		const n = before - this.items.length;
+		if (n) await this.save();
+		return n;
+	}
+
+	/** "Clear completed": delete all completed tasks, or those of one user list. */
+	async clearDone(listId?: string): Promise<number> {
+		const before = this.items.length;
+		this.data.items = this.items.filter((t) => !t.done || (listId !== undefined && t.listId !== listId));
+		const n = before - this.items.length;
+		if (n) await this.save();
+		return n;
+	}
+
+	/** Split completed tasks into the recent ones (shown) and older ones (behind "Show older"). */
+	splitDone(done: Task[], now = Date.now()): { recent: Task[]; older: Task[] } {
+		const days = this.plugin.settings.tasksDoneVisibleDays;
+		if (days < 0) return { recent: done, older: [] };
+		const limit = now - days * 86400000;
+		const recent: Task[] = [];
+		const older: Task[] = [];
+		for (const t of done) ((t.completedAt ?? now) >= limit ? recent : older).push(t);
+		return { recent, older };
 	}
 
 	// ------------------------------------------------------------------ lists

@@ -691,3 +691,10 @@
 .ch-date-foot { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--background-modifier-border); }
 .ch-date-foot button { font-size: 0.85em; padding: 3px 10px; height: auto; }
 .ch-tasks-title-sub { font-size: 0.55em; font-weight: normal; color: var(--text-muted); align-self: flex-end; margin-bottom: 4px; }
+.ch-tasks-done-foot { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 8px 4px 2px; }
+.ch-tasks-link { background: transparent; box-shadow: none; border: none; padding: 2px 0; height: auto; color: var(--text-accent); cursor: pointer; font-size: 0.85em; }
+.ch-tasks-link:hover { text-decoration: underline; }
+.ch-tasks-clear { color: var(--text-muted); }
+.ch-period-setting .setting-item-control { flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.ch-period-custom { display: flex; gap: 6px; align-items: center; }
+.ch-period-num { width: 70px; }
