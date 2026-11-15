@@ -70,6 +70,10 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 
 	display(): void {
 		const { containerEl } = this;
+		// Re-rendering after a change keeps the scroll position; switching tabs starts at the top.
+		const scroller = scrollParent(containerEl);
+		const keepScroll = this.resetScroll ? 0 : scroller?.scrollTop ?? 0;
+		this.resetScroll = false;
 		containerEl.empty();
 		containerEl.addClass("ch-settings");
 
@@ -88,6 +92,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 			btn.createSpan({ text: label });
 			btn.onclick = () => {
 				OmniCalendarSettingTab.tab = id;
+				this.resetScroll = true;
 				this.display();
 			};
 		}
@@ -120,7 +125,14 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 			case "display": this.displayTab(body); break;
 			case "notes": this.notesTab(body); break;
 		}
+		if (scroller) scroller.scrollTop = keepScroll;
+		// The sticky tab bar covers the area around it with the settings background, so rows
+		// scrolled past it don't show above or beside it.
+		const bg = backgroundOf(containerEl);
+		if (bg) barWrap.style.setProperty("--ch-settings-bg", bg);
 	}
+
+	private resetScroll = false;
 
 	/** Collapsible "more info" block, used to keep long explanations out of the way. */
 	private info(el: HTMLElement, summary: string, fill: (box: HTMLElement) => void, cls = "") {
@@ -274,7 +286,8 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 					.onChange(async (v) => {
 						s.sidebarView = v as SidebarView;
 						await this.save();
-						await this.plugin.applySidebar(true);
+						// Don't reveal/focus it: that would close this settings window.
+						await this.plugin.applySidebar(false);
 					})
 			)
 			.addDropdown((d) =>
@@ -284,7 +297,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 					.onChange(async (v) => {
 						s.sidebarSide = v as "left" | "right";
 						await this.save(true);
-						await this.plugin.applySidebar(s.sidebarView !== "none");
+						await this.plugin.applySidebar(false);
 					})
 			);
 		new Setting(el)
@@ -642,3 +655,21 @@ const CORE_TAB_NAMES: Record<string, string> = {
 	"file-explorer": "Files", search: "Search", bookmarks: "Bookmarks", tag: "Tags", backlink: "Backlinks",
 	"outgoing-link": "Outgoing links", outline: "Outline", "all-properties": "All properties", "file-properties": "Properties",
 };
+
+/** The element that scrolls the settings (the tab content itself, or an ancestor on mobile). */
+function scrollParent(el: HTMLElement): HTMLElement | null {
+	for (let e: HTMLElement | null = el; e; e = e.parentElement) {
+		const o = getComputedStyle(e).overflowY;
+		if (o === "auto" || o === "scroll") return e;
+	}
+	return null;
+}
+
+/** First non-transparent background colour of the element or its ancestors. */
+function backgroundOf(el: HTMLElement): string | null {
+	for (let e: HTMLElement | null = el; e; e = e.parentElement) {
+		const c = getComputedStyle(e).backgroundColor;
+		if (c && c !== "transparent" && !/rgba\(.*,\s*0\)$/.test(c)) return c;
+	}
+	return null;
+}

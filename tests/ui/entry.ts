@@ -50,7 +50,8 @@ function fakeWorkspace() {
 		getLeaf: () => mk(rootSplit),
 		getRightLeaf: () => mk(rightSplit),
 		getLeftLeaf: () => mk(leftSplit),
-		revealLeaf: async () => {},
+		reveals: 0,
+		async revealLeaf() { this.reveals++; },
 		on: (name: string, cb: () => void) => { if (name === "layout-change") layoutCbs.push(cb); return {}; },
 		fireLayoutChange: () => layoutCbs.forEach((cb) => cb()),
 	};

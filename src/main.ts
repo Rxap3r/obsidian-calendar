@@ -234,7 +234,7 @@ export default class OmniCalendarPlugin extends Plugin {
 				const moved = this.newSidebarLeaf();
 				if (!moved) continue;
 				await moved.setViewState({ ...state, active: false });
-				if (sourceOpen) await this.app.workspace.revealLeaf(moved);
+				if (sourceOpen) this.selectSidebarTab(moved);
 			}
 		}
 	}
@@ -275,6 +275,7 @@ export default class OmniCalendarPlugin extends Plugin {
 			await leaf.setViewState({ type, active: reveal, state: state ?? (kind === "full" ? { mode: this.settings.sidebarCalendarMode } : {}) });
 		}
 		if (reveal) await this.app.workspace.revealLeaf(leaf);
+		else this.selectSidebarTab(leaf);
 	}
 
 	/** What is actually in the sidebar right now. */
@@ -384,12 +385,18 @@ export default class OmniCalendarPlugin extends Plugin {
 		this.app.workspace.iterateAllLeaves((leaf) => {
 			if (!found && leaf.getRoot() === root && leaf.getViewState().type === type) found = leaf;
 		});
-		if (!found) return;
-		const leaf: WorkspaceLeaf = found;
+		if (found) this.selectSidebarTab(found);
+	}
+
+	/**
+	 * Make a sidebar leaf the visible tab of its tab group without focusing it, opening a
+	 * collapsed sidebar or the mobile drawer, or closing the settings window.
+	 */
+	private selectSidebarTab(leaf: WorkspaceLeaf) {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const tabs = (leaf as any).parent;
 		if (tabs && typeof tabs.selectTab === "function") tabs.selectTab(leaf);
-		else if (!Platform.isMobile && !(root as WorkspaceSidedock).collapsed) void this.app.workspace.revealLeaf(leaf);
+		else if (!Platform.isMobile && !(leaf.getRoot() as WorkspaceSidedock).collapsed) void this.app.workspace.revealLeaf(leaf);
 	}
 
 	/** Show the mini / full calendar in the sidebar, or hide it if it is already shown. */
