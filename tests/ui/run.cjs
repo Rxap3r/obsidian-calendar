@@ -238,6 +238,39 @@ test("desktop: ⤢ in the Day planner – switch to mini (default), close, or ke
 	eq(r.keep, { label: "Open full page (keeps this sidebar calendar)", setting: "full", mini: 0, sameTab: false, planner: 1, main: true }, "keep");
 });
 
+test("desktop: Day planner 'Close' → chosen sidebar tab is shown (left and right)", {}, async ({ page }) => {
+	const r = await page.evaluate(async () => {
+		const add = (root, type, title) => { const l = ws.mk(root); l.vs = { type, state: {} }; l.title = title; return l; };
+		add(ws.rightSplit, "backlink", "Backlinks"); const bm = add(ws.rightSplit, "bookmarks", "Bookmarks");
+		add(ws.leftSplit, "file-explorer", "Files"); const se = add(ws.leftSplit, "search", "Search");
+		const out = {};
+		const settingRows = () => { tab.constructor.tab = "display"; tab.display();
+			const row = [...tab.containerEl.querySelectorAll(".setting-item")].find((x) => /Then show this sidebar tab/.test(x.textContent));
+			return row ? [...row.querySelectorAll("option")].map((o) => o.text) : null; };
+		plugin.settings.sidebarOnExpand = "mini";
+		out.hiddenForMini = settingRows();
+		plugin.settings.sidebarOnExpand = "close";
+		const press = async () => {
+			plugin.settings.sidebarView = "full"; await plugin.applySidebar(false);
+			const L = plugin.sidebarLeaves("omni-calendar-view")[0]; L.app = plugin.app;
+			const V = new view.constructor(L, plugin); await V.onOpen();
+			V.contentEl.querySelector('[aria-label^="Open full page"]').click(); await new Promise((r) => setTimeout(r, 50));
+		};
+		plugin.settings.sidebarSide = "right"; out.rightOpts = settingRows();
+		plugin.settings.sidebarAfterClose = "bookmarks"; await press();
+		out.right = ws.tabGroups.right.selected === bm;
+		plugin.settings.sidebarSide = "left"; out.leftOpts = settingRows();
+		plugin.settings.sidebarAfterClose = "search"; await press();
+		out.left = ws.tabGroups.left.selected === se;
+		out.planner = plugin.sidebarLeaves("omni-calendar-view").length;
+		return out;
+	});
+	eq(r.hiddenForMini, null, "extra setting only with Close");
+	eq(r.rightOpts, ["Let Obsidian decide", "Backlinks", "Bookmarks"], "right sidebar tabs");
+	eq(r.leftOpts, ["Let Obsidian decide", "Files", "Search", "Bookmarks (not in the left sidebar right now)"], "left sidebar tabs (+ saved choice from the right)");
+	eq([r.right, r.left, r.planner], [true, true, 0], "chosen tab shown, planner closed");
+});
+
 test("desktop: responsive month/week at narrow widths", { width: 360 }, async ({ page }) => {
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "month"));
 	await page.waitForTimeout(200);

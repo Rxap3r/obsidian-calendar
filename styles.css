@@ -490,3 +490,6 @@
 .ch-tg-hscroll::before { left: var(--ch-gutter); background: linear-gradient(to right, rgba(0, 0, 0, 0.12), transparent); }
 .ch-tg-hscroll::after { right: 0; background: linear-gradient(to left, rgba(0, 0, 0, 0.12), transparent); }
 .ch-tg-hscroll.ch-more-left::before, .ch-tg-hscroll.ch-more-right::after { opacity: 1; }
+
+/* A setting that belongs to the one above it (shown only for some choices). */
+.ch-sub-setting { padding-left: 18px; border-left: 2px solid var(--background-modifier-border); }

@@ -24,10 +24,13 @@ function fakeWorkspace() {
 	const rootSplit = { name: "main" };
 	const leaves: any[] = [];
 	const layoutCbs: (() => void)[] = [];
+	const tabGroups: Record<string, any> = {};
 	const mk = (root: any) => {
+		const tabs = (tabGroups[root.name] ??= { selected: null as any, selectTab(x: any) { this.selected = x; } });
 		const l: any = {
-			root, vs: { type: null, state: {} },
+			root, vs: { type: null, state: {} }, parent: tabs,
 			getRoot() { return this.root; },
+			getDisplayText() { return this.title ?? this.vs.type; },
 			getViewState() { return this.vs; },
 			async setViewState(v: any) { this.vs = v; },
 			detach() { const i = leaves.indexOf(this); if (i >= 0) leaves.splice(i, 1); },
@@ -40,7 +43,8 @@ function fakeWorkspace() {
 		onLayoutReady: (f: () => void) => f(),
 		requestSaveLayout() {},
 		getLeavesOfType: (t: string) => leaves.filter((l) => l.vs.type === t),
-		activeLeaf: null as any,
+		activeLeaf: null as any, tabGroups,
+		iterateAllLeaves: (f: (l: any) => void) => [...leaves].forEach(f),
 		getMostRecentLeaf: (root: any) => [...leaves].reverse().find((l) => l.root === root) ?? null,
 		setActiveLeaf(l: any) { this.activeLeaf = l; },
 		getLeaf: () => mk(rootSplit),
