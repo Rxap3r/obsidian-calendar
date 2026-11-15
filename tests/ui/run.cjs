@@ -469,10 +469,35 @@ test("desktop: tasks sidebar toggle, main switch, menu entries, settings tab", {
 	await shot(page, "settings-tab-tasks");
 });
 
+test("desktop: tasks in the sidebar – button opens the Tasks page with the same list", {}, async ({ page }) => {
+	const r = await page.evaluate(async () => {
+		const side = await mountTasks({ side: true });
+		side.select("tomorrow");
+		const out = { mainHasBtn: null };
+		const btn = side.contentEl.querySelector(".ch-tasks-open-full");
+		out.sideHasBtn = !!btn;
+		out.narrow = side.contentEl.querySelector(".ch-tasks").classList.contains("ch-narrow");
+		btn.click(); await new Promise((r) => setTimeout(r, 50));
+		const main = plugin.app.workspace.getLeavesOfType("omni-calendar-tasks").filter((l) => !plugin.isInSidebar(l));
+		out.mainOpened = main.length;
+		out.mainList = main[0]?.getViewState().state.list ?? null;
+		out.sideKept = plugin.sidebarLeaves("omni-calendar-tasks").length;
+		return out;
+	});
+	eq(r, { mainHasBtn: null, sideHasBtn: true, narrow: true, mainOpened: 1, mainList: "tomorrow", sideKept: 1 }, "open full Tasks page from sidebar");
+	await page.locator("#side").screenshot({ path: path.join(SHOTS, "tasks-sidebar.png") });
+	await page.evaluate(() => mountTasks());
+	eq(await page.$$eval("#main .ch-tasks-open-full", (e) => e.length), 0, "no such button on the full page");
+});
+
 test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mobile: true }, async ({ page }) => {
 	await seedTasks()(page);
+	// Obsidian's mobile theme gives buttons padding and a minimum size – that made the checkboxes oval.
+	await page.addStyleTag({ content: "button { padding: 6px 16px; min-width: 44px; min-height: 36px; }" });
 	await page.evaluate(() => mountTasks());
 	await page.waitForTimeout(200);
+	const box = await page.$eval(".ch-task-checkbox", (e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; });
+	eq(box, [20, 20], "checkbox stays a circle");
 	const r = await page.evaluate(() => {
 		const main = document.querySelector(".ch-tasks-main");
 		return { bar: !!document.querySelector(".ch-tasks-bar"), nav: !!document.querySelector(".ch-tasks-nav"),
@@ -486,6 +511,22 @@ test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mo
 	await page.tap(".ch-task .ch-task-title");
 	await page.waitForTimeout(150);
 	eq(await page.evaluate(() => { const m = document.querySelector(".ch-task-modal"); return m && m.scrollWidth <= m.clientWidth + 1; }), true, "dialog opens without sideways overflow");
+	const d = await page.evaluate(() => {
+		const date = document.querySelector(".ch-task-modal .ch-task-date-setting");
+		const name = date.querySelector(".setting-item-name");
+		const hint = document.querySelector(".ch-task-modal .ch-ph-date .ch-ph-hint");
+		return { labelFits: name.scrollWidth <= name.clientWidth + 1, hint: getComputedStyle(hint).display, hintText: hint.textContent };
+	});
+	eq(d, { labelFits: true, hint: "block", hintText: "Select date" }, "date label not cut off, 'Select date' shown while empty");
+	await page.tap('.ch-task-quick button >> text=Today');
+	await page.waitForTimeout(80);
+	const t2 = await page.evaluate(() => {
+		const modal = document.querySelector(".ch-task-modal").getBoundingClientRect();
+		const right = Math.max(...[...document.querySelectorAll(".ch-task-modal .ch-task-time-setting .setting-item-control > *")].map((e) => e.getBoundingClientRect().right));
+		return { timeFits: right <= modal.right - 8, hintGone: getComputedStyle(document.querySelector(".ch-ph-date .ch-ph-hint")).display };
+	});
+	eq(t2, { timeFits: true, hintGone: "none" }, "time row fits inside the dialog; hint hidden once a date is set");
+	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile-date.png") });
 	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile.png") });
 });
 

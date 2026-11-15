@@ -568,14 +568,16 @@
 .ch-task:hover { background: var(--background-modifier-hover); }
 .ch-task-line { display: flex; align-items: flex-start; gap: 10px; }
 .ch-task-checkbox {
-	flex: none; width: 20px; height: 20px; padding: 0; margin-top: 1px; border-radius: 50%;
+	/* Fixed square box: Obsidian's (mobile) button styles add min-width/padding, which made it oval. */
+	flex: 0 0 20px; width: 20px; height: 20px; min-width: 20px; max-width: 20px; min-height: 20px; max-height: 20px;
+	aspect-ratio: 1; box-sizing: border-box; line-height: 1; padding: 0 !important; margin-top: 1px; border-radius: 50%;
 	border: 2px solid var(--ch-event-color); background: transparent; box-shadow: none;
 	display: inline-flex; align-items: center; justify-content: center; color: #fff; cursor: pointer;
 }
 .ch-task-checkbox:hover { background: color-mix(in srgb, var(--ch-event-color) 25%, transparent); }
 .ch-task-checkbox[aria-checked="true"] { background: var(--ch-event-color); }
 .ch-task-checkbox svg { width: 13px; height: 13px; stroke-width: 3; }
-.ch-task-checkbox.ch-small { width: 16px; height: 16px; margin-top: 0; }
+.ch-task-checkbox.ch-small { flex-basis: 16px; width: 16px; height: 16px; min-width: 16px; max-width: 16px; min-height: 16px; max-height: 16px; margin-top: 0; }
 .ch-task-checkbox.ch-small svg { width: 10px; height: 10px; }
 .ch-task-body { flex: 1; min-width: 0; }
 .ch-task-title { overflow-wrap: anywhere; }
@@ -607,7 +609,22 @@
 /* Task dialog */
 .ch-prio-seg button.is-active.ch-prio-2 { background: #f59f00; color: #fff; }
 .ch-prio-seg button.is-active.ch-prio-3 { background: var(--color-red); color: #fff; }
-.ch-task-date-setting .setting-item-control, .ch-task-time-setting .setting-item-control { flex-wrap: wrap; gap: 6px; }
+/* Date and time: label on its own line, controls below at full width (no cut-off label or buttons on phones). */
+.ch-task-date-setting, .ch-task-time-setting { flex-wrap: wrap; }
+.ch-task-date-setting .setting-item-info, .ch-task-time-setting .setting-item-info { flex: 1 1 100%; min-width: 0; margin-right: 0; }
+.ch-task-date-setting .setting-item-control, .ch-task-time-setting .setting-item-control {
+	flex: 1 1 100%; min-width: 0; flex-wrap: wrap; gap: 6px; justify-content: flex-start; margin-top: 6px;
+}
+.ch-ph-wrap { position: relative; display: inline-flex; min-width: 0; }
+.ch-ph-date { flex: 0 1 170px; }
+.ch-ph-time { flex: 1 1 100px; max-width: 140px; }
+.ch-ph-wrap .ch-input { width: 100%; max-width: none; min-width: 0; box-sizing: border-box; }
+.ch-ph-hint { display: none; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-faint); pointer-events: none; white-space: nowrap; }
+.ch-ph-wrap.is-empty .ch-ph-hint { display: block; }
+/* Hide the browser's own empty pattern (mm/dd/yyyy, --:--) behind the hint. */
+.ch-ph-wrap.is-empty .ch-input { color: transparent; }
+.ch-ph-wrap.is-empty .ch-input:focus { color: inherit; }
+.ch-ph-wrap.is-empty .ch-input:focus + .ch-ph-hint { display: none; }
 .ch-task-quick { display: flex; flex-wrap: wrap; gap: 4px; }
 .ch-task-quick button { font-size: 0.8em; padding: 2px 8px; height: auto; }
 .ch-task-time-sep { color: var(--text-muted); }
