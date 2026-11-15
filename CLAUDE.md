@@ -113,7 +113,8 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - list, priority (none/low/medium/high);
     - optional date and optional time or time range (most tasks will have one);
     - subtasks, **one level only**;
-    - done, plus an optional link to an event (local or remote ID + occurrence).
+    - done, plus an optional link to an event (local or remote ID + occurrence);
+    - **linked notes:** several vault paths per task.
   - **Lists:**
     - user lists with a colour, like Microsoft To Do, plus a default list "Tasks";
     - automatic lists: Today, Tomorrow, Upcoming (7 days), Overdue, No date, All, Done;
@@ -127,8 +128,13 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - timed tasks as light blocks;
     - date-only tasks as **one counter per day** ("☑ 3");
     - done tasks struck through, with a setting to hide them.
-  - **1.7:** Tasks page (full + sidebar), lists, task editing, subtasks, quick add, Tasks settings tab, menu entry and commands.
-  - **1.8:** calendar integration, tasks on events (dialog section, "2/5" hint), "Tasks today" in the mini calendar.
+  - **Linked notes (tasks and events):**
+    - several existing notes can be linked via a fuzzy note picker, then listed and opened with a click;
+    - notes are never parsed or modified;
+    - update paths on vault rename/move, and drop them on delete.
+    - Events: migrate the existing single `notePath` into the list. Remote events store their links locally, keyed by remote ID.
+  - **1.7:** Tasks page (full + sidebar), lists, task editing, subtasks, quick add, **linked notes on tasks**, Tasks settings tab, menu entry and commands.
+  - **1.8:** calendar integration, tasks on events (dialog section, "2/5" hint), **linked notes on events** (local + remote), "Tasks today" in the mini calendar.
   - **1.9:** repeating tasks, and per-occurrence tasks on repeating events.
   - **Later:** Microsoft To Do sync (`Tasks.ReadWrite`, re-consent needed), Google Tasks, task reminders.
 - **After Tasks: reminders and notifications.** See the README roadmap for the agreed design:

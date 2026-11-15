@@ -479,6 +479,11 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 
   Each is sorted by priority, then by time.
 - **Event tasks appear in the task lists too**, with a small note saying which event they belong to.
+- **Linked notes:** you can link **several existing notes** to a task, and later to any event, for example notes you prepared for a piece of work.
+  - They're listed neatly under the task or event, and one click opens them.
+  - "Link note" opens a quick search over your vault.
+  - The notes themselves stay exactly as they are; nothing is read out of them or changed.
+  - If you rename or move a linked note, the link follows. If you delete it, the link disappears.
 - **As little clutter as possible:** done tasks are struck through, and a setting can hide them. A general **Tasks on/off switch** hides everything task-related without deleting anything.
 - The name **"Tasks"** is used everywhere (page, menu, settings, tab title).
 - Tasks are stored in a **separate file** in the plugin folder, not in the settings file. That keeps sync conflicts between phone and computer less likely.
@@ -490,6 +495,7 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
   - a **quick-add** box.
 - **Tasks in the sidebar**, as a compact version with its **own toggle**, independent of the mini calendar / day planner.
 - Creating and editing a task: title, notes, list, priority, date, time / time range, subtasks. Tick off with a checkbox.
+- **Linked notes on tasks:** link several notes via a quick search, see them listed under the task, open them with one click, and remove links again.
 - Managing lists: create, rename, colour, delete.
 - New **Tasks** settings tab: on/off, show completed tasks, default priority, default list. Ribbon menu entry **Open tasks** and commands.
 
@@ -502,6 +508,7 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
   - a progress hint ("2/5") on the event;
   - this also works for Google/Outlook events, but those tasks are stored only in Obsidian.
 - The mini calendar gets a small **"Tasks today"** section.
+- **Linked notes on events:** the same as on tasks, for local and Google/Outlook events. For Google/Outlook events the links are stored only in Obsidian. The existing single "Create note" becomes one of the linked notes, and older events with a note keep it.
 
 **Step 3 – version 1.9: repeating**
 - **Repeating tasks**, each occurrence ticked off separately.
