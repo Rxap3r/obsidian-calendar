@@ -22,6 +22,7 @@ import { TaskModal } from "../../src/modals/TaskModal";
 import { TFile } from "obsidian";
 import * as timeMod from "../../src/timePicker";
 import * as eventMod from "../../src/modals/EventModal";
+import * as dateMod from "../../src/dateUtils";
 
 function fakeWorkspace() {
 	const leftSplit = { name: "left", collapsed: false };
@@ -152,6 +153,7 @@ function fakeWorkspace() {
 	(window as any).TaskModal = TaskModal;
 	(window as any).__timeMod = timeMod;
 	(window as any).__eventMod = eventMod;
+	(window as any).__dateMod = dateMod;
 	// Tasks page: mountTasks() replaces the calendar in #main (or puts it in #side with { side: true }).
 	(window as any).mountTasks = async (o: { side?: boolean } = {}) => {
 		const leaf: any = ws.mk(o.side ? ws.rightSplit : ws.rootSplit);

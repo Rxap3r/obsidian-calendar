@@ -737,6 +737,29 @@ test("settings: every period setting offers the same standard choices", {}, asyn
 	eq(r["Delete completed tasks after"][0], "Never", "Never first");
 });
 
+test("events: all-day event created late in the evening covers one day only", {}, async ({ page }) => {
+	// Like creating an event at ~22:30: suggested 23:00 – 00:00 (next day), then "All day" switched on.
+	await page.evaluate(() => { const { EventModal } = window.__eventMod; new EventModal(plugin, { start: new Date(2026, 10, 16, 23, 0), end: new Date(2026, 10, 17, 0, 0) }).open(); });
+	await page.waitForTimeout(100);
+	eq(await page.textContent(".ch-event-end-date"), "Tue, Nov 17, 2026", "timed end is midnight = Tuesday");
+	await page.evaluate(() => [...document.querySelectorAll(".setting-item")].find((x) => x.textContent.startsWith("All day")).querySelector(".checkbox-container").click());
+	eq(await page.textContent(".ch-event-end-date"), "Mon, Nov 16, 2026", "all day: ends Monday");
+	await page.fill(".ch-title-input", "Late all-day");
+	await page.evaluate(() => [...document.querySelectorAll(".ch-modal-buttons button.mod-cta")].pop().click());
+	await page.waitForTimeout(150);
+	const r = await page.evaluate(() => {
+		const e = plugin.data.events.find((x) => x.title === "Late all-day");
+		const days = plugin.store.getOccurrences(new Date(2026, 10, 15), new Date(2026, 10, 19)).filter((o) => o.title === "Late all-day");
+		const { overlapsDay } = window.__dateMod;
+		const on = [16, 17].map((d) => days.some((o) => overlapsDay(o.start, o.end, new Date(2026, 10, d))));
+		return { start: e.start, end: e.end, on };
+	});
+	eq(r, { start: "2026-11-16", end: "2026-11-16", on: [true, false] }, "saved and shown on Monday only");
+	// default suggestion late in the evening stays on the same day
+	const d = await page.evaluate(() => { const x = plugin.store.defaultTimes(new Date(2026, 10, 16), 23); return [x.start.getHours(), x.end.getDate(), x.end.getHours(), x.end.getMinutes()]; });
+	eq(d, [23, 16, 23, 59], "23:00 suggestion ends 23:59 the same day");
+});
+
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {
 	await page.evaluate(() => mountTasks());
 	await page.waitForTimeout(100);
