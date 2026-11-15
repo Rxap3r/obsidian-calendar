@@ -634,7 +634,7 @@ test("tasks: 'Upcoming' range follows the setting", {}, async ({ page }) => {
 	const opts = await page.evaluate(() => { tab.constructor.tab = "tasks"; tab.display();
 		const row = [...tab.containerEl.querySelectorAll(".setting-item")].find((x) => /Upcoming list/.test(x.textContent));
 		return [...row.querySelector("select").options].map((o) => o.value); });
-	eq(opts, ["3", "7", "14", "30", "60", "90", "180", "365", "custom"], "setting options (+ Custom…)");
+	eq(opts, ["7", "14", "30", "60", "90", "180", "365", "custom"], "setting options (+ Custom…)");
 });
 
 test("tasks: completed tasks – recent only, show older, clear, automatic clean-up", {}, async ({ page }) => {
@@ -710,10 +710,31 @@ test("settings: 'Custom…' periods (days / weeks / months / years)", {}, async 
 		out.miniShown = [mini.querySelector(".ch-period-num").value, mini.querySelector(".ch-period-unit").selectedOptions[0].text];
 		return out;
 	});
-	eq(r.delOpts, ["Never", "30 days", "90 days", "180 days", "1 year", "Custom…"], "presets");
+	eq(r.delOpts, ["Never", "7 days", "2 weeks", "30 days", "60 days", "90 days", "6 months", "1 year", "Custom…"], "presets");
 	eq(r.customHidden, "none", "custom field hidden for presets");
 	eq([r.del, r.up, r.redisplay, r.mini, r.miniShown], [730, 200, ["custom", "2", "years"], 365, ["1", "years"]], "custom values (2 years, 200 days), redisplay, limit shown");
 	await page.screenshot({ path: path.join(SHOTS, "settings-periods.png") });
+});
+
+test("settings: every period setting offers the same standard choices", {}, async ({ page }) => {
+	const r = await page.evaluate(() => {
+		const out = {};
+		for (const tabId of ["display", "tasks"]) {
+			tab.constructor.tab = tabId; tab.display();
+			for (const row of tab.containerEl.querySelectorAll(".ch-period-setting")) {
+				out[row.querySelector(".setting-item-name").textContent] = [...row.querySelector("select").options].map((o) => o.text);
+			}
+		}
+		return out;
+	});
+	const STD = ["7 days", "2 weeks", "30 days", "60 days", "90 days", "6 months", "1 year"];
+	eq(Object.keys(r), ["Agenda length", "Upcoming list in the mini calendar", "Upcoming list", "Show completed tasks from the last", "Delete completed tasks after"], "period settings found");
+	for (const [name, opts] of Object.entries(r)) {
+		eq(opts.filter((o) => STD.includes(o)), STD, `${name}: standard choices`);
+		eq(opts[opts.length - 1], "Custom…", `${name}: Custom… last`);
+	}
+	eq(r["Upcoming list in the mini calendar"], ["Hidden", "Tomorrow only", ...STD, "Same as agenda length", "Custom…"], "mini calendar extras");
+	eq(r["Delete completed tasks after"][0], "Never", "Never first");
 });
 
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {

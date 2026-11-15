@@ -143,7 +143,8 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - Done shows the last `tasksDoneVisibleDays` (default 30, -1 = everything), with "Show older";
     - "Clear completed";
     - optional automatic delete after `tasksDeleteDoneAfterDays` (0 = never, the default).
-    - Period settings use `periodSetting()` in settings.ts (presets + "Custom…" number/unit). Use it for any new "how long / how far" setting.
+    - Period settings use `periodSetting()` in settings.ts. Use it for any new "how long / how far" setting.
+      Every such setting must offer the **same** `STANDARD_PERIODS` (7d, 2w, 30d, 60d, 90d, 6mo, 1y), plus setting-specific extras and "Custom…". The maintainer asked for this uniformity, and a test checks it.
   - **Later:** Microsoft To Do sync (`Tasks.ReadWrite`, re-consent needed), Google Tasks, task reminders.
 - **After Tasks: reminders and notifications.** See the README roadmap for the agreed design:
   - a reminder field and a default reminder;

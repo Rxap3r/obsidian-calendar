@@ -8,6 +8,11 @@ import { uid } from "./dateUtils";
 import { DEFAULT_NOTE_TEMPLATE } from "./notes";
 import { DEFAULT_TASK_LIST, PRIORITY_NAMES } from "./tasks";
 
+/** Standard choices for every "how long / how far" setting (plus "Custom…"), so they all match. */
+export const STANDARD_PERIODS: [number, string][] = [
+	[7, "7 days"], [14, "2 weeks"], [30, "30 days"], [60, "60 days"], [90, "90 days"], [180, "6 months"], [365, "1 year"],
+];
+
 export const PALETTE = ["#7c5cff", "#2f9e44", "#e8590c", "#1c7ed6", "#d6336c", "#f59f00", "#0ca678", "#ae3ec9", "#495057"];
 
 export const DEFAULT_SETTINGS: OmniCalendarSettings = {
@@ -284,7 +289,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 		);
 		this.numberSetting(el, "Scroll to hour", "Where week and day views start (0–23).", s.scrollToHour, 0, 23, (v) => (s.scrollToHour = v));
 		this.numberSetting(el, "Default event length (minutes)", "", s.defaultEventDuration, 5, 1440, (v) => (s.defaultEventDuration = v));
-		this.numberSetting(el, "Agenda length (days)", "Days shown in the agenda view.", s.agendaDays, 1, 365, (v) => (s.agendaDays = v));
+		this.periodSetting(el, "Agenda length", "How many days the Agenda view shows.", s.agendaDays, {}, 1, 365, (v) => (s.agendaDays = v));
 
 		new Setting(el).setName("Sidebar").setHeading();
 		new Setting(el)
@@ -341,7 +346,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 				);
 		}
 		this.periodSetting(el, "Upcoming list in the mini calendar", "How far ahead the “Upcoming” list below the mini calendar looks.",
-			s.sidebarUpcomingDays, [[0, "Hidden"], [1, "Tomorrow only"], [3, "3 days"], [7, "7 days"], [14, "2 weeks"], [30, "30 days"], [60, "60 days"], [90, "90 days"], [-1, "Same as agenda length"]],
+			s.sidebarUpcomingDays, { before: [[0, "Hidden"], [1, "Tomorrow only"]], after: [[-1, "Same as agenda length"]] },
 			1, 365, (v) => (s.sidebarUpcomingDays = v));
 	}
 
@@ -385,15 +390,15 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 				})
 			);
 		this.periodSetting(el, "Upcoming list", "How far ahead the “Upcoming” task list looks (today plus this many days). Later tasks are under “All”.",
-			s.tasksUpcomingDays, [[3, "3 days"], [7, "7 days"], [14, "2 weeks"], [30, "30 days"], [60, "60 days"], [90, "90 days"], [180, "6 months"], [365, "1 year"]],
+			s.tasksUpcomingDays, {},
 			1, 3650, (v) => { s.tasksUpcomingDays = v; store.trigger("changed"); });
 
 		new Setting(el).setName("Completed tasks").setHeading();
 		this.periodSetting(el, "Show completed tasks from the last", "The Done list and Done sections show tasks completed in this period. Older ones stay available behind “Show older”.",
-			s.tasksDoneVisibleDays, [[7, "7 days"], [30, "30 days"], [90, "90 days"], [-1, "Everything"]],
+			s.tasksDoneVisibleDays, { after: [[-1, "Everything"]] },
 			1, 3650, (v) => { s.tasksDoneVisibleDays = v; store.trigger("changed"); });
 		this.periodSetting(el, "Delete completed tasks after", "Completed tasks are deleted automatically this long after you ticked them off. Deleting can't be undone.",
-			s.tasksDeleteDoneAfterDays, [[0, "Never"], [30, "30 days"], [90, "90 days"], [180, "180 days"], [365, "1 year"]],
+			s.tasksDeleteDoneAfterDays, { before: [[0, "Never"]] },
 			1, 3650, (v) => { s.tasksDeleteDoneAfterDays = v; void this.plugin.cleanUpDoneTasks(); });
 		new Setting(el).setName("Default priority").addDropdown((d) =>
 			d
@@ -555,8 +560,14 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 	 * number and a unit (days, weeks, months, years). Values are stored in days (special values such
 	 * as 0 / -1 are presets). Custom values are limited to min…max days.
 	 */
-	private periodSetting(el: HTMLElement, name: string, desc: string, value: number, presets: [number, string][], min: number, max: number, set: (days: number) => void) {
+	private periodSetting(
+		el: HTMLElement, name: string, desc: string, value: number,
+		special: { before?: [number, string][]; after?: [number, string][] },
+		min: number, max: number, set: (days: number) => void
+	) {
 		const UNITS: [string, number][] = [["days", 1], ["weeks", 7], ["months", 30], ["years", 365]];
+		// The same standard choices everywhere; only setting-specific extras (Never, Hidden, …) differ.
+		const presets: [number, string][] = [...(special.before ?? []), ...STANDARD_PERIODS.filter(([d]) => d <= max), ...(special.after ?? [])];
 		const isPreset = presets.some(([v]) => v === value);
 		const setting = new Setting(el).setName(name).setDesc(desc).setClass("ch-period-setting");
 		let customEl: HTMLElement;
