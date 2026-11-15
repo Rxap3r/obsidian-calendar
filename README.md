@@ -113,6 +113,24 @@ The event dialog has these fields:
 
 Editing a recurring event changes **every occurrence** of it. To remove a single date, use *Delete this occurrence*.
 
+### Date and time pickers
+
+Dates and times in the event and task dialogs use Omni Calendar's **own pickers**, so they look and work the same on Windows, Mac, Linux, Android and iOS. They don't use the device's date or clock dialogs, which differ per device and were cut off on some Android tablets.
+
+**Date:** tap the field to get a small **month calendar**.
+- **‹ ›** switch months, and today is highlighted.
+- Weeks start on your *First day of the week* setting.
+- **Today** is at the bottom, plus **No date** for tasks.
+
+**Time:**
+
+- **Click or tap the field** to get a list in **15-minute steps**, scrolled to the current or chosen time.
+- **End times** list only times after the start, with the **duration**, e.g. *11:00 · 30 min*.
+- **Typing on a computer:** type the time directly. `1030`, `10:30`, `9`, `930`, `2:30pm` all work; press Enter. Use this for exact minutes like 10:37.
+- **On phones:** no keyboard pops up. Pick from the list, or tap **⌨ Type a time** at the top of the list.
+- **No time** at the top of the list clears a task's time.
+- 12 or 24 hours: *Settings → Omni Calendar → Display → 24-hour clock* (on = `14:30`, off = `2:30 PM`). The pickers, the calendar and the tasks all follow it.
+
 ### Choosing which calendars new events go to
 
 - **Default:** *Settings → Omni Calendar → **Calendars** → **New events*** lists every calendar you can write to: your local calendars, plus the Google and Outlook
@@ -189,7 +207,7 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
 **The task dialog:**
 - **Title, list and priority:** *None / Low / Medium / High*, shown as `!`, `!!`, `!!!`.
 - **Date:** with quick buttons *Today*, *Tomorrow*, *Next week* and *No date*.
-- **Time:** optional, once a date is set. Either a single time or a range (*from … to …*).
+- **Time:** optional, once a date is set. Either a single time or a range (*from … to …*). See [date and time pickers](#date-and-time-pickers).
 - **Subtasks:** one level. Type and press Enter to add one. You can also tick them off directly on the Tasks page.
 - **Linked notes:**
   - **Link note** searches your vault, and you can link as many notes as you like.

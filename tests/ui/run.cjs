@@ -385,10 +385,15 @@ test("desktop: task dialog – priority, date, time range, subtasks, linked note
 	await page.click(".ch-prio-seg .ch-prio-3");
 	await page.click('.ch-task-quick button:text("Tomorrow")');
 	expect(await page.isVisible(".ch-task-time-setting"), "time row visible once a date is set");
-	await page.fill(".ch-task-start", "10:30");
-	await page.dispatchEvent(".ch-task-start", "change");
-	await page.fill(".ch-task-end", "11:45");
-	await page.dispatchEvent(".ch-task-end", "change");
+	// Our own time picker: type a start, pick the end from the list (shows durations).
+	await page.click(".ch-task-start input");
+	await page.keyboard.type("1030");
+	await page.keyboard.press("Enter");
+	await page.click(".ch-task-end input");
+	const endItems = await page.$$eval(".ch-time-list [data-value]", (e) => e.slice(0, 3).map((x) => x.textContent));
+	eq(endItems, ["10:45  ·  15 min", "11:00  ·  30 min", "11:15  ·  45 min"], "end list starts after the start, with durations");
+	await page.click('.ch-time-list [data-value="11:45"]');
+	eq(await page.$$eval(".ch-time-list", (e) => e.length), 0, "list closes after picking");
 	await page.fill(".ch-task-add-sub", "Book room");
 	await page.press(".ch-task-add-sub", "Enter");
 	await page.fill(".ch-task-add-sub", "Print handouts");
@@ -422,6 +427,103 @@ test("desktop: task dialog – priority, date, time range, subtasks, linked note
 	await page.evaluate(() => { plugin.tasks.renameLink("Projects/Website notes.md", "Archive/Website notes.md"); plugin.tasks.removeLink("Calendar/Workshop plan.md"); });
 	eq(await page.evaluate(() => plugin.tasks.items.find((x) => x.title === "Prepare workshop").links), ["Archive/Website notes.md"], "links follow rename/delete");
 	await page.screenshot({ path: path.join(SHOTS, "tasks-desktop-tomorrow.png") });
+});
+
+test("time picker: typing, list, 12-hour clock, invalid input, phone mode", {}, async ({ page }) => {
+	const r = await page.evaluate(async () => {
+		const { parseTimeInput } = window.__timeMod;
+		return ["1030", "10:30", "9", "930", "2:30pm", "12am", "12 pm", "7.15", "25:00", "abc", "10:75"].map((s) => parseTimeInput(s));
+	});
+	eq(r, ["10:30", "10:30", "09:00", "09:30", "14:30", "00:00", "12:00", "07:15", null, null, null], "parsing");
+	await page.evaluate(() => { plugin.settings.use24h = false; new TaskModal(plugin, undefined, { date: "2026-11-14" }).open(); });
+	await page.waitForTimeout(100);
+	await page.click(".ch-task-start input");
+	eq(await page.$$eval(".ch-time-list [data-value]", (e) => e.length), 96, "96 quarter-hour steps");
+	eq(await page.$eval('.ch-time-list [data-value="14:30"]', (e) => e.textContent), "2:30 PM", "12-hour labels");
+	await page.keyboard.type("nonsense");
+	await page.keyboard.press("Enter");
+	eq(await page.inputValue(".ch-task-start input"), "", "invalid input is rejected");
+	await page.click(".ch-task-start input");
+	await page.keyboard.type("9:05pm");
+	await page.keyboard.press("Enter");
+	eq(await page.inputValue(".ch-task-start input"), "9:05 PM", "exact minutes can be typed");
+	await page.screenshot({ path: path.join(SHOTS, "time-picker-desktop.png") });
+});
+
+test("mobile: time picker list first, 'Type a time', event dialog keeps duration", { mobile: true }, async ({ page }) => {
+	await page.evaluate(() => new TaskModal(plugin, undefined, { date: "2026-11-14" }).open());
+	await page.waitForTimeout(100);
+	eq(await page.$eval(".ch-task-start input", (e) => e.readOnly), true, "no keyboard by default on phones");
+	await page.tap(".ch-task-start input");
+	await page.waitForTimeout(80);
+	const box = await page.evaluate(() => {
+		const list = document.querySelector(".ch-time-list"); const l = list.getBoundingClientRect();
+		const type = list.querySelector(".ch-time-type").getBoundingClientRect();
+		return { inside: l.left >= 0 && l.right <= innerWidth && l.top >= 0 && l.bottom <= innerHeight, typeVisible: type.top >= l.top - 1 && type.bottom <= l.bottom, scrolled: list.scrollTop > 0 };
+	});
+	eq(box, { inside: true, typeVisible: true, scrolled: true }, "list fully on screen; 'Type a time' stays visible while scrolled to the current time");
+	await page.screenshot({ path: path.join(SHOTS, "time-picker-mobile.png") });
+	await page.tap('.ch-time-list [data-value="09:30"]');
+	eq(await page.inputValue(".ch-task-start input"), "09:30", "tap picks a time");
+	await page.evaluate(() => window.lastModal.close());
+	// Event dialog: moving the start keeps the duration (end follows)
+	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "week"));
+	await page.evaluate(() => { const { EventModal } = window.__eventMod; new EventModal(plugin, { start: new Date(2026, 10, 14, 10, 0), end: new Date(2026, 10, 14, 11, 0) }).open(); });
+	await page.waitForTimeout(100);
+	await page.tap(".ch-event-start-time input");
+	await page.tap('.ch-time-list [data-value="13:00"]');
+	eq(await page.inputValue(".ch-event-end-time input"), "14:00", "end moved with the start");
+	await page.tap(".ch-event-end-time input");
+	eq(await page.$eval('.ch-time-list [data-value="14:30"]', (e) => e.textContent), "14:30  ·  1 h 30 min", "event end list shows durations");
+});
+
+test("date picker: month calendar, first day of week, navigation, no date", {}, async ({ page }) => {
+	await page.evaluate(() => { plugin.settings.firstDayOfWeek = 1; new TaskModal(plugin).open(); });
+	await page.waitForTimeout(100);
+	eq(await page.textContent(".ch-task-date"), "Select date", "empty");
+	await page.click(".ch-task-date button");
+	const r = await page.evaluate(() => {
+		const p = document.querySelector(".ch-date-popup");
+		return { title: p.querySelector(".ch-date-title").textContent, wd: [...p.querySelectorAll(".ch-date-wd")].map((e) => e.textContent).join(""),
+			first: p.querySelector(".ch-date-day").dataset.date, today: p.querySelector(".ch-today")?.dataset.date, days: p.querySelectorAll(".ch-date-day").length };
+	});
+	eq(r, { title: "November 2026", wd: "MTWTFSS", first: "2026-10-26", today: "2026-11-14", days: 42 }, "month grid (Monday first, 6 weeks)");
+	await page.screenshot({ path: path.join(SHOTS, "date-picker-desktop.png") });
+	await page.click('.ch-date-nav[aria-label="Next month"]');
+	eq(await page.textContent(".ch-date-title"), "December 2026", "next month");
+	await page.click('.ch-date-day[data-date="2026-12-24"]');
+	eq(await page.evaluate(() => [document.querySelector(".ch-task-date").textContent, !!document.querySelector(".ch-date-popup"), window.lastModal.task.date]), ["Thu, Dec 24, 2026", false, "2026-12-24"], "picked, popup closed");
+	expect(await page.isVisible(".ch-task-time-setting"), "time row appears once a date is set");
+	await page.click(".ch-task-date button");
+	await page.click('.ch-date-foot button:text("No date")');
+	eq(await page.evaluate(() => [document.querySelector(".ch-task-date").textContent, window.lastModal.task.date ?? null]), ["Select date", null], "No date clears");
+	// Sunday-first setting
+	await page.evaluate(() => { window.lastModal.close(); plugin.settings.firstDayOfWeek = 0; new TaskModal(plugin).open(); });
+	await page.click(".ch-task-date button");
+	eq(await page.$eval(".ch-date-popup", (p) => [...p.querySelectorAll(".ch-date-wd")].map((e) => e.textContent).join("")), "SMTWTFS", "Sunday first");
+});
+
+test("mobile: date picker fits on screen; event dialog dates + until", { mobile: true }, async ({ page }) => {
+	await page.evaluate(() => { const { EventModal } = window.__eventMod; new EventModal(plugin, { start: new Date(2026, 10, 14, 10, 0), end: new Date(2026, 10, 14, 11, 0) }).open(); });
+	await page.waitForTimeout(100);
+	await page.tap(".ch-event-start-date button");
+	await page.waitForTimeout(80);
+	const box = await page.evaluate(() => { const l = document.querySelector(".ch-date-popup").getBoundingClientRect(); return l.left >= 0 && l.right <= innerWidth && l.top >= 0 && l.bottom <= innerHeight; });
+	eq(box, true, "calendar fully on screen");
+	await page.screenshot({ path: path.join(SHOTS, "date-picker-mobile.png") });
+	await page.tap('.ch-date-day[data-date="2026-11-20"]');
+	eq(await page.evaluate(() => [document.querySelector(".ch-event-end-date").textContent, document.querySelector(".ch-event-end-time input").value]), ["Fri, Nov 20, 2026", "11:00"], "end date follows the start");
+	// repeat until
+	await page.selectOption(".ch-repeat-row select", "weekly");
+	await page.waitForTimeout(50);
+	await page.evaluate(() => { const s = [...document.querySelectorAll(".setting-item")].find((x) => x.textContent.startsWith("Ends") && x.querySelector("select")).querySelector("select"); s.value = "until"; s.dispatchEvent(new Event("change")); });
+	await page.tap(".ch-until button");
+	await page.tap('.ch-date-nav[aria-label="Next month"]');
+	await page.tap('.ch-date-day[data-date="2026-12-18"]');
+	await page.fill(".ch-title-input", "Weekly");
+	await page.evaluate(() => [...document.querySelectorAll(".ch-modal-buttons button.mod-cta")].pop().click());
+	await page.waitForTimeout(150);
+	eq(await page.evaluate(() => { const e = plugin.data.events.find((x) => x.title === "Weekly"); return [e.start, e.recurrence?.until]; }), ["2026-11-20T10:00", "2026-12-18"], "saved with picked dates");
 });
 
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {
@@ -514,18 +616,18 @@ test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mo
 	const d = await page.evaluate(() => {
 		const date = document.querySelector(".ch-task-modal .ch-task-date-setting");
 		const name = date.querySelector(".setting-item-name");
-		const hint = document.querySelector(".ch-task-modal .ch-ph-date .ch-ph-hint");
-		return { labelFits: name.scrollWidth <= name.clientWidth + 1, hint: getComputedStyle(hint).display, hintText: hint.textContent };
+		const f = document.querySelector(".ch-task-modal .ch-task-date");
+		return { labelFits: name.scrollWidth <= name.clientWidth + 1, empty: f.classList.contains("is-empty"), hintText: f.textContent };
 	});
-	eq(d, { labelFits: true, hint: "block", hintText: "Select date" }, "date label not cut off, 'Select date' shown while empty");
+	eq(d, { labelFits: true, empty: true, hintText: "Select date" }, "date label not cut off, 'Select date' shown while empty");
 	await page.tap('.ch-task-quick button >> text=Today');
 	await page.waitForTimeout(80);
 	const t2 = await page.evaluate(() => {
 		const modal = document.querySelector(".ch-task-modal").getBoundingClientRect();
 		const right = Math.max(...[...document.querySelectorAll(".ch-task-modal .ch-task-time-setting .setting-item-control > *")].map((e) => e.getBoundingClientRect().right));
-		return { timeFits: right <= modal.right - 8, hintGone: getComputedStyle(document.querySelector(".ch-ph-date .ch-ph-hint")).display };
+		return { timeFits: right <= modal.right - 8, date: document.querySelector(".ch-task-date").textContent };
 	});
-	eq(t2, { timeFits: true, hintGone: "none" }, "time row fits inside the dialog; hint hidden once a date is set");
+	eq(t2, { timeFits: true, date: "Sat, Nov 14, 2026" }, "time row fits inside the dialog; chosen date shown");
 	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile-date.png") });
 	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile.png") });
 });

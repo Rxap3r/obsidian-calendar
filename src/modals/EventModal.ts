@@ -3,6 +3,7 @@ import type OmniCalendarPlugin from "../main";
 import { CalendarStore } from "../store";
 import { CalendarOccurrence, EventInput, LocalEvent, Recurrence, RecurrenceFreq } from "../types";
 import { confirmAction } from "./ConfirmModal";
+import { DateField, TimeField } from "../timePicker";
 import { addDays, addMinutes, isValidDate, parseLocal, toDateKey, toTimeKey } from "../dateUtils";
 
 export interface EventModalInit {
@@ -47,6 +48,9 @@ export class EventModal extends Modal {
 	private count: number;
 
 	private timeEls: HTMLElement[] = [];
+	private timeFields: Partial<Record<"start" | "end", TimeField>> = {};
+	private dateFields: Partial<Record<"start" | "end", DateField>> = {};
+	private untilField: DateField | null = null;
 	private recurEls: HTMLElement[] = [];
 	private busy = false;
 
@@ -211,9 +215,11 @@ export class EventModal extends Modal {
 					this.refreshVisibility();
 				})
 		);
-		const untilInput = ends.controlEl.createEl("input", { type: "date", cls: "ch-input ch-until" });
-		untilInput.value = this.until || this.startDate;
-		untilInput.addEventListener("change", () => (this.until = untilInput.value));
+		this.until = this.until || this.startDate;
+		this.untilField = new DateField(ends.controlEl, {
+			value: this.until, placeholder: "Select date", firstDayOfWeek: this.plugin.settings.firstDayOfWeek,
+			cls: "ch-until", onChange: (v) => (this.until = v ?? this.until),
+		});
 		const countInput = ends.controlEl.createEl("input", { type: "number", cls: "ch-input ch-count" });
 		countInput.min = "1";
 		countInput.value = String(this.count);
@@ -280,8 +286,8 @@ export class EventModal extends Modal {
 		this.refreshVisibility();
 	}
 
-	private untilEl(): HTMLInputElement | null {
-		return this.contentEl.querySelector(".ch-until");
+	private untilEl(): HTMLElement | null {
+		return this.untilField?.el ?? null;
 	}
 	private countEl(): HTMLInputElement | null {
 		return this.contentEl.querySelector(".ch-count");
@@ -289,12 +295,25 @@ export class EventModal extends Modal {
 
 	private dateTimeRow(container: HTMLElement, label: string, which: "start" | "end") {
 		const s = new Setting(container).setName(label);
-		const date = s.controlEl.createEl("input", { type: "date", cls: "ch-input" });
-		date.value = which === "start" ? this.startDate : this.endDate;
-		const time = s.controlEl.createEl("input", { type: "time", cls: "ch-input" });
-		time.value = which === "start" ? this.startTime : this.endTime;
-		time.step = "300";
-		this.timeEls.push(time);
+		const date = new DateField(s.controlEl, {
+			value: which === "start" ? this.startDate : this.endDate,
+			placeholder: "Select date",
+			firstDayOfWeek: this.plugin.settings.firstDayOfWeek,
+			cls: `ch-event-${which}-date`,
+			onChange: () => onChange(),
+		});
+		this.dateFields[which] = date;
+		const time = new TimeField(s.controlEl, {
+			value: which === "start" ? this.startTime : this.endTime,
+			placeholder: which === "start" ? "Start" : "End",
+			use24h: this.plugin.settings.use24h,
+			cls: `ch-event-${which}-time`,
+			// End on the same day: list times after the start, with durations.
+			after: which === "end" ? () => (this.endDate === this.startDate ? this.startTime : undefined) : undefined,
+			onChange: () => onChange(),
+		});
+		this.timeFields[which] = time;
+		this.timeEls.push(time.el);
 
 		const onChange = () => {
 			if (which === "start") {
@@ -302,24 +321,21 @@ export class EventModal extends Modal {
 				const oldStart = parseLocal(`${this.startDate}T${this.startTime}`);
 				const oldEnd = parseLocal(`${this.endDate}T${this.endTime}`);
 				const durMs = oldEnd.getTime() - oldStart.getTime();
-				this.startDate = date.value;
-				this.startTime = time.value || this.startTime;
+				this.startDate = date.getValue() ?? this.startDate;
+				this.startTime = time.getValue() || this.startTime;
 				const ns = parseLocal(`${this.startDate}T${this.startTime}`);
 				if (isValidDate(ns) && isValidDate(oldStart) && durMs >= 0) {
 					const ne = new Date(ns.getTime() + durMs);
 					this.endDate = toDateKey(ne);
 					this.endTime = toTimeKey(ne);
-					const endInputs = this.contentEl.querySelectorAll<HTMLInputElement>(".ch-end-row input");
-					if (endInputs[0]) endInputs[0].value = this.endDate;
-					if (endInputs[1]) endInputs[1].value = this.endTime;
+					this.dateFields.end?.setValue(this.endDate);
+					this.timeFields.end?.setValue(this.endTime);
 				}
 			} else {
-				this.endDate = date.value;
-				this.endTime = time.value || this.endTime;
+				this.endDate = date.getValue() ?? this.endDate;
+				this.endTime = time.getValue() || this.endTime;
 			}
 		};
-		date.addEventListener("change", onChange);
-		time.addEventListener("change", onChange);
 		s.settingEl.addClass(which === "start" ? "ch-start-row" : "ch-end-row");
 	}
 
@@ -401,7 +417,7 @@ export class EventModal extends Modal {
 		let recurrence: Recurrence | undefined;
 		if (this.freq !== "none") {
 			recurrence = { freq: this.freq, interval: Math.max(1, this.interval) };
-			const untilVal = this.untilEl()?.value ?? this.until;
+			const untilVal = this.untilField?.getValue() ?? this.until;
 			const countVal = parseInt(this.countEl()?.value ?? "") || this.count;
 			if (this.endsMode === "until" && untilVal) recurrence.until = untilVal;
 			if (this.endsMode === "count") recurrence.count = Math.max(1, countVal);

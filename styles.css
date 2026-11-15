@@ -615,16 +615,6 @@
 .ch-task-date-setting .setting-item-control, .ch-task-time-setting .setting-item-control {
 	flex: 1 1 100%; min-width: 0; flex-wrap: wrap; gap: 6px; justify-content: flex-start; margin-top: 6px;
 }
-.ch-ph-wrap { position: relative; display: inline-flex; min-width: 0; }
-.ch-ph-date { flex: 0 1 170px; }
-.ch-ph-time { flex: 1 1 100px; max-width: 140px; }
-.ch-ph-wrap .ch-input { width: 100%; max-width: none; min-width: 0; box-sizing: border-box; }
-.ch-ph-hint { display: none; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-faint); pointer-events: none; white-space: nowrap; }
-.ch-ph-wrap.is-empty .ch-ph-hint { display: block; }
-/* Hide the browser's own empty pattern (mm/dd/yyyy, --:--) behind the hint. */
-.ch-ph-wrap.is-empty .ch-input { color: transparent; }
-.ch-ph-wrap.is-empty .ch-input:focus { color: inherit; }
-.ch-ph-wrap.is-empty .ch-input:focus + .ch-ph-hint { display: none; }
 .ch-task-quick { display: flex; flex-wrap: wrap; gap: 4px; }
 .ch-task-quick button { font-size: 0.8em; padding: 2px 8px; height: auto; }
 .ch-task-time-sep { color: var(--text-muted); }
@@ -644,3 +634,58 @@
 .ch-note-suggestion-path { font-size: 0.8em; color: var(--text-muted); }
 .ch-task-list-setting .setting-item-control { gap: 6px; }
 .ch-task-modal .ch-task-sub-row .ch-input, .ch-task-modal .ch-task-add-sub { max-width: none; }
+
+/* ---------------------------------------------------------------- our own time picker (same on every device) */
+.ch-timefield { position: relative; display: inline-flex; flex: 1 1 100px; max-width: 140px; min-width: 0; }
+.ch-timefield-input { width: 100%; max-width: none !important; min-width: 0; box-sizing: border-box; cursor: pointer; font-variant-numeric: tabular-nums; }
+.ch-timefield.ch-invalid .ch-timefield-input { border-color: var(--text-error); box-shadow: 0 0 0 1px var(--text-error); }
+.ch-time-list {
+	position: fixed; z-index: calc(var(--layer-menu, 65) + 1); box-sizing: border-box;
+	display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; padding: 4px;
+	background: var(--background-primary); border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m); box-shadow: var(--shadow-s);
+}
+.ch-time-item {
+	flex: none; display: block; width: 100%; height: auto; min-height: 0; padding: 6px 10px; margin: 0; text-align: left;
+	background: transparent; box-shadow: none; border: none; border-radius: var(--radius-s); cursor: pointer;
+	color: var(--text-normal); white-space: pre; font-variant-numeric: tabular-nums;
+}
+.ch-time-item:hover, .ch-time-item.is-active { background: var(--background-modifier-hover); }
+.ch-time-item.is-selected { color: var(--text-accent); font-weight: 600; }
+.ch-time-type, .ch-time-clear { color: var(--text-muted); border-bottom: 1px solid var(--background-modifier-border); border-radius: 0; }
+.ch-time-head { position: sticky; top: -4px; z-index: 1; margin: -4px -4px 2px; padding: 4px 4px 0; background: var(--background-primary); border-bottom: 1px solid var(--background-modifier-border); }
+.ch-time-head .ch-time-item { border-bottom: none; }
+
+/* ---------------------------------------------------------------- our own date picker (same on every device) */
+.ch-datefield { display: inline-flex; min-width: 0; flex: 0 1 190px; }
+.ch-datefield-btn {
+	width: 100%; max-width: none !important; min-width: 0; box-sizing: border-box; height: auto; min-height: var(--input-height, 30px);
+	padding: 4px 10px; text-align: left; justify-content: flex-start; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+	font-weight: normal; box-shadow: none;
+}
+.ch-datefield.is-empty .ch-datefield-btn { color: var(--text-faint); }
+.ch-date-popup {
+	position: fixed; z-index: calc(var(--layer-menu, 65) + 1); box-sizing: border-box; overflow-y: auto; padding: 8px;
+	background: var(--background-primary); border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m); box-shadow: var(--shadow-s);
+}
+.ch-date-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.ch-date-title { font-weight: 600; }
+.ch-date-nav {
+	width: 32px; height: 32px; padding: 0; font-size: 1.3em; line-height: 1;
+	background: transparent; box-shadow: none; border: none; border-radius: var(--radius-s); cursor: pointer;
+}
+.ch-date-nav:hover { background: var(--background-modifier-hover); }
+.ch-date-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; text-align: center; }
+.ch-date-wd { font-size: 0.75em; color: var(--text-muted); padding: 2px 0 4px; text-transform: uppercase; }
+.ch-date-day {
+	height: 34px; min-width: 0; padding: 0; margin: 0; border: none; box-shadow: none; background: transparent;
+	border-radius: 50%; aspect-ratio: 1; justify-self: center; width: 34px; max-width: 100%;
+	cursor: pointer; color: var(--text-normal); font-variant-numeric: tabular-nums;
+}
+.ch-date-day:hover { background: var(--background-modifier-hover); }
+.ch-date-day.ch-other-month { color: var(--text-faint); }
+.ch-date-day.ch-today { color: var(--text-accent); font-weight: 700; }
+.ch-date-day.is-selected { background: var(--interactive-accent); color: var(--text-on-accent); font-weight: 600; }
+.ch-date-foot { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--background-modifier-border); }
+.ch-date-foot button { font-size: 0.85em; padding: 3px 10px; height: auto; }
