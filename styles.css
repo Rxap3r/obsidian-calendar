@@ -422,9 +422,15 @@
 
 /* ---------------------------------------------------------------- settings tabs */
 .ch-settings-tabs-wrap {
-	position: sticky; top: 0; z-index: 2; background: var(--background-primary);
+	position: sticky; top: 0; z-index: 2; background: var(--ch-settings-bg, var(--background-primary));
 	border-bottom: 1px solid var(--background-modifier-border);
-	margin-bottom: 12px;
+	margin-bottom: 12px; padding-top: 4px;
+}
+/* One solid field: also cover the padding above and beside the bar, so scrolled rows disappear behind it. */
+.ch-settings-tabs-wrap::before {
+	content: ""; position: absolute; z-index: -1; pointer-events: none;
+	left: -64px; right: -64px; top: -64px; bottom: 0;
+	background: var(--ch-settings-bg, var(--background-primary));
 }
 .ch-settings-tabs {
 	/* One line; swipe / scroll sideways when the tabs do not fit (mobile). */

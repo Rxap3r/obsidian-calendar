@@ -271,6 +271,45 @@ test("desktop: Day planner 'Close' → chosen sidebar tab is shown (left and rig
 	eq([r.right, r.left, r.planner], [true, true, 0], "chosen tab shown, planner closed");
 });
 
+test("desktop: settings keep their scroll position, don't reveal the sidebar, defaults", {}, async ({ page }) => {
+	const r = await page.evaluate(async () => {
+		const out = {};
+		const fresh = new plugin.constructor(plugin.app); await fresh.loadPluginData?.call(fresh);
+		out.defaults = [fresh.settings?.sidebarOnExpand, fresh.settings?.sidebarAfterClose];
+		const box = document.createElement("div");
+		box.style.cssText = "position:fixed;left:0;top:0;width:600px;height:300px;overflow:auto;background:rgb(250, 250, 250);z-index:200";
+		document.body.appendChild(box); box.appendChild(tab.containerEl);
+		tab.constructor.tab = "display"; tab.display();
+		tab.containerEl.style.padding = "24px 32px";
+		box.scrollTop = 400; const before = box.scrollTop;
+		const row = (re) => [...tab.containerEl.querySelectorAll(".setting-item")].find((x) => re.test(x.textContent));
+		const sel = row(/When the Day planner opens/).querySelector("select");
+		sel.value = "close"; sel.dispatchEvent(new Event("change")); await new Promise((r) => setTimeout(r, 50));
+		out.kept = Math.abs(box.scrollTop - before) < 2 && before > 0;
+		out.subShown = !!row(/Then show this sidebar tab/);
+		out.afterCloseDefault = row(/Then show this sidebar tab/).querySelector("select").value;
+		ws.reveals = 0;
+		const side = row(/Calendar in sidebar/).querySelector("select");
+		side.value = "mini"; side.dispatchEvent(new Event("change")); await new Promise((r) => setTimeout(r, 50));
+		out.reveals = ws.reveals;
+		const mini = plugin.sidebarLeaves("omni-calendar-mini")[0];
+		out.miniSelected = !!mini && mini.parent.selected === mini;
+		const wrap = tab.containerEl.querySelector(".ch-settings-tabs-wrap");
+		out.bg = getComputedStyle(wrap, "::before").backgroundColor;
+		const b2 = box.scrollTop; tab.containerEl.querySelectorAll(".ch-settings-tab")[0].click();
+		out.tabSwitchTop = box.scrollTop === 0 && b2 > 0;
+		return out;
+	});
+	await page.evaluate(() => { tab.containerEl.parentElement.scrollTop = 250; });
+	await page.screenshot({ path: path.join(SHOTS, "settings-scrolled.png"), clip: { x: 0, y: 0, width: 600, height: 300 } });
+	eq(r.defaults, ["mini", ""], "defaults: switch to mini, let Obsidian decide");
+	eq(r.kept, true, "scroll position kept after a change");
+	eq([r.subShown, r.afterCloseDefault], [true, ""], "'Close' shows sub-setting with 'Let Obsidian decide'");
+	eq([r.reveals, r.miniSelected], [0, true], "sidebar changed without revealing / closing settings");
+	eq(r.bg, "rgb(250, 250, 250)", "tab bar background covers its surroundings");
+	eq(r.tabSwitchTop, true, "switching tabs starts at the top");
+});
+
 test("desktop: responsive month/week at narrow widths", { width: 360 }, async ({ page }) => {
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "month"));
 	await page.waitForTimeout(200);
