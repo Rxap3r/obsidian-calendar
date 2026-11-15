@@ -446,7 +446,10 @@ export class CalendarStore extends Events {
 		const now = new Date();
 		const h = hour ?? (dayDiff(now, day) === 0 ? Math.min(now.getHours() + 1, 23) : 9);
 		const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, minute);
-		return { start, end: addMinutes(start, this.settings.defaultEventDuration) };
+		let end = addMinutes(start, this.settings.defaultEventDuration);
+		// Late in the evening: keep the suggested event on the same day (23:00–23:59, not –00:00 next day).
+		if (dayDiff(start, end) !== 0) end = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59);
+		return { start, end };
 	}
 }
 

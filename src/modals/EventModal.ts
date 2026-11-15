@@ -182,6 +182,12 @@ export class EventModal extends Modal {
 		new Setting(contentEl).setName("All day").addToggle((t) =>
 			t.setValue(this.allDay).onChange((v) => {
 				this.allDay = v;
+				// A timed event ending at midnight (e.g. Mon 23:00 – Tue 00:00) doesn't touch the next
+				// day. As an all-day event it is only Monday – all-day end dates are inclusive.
+				if (v && this.endTime === "00:00" && this.endDate > this.startDate) {
+					this.endDate = toDateKey(addDays(parseLocal(this.endDate), -1));
+					this.dateFields.end?.setValue(this.endDate);
+				}
 				this.refreshVisibility();
 			})
 		);
