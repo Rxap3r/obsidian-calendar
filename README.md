@@ -161,6 +161,7 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
 - **In the sidebar:** ribbon menu → **Show tasks in sidebar**, or *Settings → Omni Calendar → **Tasks** → Tasks in sidebar*.
   - This is independent of the mini calendar / day planner, so you can have both.
   - It uses the same side as "Calendar in sidebar".
+  - The **⤢ button** at the top of the sidebar version opens the full Tasks page with the same list. The sidebar version stays where it is.
 
 **The Tasks page:**
 - **Lists on the left.** On the phone and in the sidebar, they become a bar at the top that you swipe sideways.

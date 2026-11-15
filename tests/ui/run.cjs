@@ -469,6 +469,27 @@ test("desktop: tasks sidebar toggle, main switch, menu entries, settings tab", {
 	await shot(page, "settings-tab-tasks");
 });
 
+test("desktop: tasks in the sidebar – button opens the Tasks page with the same list", {}, async ({ page }) => {
+	const r = await page.evaluate(async () => {
+		const side = await mountTasks({ side: true });
+		side.select("tomorrow");
+		const out = { mainHasBtn: null };
+		const btn = side.contentEl.querySelector(".ch-tasks-open-full");
+		out.sideHasBtn = !!btn;
+		out.narrow = side.contentEl.querySelector(".ch-tasks").classList.contains("ch-narrow");
+		btn.click(); await new Promise((r) => setTimeout(r, 50));
+		const main = plugin.app.workspace.getLeavesOfType("omni-calendar-tasks").filter((l) => !plugin.isInSidebar(l));
+		out.mainOpened = main.length;
+		out.mainList = main[0]?.getViewState().state.list ?? null;
+		out.sideKept = plugin.sidebarLeaves("omni-calendar-tasks").length;
+		return out;
+	});
+	eq(r, { mainHasBtn: null, sideHasBtn: true, narrow: true, mainOpened: 1, mainList: "tomorrow", sideKept: 1 }, "open full Tasks page from sidebar");
+	await page.locator("#side").screenshot({ path: path.join(SHOTS, "tasks-sidebar.png") });
+	await page.evaluate(() => mountTasks());
+	eq(await page.$$eval("#main .ch-tasks-open-full", (e) => e.length), 0, "no such button on the full page");
+});
+
 test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mobile: true }, async ({ page }) => {
 	await seedTasks()(page);
 	// Obsidian's mobile theme gives buttons padding and a minimum size – that made the checkboxes oval.

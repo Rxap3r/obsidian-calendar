@@ -66,6 +66,10 @@ export class TasksView extends ItemView {
 		this.contentEl.addClass("ch-tasks-view");
 		this.rootEl = this.contentEl.createDiv({ cls: "ch-tasks" });
 		this.registerEvent(this.plugin.tasks.on("changed", () => this.queueRender()));
+		// Moved between sidebar and main area: show / hide the "open Tasks page" button.
+		this.registerEvent(this.app.workspace.on("layout-change", () => {
+			if (this.inSidebar() !== this.rootEl.hasClass("ch-in-sidebar")) this.render();
+		}));
 		const ro = new ResizeObserver(() => {
 			const n = this.contentEl.clientWidth > 0 && this.contentEl.clientWidth < NARROW;
 			if (n !== this.narrow) {
@@ -101,6 +105,14 @@ export class TasksView extends ItemView {
 		});
 	}
 
+	private inSidebar(): boolean {
+		try {
+			return this.plugin.isInSidebar(this.leaf);
+		} catch {
+			return false;
+		}
+	}
+
 	private listName(id: string): string {
 		return SMART_LISTS.find((s) => s.id === id)?.name ?? this.plugin.tasks.lists.find((l) => l.id === id)?.name ?? "Tasks";
 	}
@@ -118,6 +130,7 @@ export class TasksView extends ItemView {
 		const scroll = this.rootEl.querySelector(".ch-tasks-main")?.scrollTop ?? 0;
 		this.rootEl.empty();
 		this.rootEl.toggleClass("ch-narrow", this.narrow);
+		this.rootEl.toggleClass("ch-in-sidebar", this.inSidebar());
 
 		if (!this.plugin.settings.tasksEnabled) {
 			this.rootEl.createDiv({ cls: "ch-empty ch-tasks-off", text: "Tasks are turned off. Turn them on in Settings → Omni Calendar → Tasks." });
@@ -189,13 +202,19 @@ export class TasksView extends ItemView {
 			setIcon(more, "more-horizontal");
 			more.onclick = (e) => this.listMenu(userList, e);
 		}
+		if (this.inSidebar()) {
+			// Like the day planner's ⤢: open the full Tasks page with the same list.
+			const full = head.createEl("button", { cls: "ch-icon-btn ch-tasks-open-full", attr: { "aria-label": "Open Tasks page" } });
+			setIcon(full, "maximize-2");
+			full.onclick = () => void this.plugin.openTasks(this.selected);
+		}
 		const add = head.createEl("button", { cls: "mod-cta ch-tasks-new", attr: { "aria-label": "New task" } });
 		setIcon(add.createSpan({ cls: "ch-btn-icon" }), "plus");
 		add.createSpan({ cls: "ch-new-label", text: "New task" });
 		add.onclick = () => new TaskModal(this.plugin, undefined, this.defaultsForList()).open();
 
 		if (id !== "done") {
-			const quick = main.createEl("input", { type: "text", cls: "ch-input ch-tasks-quick", attr: { placeholder: `Add a task to “${this.listName(id)}” and press Enter` } });
+			const quick = main.createEl("input", { type: "text", cls: "ch-input ch-tasks-quick", attr: { placeholder: this.narrow ? "Add a task…" : `Add a task to “${this.listName(id)}” and press Enter` } });
 			quick.addEventListener("keydown", (e) => {
 				if (e.key !== "Enter") return;
 				e.preventDefault();
