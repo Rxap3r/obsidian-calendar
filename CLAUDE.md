@@ -209,6 +209,12 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     button: inline editing of only the event description or task notes (Save/Cancel), never triggered by just clicking
     the text. For remote events, save to Google/Outlook. The open points (quick actions in the view,
     the "click opens" setting) were suggested but not yet confirmed. Ask the maintainer before building.
+  - **Progress log for tasks (with the details view):**
+    - a task gets timestamped log entries (text + date/time), added via an input + send;
+    - entries are shown oldest first, newest at the bottom, like sticky notes;
+    - it's separate from subtasks;
+    - suggested (to confirm): adding entries in the details view, a "📝 n" hint in lists, edit/delete of entries, and maybe events later.
+    - Store them in the task (e.g. `log: { at: number; text: string }[]`) and validate in `normalizeTaskData`.
   - **1.9:** repeating tasks, and per-occurrence tasks on repeating events. A repeating task stays ONE item; completed occurrences are small "done on date" entries, not copies (agreed, to keep Done uncluttered).
   - **Completed tasks (1.7.5):**
     - Done shows the last `tasksDoneVisibleDays` (default 30, -1 = everything), with "Show older";

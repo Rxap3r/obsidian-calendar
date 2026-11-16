@@ -613,6 +613,16 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
   - a setting *"Clicking opens: Details view (default) / Edit dialog directly"*;
   - right-click / long-press still offers *Edit* directly.
 
+**Planned with the details view: progress log for tasks (maintainer's idea)**
+- Each task gets a **log** section: type what you've already done or what happened, then **send** it.
+- Each entry stays in the task like a **sticky note** with **date and time**. New entries go **below** the older ones, so the history reads top to bottom.
+- It's different from subtasks: those are things *to do*, the log records what was *done*.
+- **Suggested, not yet confirmed:**
+  - adding entries also works in the details view without "Edit";
+  - a small "📝 3" hint in the task list;
+  - entries can be corrected or deleted (the original time stays);
+  - maybe the same log for events later; tasks first.
+
 **Step 3 – version 1.9: repeating**
 - **Repeating tasks**, each occurrence ticked off separately. A repeating task stays **one** task: each completed occurrence is only a small "done on …" entry, not a copy, so Done doesn't fill up with duplicates.
 - **Tasks on repeating events:** the event's task list works as a template, and each occurrence has its own ticks. Ticking one off on 14 Nov doesn't tick it off on 21 Nov.
