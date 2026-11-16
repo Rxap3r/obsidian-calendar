@@ -51,7 +51,11 @@ npm test             # build + tests/sync (Node) + tests/ui (headless Chromium) 
   which attaches `main.js`, `manifest.json` and `styles.css` to a GitHub release. BRAT installs from that.
 - `main.js` and `dist/` are git-ignored build output.
 - **GitHub check** (`.github/workflows/ci.yml`): every push builds and runs both test suites. Playwright is installed there only for
-  the run; it is not in `package.json`.
+  the run; it is not in `package.json`. The downloaded browser is kept in GitHub's Actions cache (version `1.63.0`, set in two
+  places in `ci.yml`). After pushing, check that the run passed (Actions tab / `actions_list`), not only the local run.
+- **UI tests run one at a time on purpose.** Running them in parallel was discussed and the maintainer declined it
+  (fear of false failures); don't bring it back unless asked. Tests that type into a dialog must wait ~100 ms after
+  opening it (the dialog focuses the title first), and drag tests must wait until the grid has stopped scrolling.
 - The type check is strict and also fails on unused variables and imports (`tsconfig.json`).
 
 ## Architecture (src/)
@@ -129,6 +133,12 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
   event are in `LocalEvent.links`; those of Google/Outlook/ICS events and of single repeats are in `data.eventLinks[key]`.
   Both are stored only in Obsidian, never sent to the providers. The old `notePath` is migrated into `links` on load.
   Tasks of an event without a time are not counted in the calendar's day counter (the event shows "2/5" instead).
+  - **Deleting an event deletes its tasks** (after asking when it has any; `deleteEvent` in `modals/confirmations.ts`,
+    `CalendarStore.keysForDelete`). Moving an event to another calendar re-keys its tasks and notes (`createRemote`
+    returns the new key). Tasks whose event is gone are marked and offer keep-without-event / delete.
+  - **Tasks follow their event's day** (`TaskStore.followEvents`, run on every `store` change): shifted by the same
+    number of days, times kept. Not for repeats / ICS (keyed by their day).
+  - **New-event dialog** collects tasks and notes in memory and attaches them on Save to the first saved copy only.
 - `data.json` shape. When changing settings, add a migration in `normalizePluginData` (`settingsData.ts`; see `sidebarOnStartup` → `sidebarView`).
 - Command ids (`commands.ts`). Users' hotkeys are stored by them; a test checks the list.
 
@@ -271,3 +281,18 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
   - an in-app pop-up on mobile;
   - reminders stored in Google/Outlook for real phone notifications.
 - Other ideas are in the README roadmap.
+
+## Where we stopped (keep this section up to date at the end of a session)
+
+- **Released:** 1.8.0 (PR #28) and 1.8.1 (PR #29) were merged by the maintainer.
+- **On `dev-branch`, not released:** version **1.8.2** – tasks move with their event; drag-to-create across days in the
+  week view; cached test browser in the GitHub check. See *Not released yet* in `CHANGELOG.md`. Open a PR only when
+  the maintainer says "pull it".
+- **Waiting for the maintainer to test on desktop and phone:** creating a Google/Outlook event with tasks in the new-event
+  dialog (relies on the real service returning the new id); moving events with tasks between Obsidian and Google;
+  multi-day drag to create; tasks following a moved event.
+- **Decisions from the maintainer (1.8.x):**
+  - subtasks on event tasks are shown in the event dialog (not forbidden);
+  - event tasks go to the default task list; no list picker in the event's quick add (would be clutter);
+  - tasks of a deleted event are deleted with it.
+- **Next planned feature:** the details view for events and tasks (see Roadmap above and the README roadmap), then 1.9.
