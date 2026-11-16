@@ -17,6 +17,22 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
   the mouse position, so grabbing it in the middle moved it too far. Now a preview block in the event's colour shows
   exactly where it will land, with the new time (e.g. *14:15 – 15:45*), snapping to the nearest 15 minutes.
 
+- **Repeating events that started many years ago keep showing up.** A daily event used to disappear after about
+  13 years (5000 repeats). Long-running series are also no longer counted through from their first day on every redraw.
+
+- **"Refresh external calendars" command** now says when some calendars failed, like the refresh button in the
+  calendar toolbar already did.
+
+- **Deleting a local calendar with events** asks in the plugin's own dialog instead of the browser's box,
+  like every other question does.
+
+- **Sidebar setting keeps following the sidebar** even after a "Move to sidebar" that failed halfway. Before, it
+  stopped following manual changes until Obsidian was restarted.
+
+- **Internal clean-up, nothing looks different:** the largest files were split into smaller ones by topic and
+  repeated code was merged (see the Architecture table in `CLAUDE.md`). The automatic check on GitHub now also
+  runs the tests, and the code check is stricter.
+
 ## Known bugs
 
 - *(none right now)*

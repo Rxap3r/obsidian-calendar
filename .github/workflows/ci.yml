@@ -1,4 +1,4 @@
-name: Build
+name: Build and test
 
 on:
   push:
@@ -17,3 +17,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Sign-in and connector tests
+        run: npm run test:sync
+      # The UI tests drive a headless Chromium with Playwright. It is installed only for this run
+      # (it is a test tool, not a dependency of the plugin). See tests/README.md.
+      - name: Install the test browser
+        run: |
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: UI tests
+        run: npm run test:ui
+      - name: Keep the screenshots of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-screenshots
+          path: tests/.out/shots/
+          if-no-files-found: ignore

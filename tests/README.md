@@ -11,7 +11,8 @@ npm run test:ui -- mobile   # only UI tests whose name contains "mobile"
 ```
 
 Requirements: `npm install`, plus **Playwright with Chromium**. In Claude Code's cloud environment it is
-pre-installed. Locally you can use `npm i -D playwright && npx playwright install chromium`.
+pre-installed. Locally you can use `npm i --no-save playwright && npx playwright install chromium`.
+On GitHub, every push runs both suites (`.github/workflows/ci.yml`); screenshots of failed tests are attached to the run.
 
 ## `tests/sync/` (Node)
 
@@ -40,11 +41,11 @@ pre-installed. Locally you can use `npm i -D playwright && npx playwright instal
 
   | File | Covers |
   | --- | --- |
-  | `data.cjs` | ICS parsing, local recurrence, task data normalisation |
+  | `data.cjs` | ICS parsing, local recurrence, loading and checking settings and task data |
   | `calendar.cjs` | month/week/day/agenda, drag & drop, touch, narrow layouts, month times |
   | `events.cjs` | event dialog, Google/Outlook edits, several target calendars, all-day edge cases |
   | `sidebar.cjs` | mini calendar, day planner, sidebar settings, ribbon menu |
-  | `settings.cjs` | settings tabs and tab bar, scroll position, period settings |
+  | `settings.cjs` | settings tabs and tab bar, scroll position, period settings, deleting calendars, commands |
   | `pickers.cjs` | own date/time pickers, dialog focus rules (tablet keyboard bugs) |
   | `tasks.cjs` | Tasks page, task dialog, lists, completed tasks, tasks sidebar |
 
@@ -75,7 +76,8 @@ Globals in the page:
 - `lastModal`, `lastMenu`, `notices`, `__Platform`;
 - **tasks:** `mountTasks({ side? })` creates a Tasks page in `#main` or `#side` and sets `tasksView`; `TaskModal`;
   `vaultNotes` (fake notes for linking); `openedFile` (the last note opened);
-- **modules:** `__timeMod` (date/time pickers, `parseTimeInput`), `__eventMod` (`EventModal`), `__dateMod` (date helpers).
+- **modules:** `__timeMod` (date/time pickers, `parseTimeInput`), `__eventMod` (`EventModal`), `__dateMod` (date helpers);
+- **plugin parts:** `plugin.sidebar` (sidebar placement), `plugin.commands` (the registered commands, to run or check them).
 
 The test page uses Obsidian's real layer values: modal 50, menu 65.
 Some tests imitate Obsidian's dialog focus trap: focus that leaves the dialog is pulled back to the title. Use them

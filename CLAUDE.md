@@ -50,32 +50,48 @@ npm test             # build + tests/sync (Node) + tests/ui (headless Chromium) 
 - **Release:** pushing a tag equal to `manifest.json`'s version (no `v` prefix) runs `.github/workflows/release.yml`,
   which attaches `main.js`, `manifest.json` and `styles.css` to a GitHub release. BRAT installs from that.
 - `main.js` and `dist/` are git-ignored build output.
+- **GitHub check** (`.github/workflows/ci.yml`): every push builds and runs both test suites. Playwright is installed there only for
+  the run; it is not in `package.json`.
+- The type check is strict and also fails on unused variables and imports (`tsconfig.json`).
 
 ## Architecture (src/)
 
+Files are kept small on purpose: when a file grows past roughly 300–400 lines, split it by topic like the folders below.
+Shared helpers live in one place. Before writing a small helper (error text, plural, colour, date maths), check
+`util.ts`, `dateUtils.ts`, `periods.ts`, `defaults.ts` and `views/shared.ts`.
+
 | File | Purpose |
 | --- | --- |
-| `main.ts` | Plugin entry: views, commands, ribbon icon + calendar menu, sidebar logic (`applySidebar`, `syncSidebarSetting`), settings loading and migrations (`loadPluginData`), notes, .ics export, `omni-calendar` code block |
+| `main.ts` | Plugin entry: start-up, ribbon icon + calendar menu, opening pages (`openCalendar`, `openTasks`), `persist`, refresh timer, event notes |
+| `commands.ts` | All commands (`registerCommands`). The ids must stay stable |
+| `sidebar.ts` | `SidebarManager` (`plugin.sidebar`): mini calendar, day planner and Tasks in the sidebar (`apply`, `applyTasks`, `toggle`, `expand`, `syncSetting`) |
+| `settingsData.ts` | `normalizePluginData`: loading and checking `data.json`, defaults, **migrations** |
+| `defaults.ts` | `DEFAULT_SETTINGS`, `PALETTE`, `nextColor` |
 | `types.ts` | All data types (`OmniCalendarSettings`, `LocalEvent`, `CalendarSource`, `Account`, `CalendarOccurrence`, …) |
 | `store.ts` | Data layer: local events + recurrence expansion, ICS fetching/caching, remote (Google/Outlook) events, writes (`createRemote`, `updateRemote`, `deleteRemote`, `moveOccurrence`), change events |
-| `ics.ts` | ICS parsing via ical.js (time zones incl. Windows names, RRULE, exceptions), `.ics` export |
+| `ics.ts`, `icsExport.ts` | ICS parsing via ical.js (time zones incl. Windows names, RRULE, exceptions); `.ics` export of local events |
 | `sync/oauth.ts` | OAuth 2.0 authorization code + PKCE, loopback redirect server, manual paste fallback, token refresh |
 | `sync/accounts.ts` | Connected accounts, tokens in Obsidian SecretStorage, refresh, sign-out/revoke, calendar list → sources |
 | `sync/providers.ts` | Google Calendar API + Microsoft Graph connectors (list/create/update/delete events) |
 | `sync/http.ts` | Authenticated requests (host allow-list, 401 retry, readable errors) |
 | `sync/builtin.ts` | Built-in app registrations (see Security) |
-| `views/CalendarView.ts` | Full calendar: month (grid, or compact grid when narrow), week/day time grid (swipe mode when narrow), agenda, toolbar, drag & drop, touch gestures, responsive layout |
+| `sync/setupGuides.ts` | The explanation texts of the sign-in dialog (text only) |
+| `views/OmniView.ts` | Base of the three views: `queueRender`, `inSidebar` |
+| `views/viewTypes.ts` | The view type ids |
+| `views/CalendarView.ts` | Calendar / day planner, the frame only: toolbar, navigation, filter, responsive layout switch |
+| `views/calendar/` | What the calendar draws: `month.ts` (grid + compact grid), `timeGrid.ts` (week/day, sideways-scrolling week), `agenda.ts`, `eventDrag.ts` (drag & drop + preview), `slotSelection.ts` (press/drag to create, touch gestures), `layout.ts` (sizes, overlapping events), `host.ts` (what they need from the view) |
 | `views/MiniCalendarView.ts` | Sidebar mini calendar |
-| `views/shared.ts` | Event chips, context menu, open event |
+| `views/AgendaBlock.ts` | The `omni-calendar` code block |
+| `views/shared.ts` | Event chips, context menu, open event, day-cell marking |
 | `tasks.ts` | Task data layer (`TaskStore`): lists, smart lists, grouping/sorting, link rename/delete, `normalizeTaskData` |
-| `views/TasksView.ts` | Tasks page (`omni-calendar-tasks`): list nav (bar when narrow), groups, quick add, task rows, menus, `ListModal` |
-| `modals/TaskModal.ts`, `NotePickerModal.ts` | Task dialog (priority, date, time range, subtasks, linked notes); vault note search with "create note" |
-| `timePicker.ts` | Own `DateField` (month calendar) and `TimeField` (15-minute list, typing), shared pop-up helpers, `keepFocusOnTap` |
-| `modals/EventModal.ts` | Create/edit dialog (local + remote, multi-calendar "Save to") |
-| `modals/SignInModal.ts` | Account connection (quick sign-in or own app registration, setup guides) |
-| `modals/EventDetailsModal.ts`, `ConfirmModal.ts` | Read-only details, confirmations |
-| `settings.ts` | Settings tab with five tabs: Calendars, Google & Outlook, Display, Tasks, Notes |
-| `notes.ts`, `dateUtils.ts` | Event notes + template, date helpers |
+| `views/TasksView.ts`, `views/tasks/` | Tasks page (`omni-calendar-tasks`): list nav (bar when narrow), groups, quick add; `tasks/taskRow.ts` (one task + its menu), `tasks/helpers.ts` |
+| `modals/TaskModal.ts`, `ListModal.ts`, `NotePickerModal.ts` | Task dialog (priority, date, time range, subtasks, linked notes); list name + colour; vault note search with "create note" |
+| `pickers/` | Own `DateField` (month calendar) and `TimeField` (15-minute list, typing); `popup.ts` has the shared pop-up helpers and `keepFocusOnTap` |
+| `modals/EventModal.ts`, `eventForm.ts` | Create/edit dialog (local + remote, multi-calendar "Save to"); `eventForm.ts` fills its fields |
+| `modals/SignInModal.ts` | Account connection (quick sign-in or own app registration) |
+| `modals/EventDetailsModal.ts`, `ConfirmModal.ts`, `confirmations.ts` | Read-only details; yes/no dialog; the shared "delete Google/Outlook event" and "delete list" questions |
+| `settings/` | Settings window: `SettingTab.ts` (tab bar), one file per tab (`calendarsTab`, `accountsTab`, `displayTab`, `tasksTab`, `notesTab`), `controls.ts` (`periodSetting`, `numberSetting`, calendar row) |
+| `notes.ts`, `dateUtils.ts`, `periods.ts`, `util.ts` | Event notes + template; date helpers; period choices and wording; error text, plural, clamp |
 
 CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS variables only, so it supports light/dark mode and themes.
 
@@ -105,11 +121,12 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
   duplicate buttons for users.
 - View types `omni-calendar-view`, `omni-calendar-mini`, the code block language `omni-calendar`, and secret IDs
   `omni-calendar-<accountId>-rt|cs`.
-- `data.json` shape. When changing settings, add a migration in `loadPluginData` (see `sidebarOnStartup` → `sidebarView`).
+- `data.json` shape. When changing settings, add a migration in `normalizePluginData` (`settingsData.ts`; see `sidebarOnStartup` → `sidebarView`).
+- Command ids (`commands.ts`). Users' hotkeys are stored by them; a test checks the list.
 
 ## Dialog and picker rules (learned from tablet bugs – don't regress)
 
-- **Dates and times** in any dialog use the plugin's own `DateField` and `TimeField` (`src/timePicker.ts`), never
+- **Dates and times** in any dialog use the plugin's own `DateField` and `TimeField` (`src/pickers/`), never
   `<input type="date|time">`. Native pickers differ per device, and Android's clock dialog was cut off on a tablet.
   New date or time fields must use them too.
   - The `TimeField` list uses 15-minute steps. End fields get `after:` (times after the start, with durations).
@@ -128,7 +145,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 | What | Where | Fallback |
 | --- | --- | --- |
-| `leaf.parent.selectTab(leaf)` to show a sidebar tab without opening the sidebar | `main.ts` `selectSidebarTab` | `revealLeaf` on desktop |
+| `leaf.parent.selectTab(leaf)` to show a sidebar tab without opening the sidebar | `sidebar.ts` `selectTab` | `revealLeaf` on desktop |
 | `leaf.updateHeader()` to refresh the tab title ("Calendar" ↔ "Day planner") | `CalendarView.updateLocationButton` | – |
 | `app.setting.open()` / `openTabById()` for the menu's "Settings" entry | `main.ts` `openSettings` | – |
 
@@ -167,7 +184,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
   reachable by tapping, for example through the dialog.
 - **UI names (use them everywhere, incl. tab titles via `getDisplayText`):** **Calendar** = full page in the main area, **Mini calendar** = `omni-calendar-mini`, **Day planner** = `omni-calendar-view` in a sidebar (setting value `full`; opens in `sidebarCalendarMode`, default Day). Avoid "full calendar".
 - Narrow layouts:
-  - month → compact 7-column grid (bars, or dots when very narrow) + the selected day's list (`renderMonthCompact`);
+  - month → compact 7-column grid (bars, or dots when very narrow) + the selected day's list (`renderMonthCompact` in `views/calendar/month.ts`);
   - week → the whole week, swiped day by day (`.ch-tg-hscroll`, header cells shifted via `--ch-sx`) with a week bar;
   - the settings tab bar scrolls sideways.
 
@@ -237,7 +254,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - Done shows the last `tasksDoneVisibleDays` (default 30, -1 = everything), with "Show older";
     - "Clear completed";
     - optional automatic delete after `tasksDeleteDoneAfterDays` (0 = never, the default).
-    - Period settings use `periodSetting()` in settings.ts. Use it for any new "how long / how far" setting.
+    - Period settings use `periodSetting()` in `settings/controls.ts`. Use it for any new "how long / how far" setting.
       Every such setting must offer the **same** `STANDARD_PERIODS` (7d, 2w, 30d, 60d, 90d, 6mo, 1y), plus setting-specific extras and "Custom…". The maintainer asked for this uniformity, and a test checks it.
   - **Later:** Microsoft To Do sync (`Tasks.ReadWrite`, re-consent needed), Google Tasks, task reminders.
 - **After Tasks: reminders and notifications.** See the README roadmap for the agreed design:

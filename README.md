@@ -522,17 +522,26 @@ Project layout:
 
 ```
 src/
-  main.ts                 plugin entry: views, commands, code block, export
-  store.ts                local events, recurrence expansion, ICS fetching and caching
-  ics.ts                  ICS parsing (ical.js), time zones, recurrence, .ics export
-  settings.ts             settings tab
+  main.ts                 plugin entry: start-up, ribbon and menu, opening pages, notes
+  commands.ts             commands for the command palette
+  sidebar.ts              mini calendar, day planner and Tasks in the sidebar
+  settingsData.ts         loading and checking data.json, migrations
+  defaults.ts             default settings, colour palette
+  store.ts                events: local (with repeats), ICS subscriptions, Google / Outlook
+  tasks.ts                tasks and task lists
+  ics.ts, icsExport.ts    ICS parsing (ical.js, time zones, repeats) and .ics export
   notes.ts                event → note creation and template
-  dateUtils.ts            date helpers
-  views/CalendarView.ts   full-page month/week/day/agenda view
-  views/MiniCalendarView.ts sidebar calendar
+  dateUtils.ts, periods.ts, util.ts   small helpers
+  sync/                   Google / Outlook sign-in and connectors
+  settings/               settings window: one file per tab, shared controls
+  pickers/                own date and time fields
+  views/CalendarView.ts   calendar page / day planner (frame: toolbar, navigation)
+  views/calendar/         month, week/day, agenda, drag & drop
+  views/MiniCalendarView.ts  mini calendar
+  views/TasksView.ts, views/tasks/   Tasks page
+  views/AgendaBlock.ts    the omni-calendar code block
   views/shared.ts         event chips, context menu
-  modals/EventModal.ts    create/edit dialog
-  modals/EventDetailsModal.ts details for external events
+  modals/                 dialogs: event, task, list, sign-in, details, confirmations
 ```
 
 ### Releasing a new version (needed for BRAT)
