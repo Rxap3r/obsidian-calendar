@@ -1,5 +1,5 @@
 import { Menu, setIcon } from "obsidian";
-import { deleteRemoteEvent } from "../modals/confirmations";
+import { deleteEvent } from "../modals/confirmations";
 import type OmniCalendarPlugin from "../main";
 import { CalendarOccurrence } from "../types";
 import { formatTime, formatTimeRange, isSameDay, toDateKey } from "../dateUtils";
@@ -71,15 +71,15 @@ export function occurrenceMenu(plugin: OmniCalendarPlugin, occ: CalendarOccurren
 		);
 		if (occ.recurring && occ.occurrenceDate) {
 			menu.addItem((i) =>
-				i.setTitle("Delete this occurrence").setIcon("calendar-x").onClick(() => plugin.store.excludeOccurrence(id, occ.occurrenceDate as string))
+				i.setTitle("Delete this occurrence").setIcon("calendar-x").onClick(() => void deleteEvent(plugin, occ, false))
 			);
 		}
 		menu.addItem((i) =>
-			i.setTitle(occ.recurring ? "Delete all occurrences" : "Delete").setIcon("trash").setWarning(true).onClick(() => plugin.store.deleteEvent(id))
+			i.setTitle(occ.recurring ? "Delete all occurrences" : "Delete").setIcon("trash").setWarning(true).onClick(() => void deleteEvent(plugin, occ, true))
 		);
 	}
 	if (!occ.readOnly && occ.remote) {
-		const del = (series: boolean) => void deleteRemoteEvent(plugin, occ, series);
+		const del = (series: boolean) => void deleteEvent(plugin, occ, series);
 		menu.addSeparator();
 		if (occ.recurring) menu.addItem((i) => i.setTitle("Delete this occurrence").setIcon("calendar-x").onClick(() => del(false)));
 		menu.addItem((i) => i.setTitle(occ.recurring ? "Delete series" : "Delete").setIcon("trash").setWarning(true).onClick(() => del(occ.recurring)));

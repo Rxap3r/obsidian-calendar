@@ -16,6 +16,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.8.1** – Subtasks of event tasks shown in the event dialog; deleting an event deletes its tasks (after asking);
+  moving an event to another calendar keeps its tasks and notes; tasks and notes can be added while creating an event;
+  tasks whose event is gone are marked and can be kept or deleted.
 - **1.8.0** – Tasks on events (with *2/5* progress on the event), several linked notes per event (also Google,
   Outlook and ICS, kept only in Obsidian), tasks in the calendar (light time blocks you can drag, one counter per
   day), *Tasks today* in the mini calendar, three new task settings for the calendar.

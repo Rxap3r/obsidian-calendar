@@ -52,12 +52,14 @@ export function renderTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t
 		m.appendText(list.name);
 	}
 	if (t.event) {
-		const m = meta.createSpan({ cls: "ch-task-meta-event", attr: { "aria-label": "Open event", title: t.event.title } });
+		const gone = store.eventGone(t);
+		const m = meta.createSpan({ cls: "ch-task-meta-event", attr: { "aria-label": gone ? "Event deleted" : "Open event", title: gone ? `${t.event.title} (deleted)` : t.event.title } });
+		m.toggleClass("is-gone", gone);
 		setIcon(m.createSpan({ cls: "ch-task-meta-icon" }), "calendar");
 		m.appendText(t.event.title || "Event");
 		m.onclick = (e) => {
 			e.stopPropagation();
-			openTaskEvent(plugin, t, (occ) => openOccurrence(plugin, occ));
+			void openTaskEvent(plugin, t, (occ) => openOccurrence(plugin, occ));
 		};
 	}
 	if (t.subtasks.length) {

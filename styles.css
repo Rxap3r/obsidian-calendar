@@ -648,8 +648,16 @@
 .ch-event-task-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ch-event-task.is-done .ch-event-task-title { text-decoration: line-through; color: var(--text-muted); }
 .ch-event-task-when { flex: none; font-size: 0.8em; color: var(--text-muted); }
+.ch-event-task-subcount { flex: none; display: inline-flex; align-items: center; gap: 2px; font-size: 0.8em; color: var(--text-muted); cursor: pointer; }
+.ch-event-task-subcount:hover { color: var(--text-normal); }
+.ch-event-subtasks { --ch-event-color: var(--interactive-accent); display: flex; flex-direction: column; gap: 2px; margin: 0 0 4px 28px; }
+.ch-event-subtask { display: flex; align-items: center; gap: 8px; font-size: 0.9em; }
+.ch-event-subtask-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-event-subtask.is-done .ch-event-subtask-title { text-decoration: line-through; color: var(--text-muted); }
 .ch-event-extras .ch-event-task-add { display: block; width: 100%; max-width: none; box-sizing: border-box; margin-top: 4px; }
 .ch-extras-hint { margin-top: 10px; }
+.ch-draft-task { cursor: default; }
+.ch-draft-check { border-style: dashed; opacity: 0.6; cursor: default; }
 .ch-task-hint {
 	display: inline-flex; align-items: center; gap: 2px; flex: none; margin-left: 4px;
 	font-size: 0.85em; font-weight: normal; opacity: 0.85; white-space: nowrap; vertical-align: middle;
@@ -659,6 +667,7 @@
 .ch-task-hint.is-complete { opacity: 0.6; }
 .ch-task-meta-event { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ch-task-meta-event:hover { color: var(--text-accent); }
+.ch-task-meta-event.is-gone, .ch-task-event-name.is-gone { text-decoration: line-through; color: var(--text-faint); }
 .ch-task-event-name { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 
 /* ---------------------------------------------------------------- tasks in the calendar (1.8) */

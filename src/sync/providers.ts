@@ -19,7 +19,8 @@ export interface CalendarProvider {
 	oauthConfig(account: Account, clientSecret?: string): OAuthProviderConfig;
 	listCalendars(t: TokenGetter): Promise<RemoteCalendarInfo[]>;
 	listEvents(t: TokenGetter, calendarId: string, from: Date, to: Date): Promise<RemoteEvent[]>;
-	createEvent(t: TokenGetter, calendarId: string, input: EventInput): Promise<void>;
+	/** Returns the new event's id at the provider (undefined if the answer had none). */
+	createEvent(t: TokenGetter, calendarId: string, input: EventInput): Promise<string | undefined>;
 	updateEvent(t: TokenGetter, calendarId: string, eventId: string, input: EventInput, etag?: string): Promise<void>;
 	deleteEvent(t: TokenGetter, calendarId: string, eventId: string, etag?: string): Promise<void>;
 	/** Revoke a refresh token (best effort). */
@@ -144,11 +145,12 @@ export const GoogleProvider: CalendarProvider = {
 	},
 
 	async createEvent(t, calendarId, input) {
-		await apiRequest(t, {
+		const created = await apiRequest(t, {
 			url: `${GOOGLE_API}/calendars/${enc(calendarId)}/events`,
 			method: "POST",
 			body: googleBody(input, false),
 		});
+		return typeof created?.id === "string" ? created.id : undefined;
 	},
 
 	async updateEvent(t, calendarId, eventId, input, etag) {
@@ -282,11 +284,12 @@ export const OutlookProvider: CalendarProvider = {
 	},
 
 	async createEvent(t, calendarId, input) {
-		await apiRequest(t, {
+		const created = await apiRequest(t, {
 			url: `${GRAPH}/me/calendars/${enc(calendarId)}/events`,
 			method: "POST",
 			body: graphBody(input),
 		});
+		return typeof created?.id === "string" ? created.id : undefined;
 	},
 
 	async updateEvent(t, _calendarId, eventId, input, etag) {

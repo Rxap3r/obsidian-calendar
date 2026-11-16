@@ -136,6 +136,36 @@ export class TaskStore extends Events {
 		return this.byEvent.map.get(key) ?? [];
 	}
 
+	/** Tasks of the events whose key matches (see `CalendarStore.keysForDelete`). */
+	forEvents(match: (key: string) => boolean): Task[] {
+		return this.items.filter((t) => t.event && match(t.event.key));
+	}
+
+	/** The event was deleted: its tasks go with it. Returns how many were deleted. */
+	async removeForEvents(match: (key: string) => boolean): Promise<number> {
+		const before = this.items.length;
+		this.data.items = this.items.filter((t) => !t.event || !match(t.event.key));
+		const n = before - this.items.length;
+		if (n) await this.save();
+		return n;
+	}
+
+	/** The event was moved to another calendar and got a new key: its tasks move along. */
+	async moveEvent(oldKey: string, newKey: string, title: string, date: string) {
+		const moved = this.items.filter((t) => t.event?.key === oldKey);
+		if (!moved.length) return;
+		for (const t of moved) t.event = { key: newKey, title, date };
+		await this.save();
+	}
+
+	/** True when the task's event is a local event that no longer exists (it was deleted). */
+	eventGone(t: Task): boolean {
+		const local = t.event && /^local:([^@]+)(?:@(.+))?$/.exec(t.event.key);
+		if (!local) return false;
+		const ev = this.plugin.store.getEvent(local[1]);
+		return !ev || (!!local[2] && (!ev.recurrence || !!ev.exdates?.includes(local[2])));
+	}
+
 	/** Keep the event's title and day in its tasks up to date (shown in task lists). */
 	async refreshEventInfo(key: string, title: string, date: string) {
 		const stale = this.items.filter((t) => t.event?.key === key && (t.event.title !== title || t.event.date !== date));

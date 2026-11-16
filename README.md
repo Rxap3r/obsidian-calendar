@@ -232,6 +232,7 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
 **Tasks on events** (new in **1.8**):
 - The event dialog has a **Tasks** section: type a task and press **Enter**, tick it off right there, click it to edit it.
   Right-click an event → **Add task…** does the same.
+- A task's **subtasks** are listed under it in the event dialog and can be ticked off there; click the count (*1/3*) to fold them away.
 - The event then shows the progress, e.g. **☐ 2/5**, in the month, week, day and agenda views and in the mini calendar.
 - A new event task gets the event's day as its date, so it also shows up in *Today*, *Upcoming* and so on.
   In the task lists it shows the event's name; **click the name** to open the event. In the task dialog, the unlink button
@@ -239,7 +240,13 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
 - Works for local, **Google, Outlook and subscribed (ICS)** events. These tasks are kept **only in Obsidian**.
 - On a **repeating event**, tasks belong to the repeat you clicked (e.g. only the meeting on 14 Nov).
   Tasks that repeat with the event are planned for 1.9.
-- Tasks are added once the event is saved; a new event's dialog says so.
+- **A new event** can get its tasks (and linked notes) right away in its dialog. They are attached when you click
+  *Save*; *Cancel* forgets them. Saved to several calendars, they go with **one** copy, the first calendar in *Save to*
+  (the dialog says which). A new repeating event gets them on its first repeat. *Create note* is offered once the event is saved.
+- **Deleting an event deletes its tasks**, after asking (deleting one repeat deletes only that repeat's tasks).
+  Moving an event to another calendar keeps its tasks and linked notes.
+- If an event disappears some other way (e.g. deleted in Google Calendar), its tasks show the event name crossed out
+  (for local events) or say it can't be found. Clicking the name lets you keep the task without the event, or delete it.
 
 **Tasks in the calendar** (new in **1.8**):
 - **Tasks with a time** appear in *Week* and *Day* as **light, dashed blocks** with a tick circle, next to the events.
