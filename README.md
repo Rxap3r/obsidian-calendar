@@ -603,6 +603,10 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
   - **Event:** title, date/time, calendar, location, description, linked notes, and its tasks (with "2/5").
   - **Task:** title, date/time range, list, priority, notes, subtasks, linked notes, and its event.
 - An **Edit** button in the view opens the editing dialog.
+- **Editing only the notes in the view (maintainer's wish):** a small **"Edit notes"** button or link next to the description of an event (and the notes of a task).
+  - It turns that text into an editable field right in the view, with *Save* / *Cancel*. The rest stays read-only.
+  - Not by simply clicking the text, so nothing is changed by accident.
+  - For Google/Outlook events the description is saved there.
 - Google, Outlook and ICS events already have a read-only view; everything gets the same look.
 - **Suggested, not yet confirmed by the maintainer:**
   - quick actions stay possible in the view (tick off the task or a subtask, open a linked note);

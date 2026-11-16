@@ -205,7 +205,9 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
   - **1.7 (done):** Tasks page (full + sidebar), lists, task editing, subtasks, quick add, **linked notes on tasks**, Tasks settings tab, menu entry and commands.
   - **1.8:** calendar integration, tasks on events (dialog section, "2/5" hint), **linked notes on events** (local + remote), "Tasks today" in the mini calendar.
   - **Details view (with 1.8 or right after; see README roadmap):** clicking an event or task opens a large
-    read-only view by default, with an **Edit** button for the edit dialog. The open points (quick actions in the view,
+    read-only view by default, with an **Edit** button for the edit dialog. It also needs a small **"Edit notes"**
+    button: inline editing of only the event description or task notes (Save/Cancel), never triggered by just clicking
+    the text. For remote events, save to Google/Outlook. The open points (quick actions in the view,
     the "click opens" setting) were suggested but not yet confirmed. Ask the maintainer before building.
   - **1.9:** repeating tasks, and per-occurrence tasks on repeating events. A repeating task stays ONE item; completed occurrences are small "done on date" entries, not copies (agreed, to keep Done uncluttered).
   - **Completed tasks (1.7.5):**
