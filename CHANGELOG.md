@@ -4,19 +4,9 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet (1.8.1)
+## Not released yet
 
-- **Subtasks of an event's tasks are visible in the event dialog.** Before, subtasks added in the task dialog were only
-  shown on the Tasks page. Now each task in the event's *Tasks* section shows its subtask progress (e.g. *1/3*) with the
-  subtasks underneath; tick them off right there, or click the count to fold them away.
-- **Deleting an event now deletes its tasks.** Before, they stayed behind with a link to an event that no longer
-  existed. If the event has tasks, you're asked first ("Its 2 tasks will be deleted too"). Deleting one repeat
-  deletes only that repeat's tasks. Linked notes are only unlinked; the notes stay.
-- **Moving an event to another calendar keeps its tasks and linked notes** (e.g. from Obsidian to Google).
-- **Tasks and linked notes in the new-event dialog:** you no longer have to save an event first. What you add there is
-  attached when you click *Save* (Cancel forgets it). With several calendars, they go with the first calendar's copy.
-- **Tasks whose event is gone** (deleted before this fix, or in Google/Outlook directly) show the event name crossed out.
-  Clicking it asks whether to keep the task without the event or delete it.
+- *(nothing yet)*
 
 ## Known bugs
 
@@ -26,6 +16,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.8.1** – Subtasks of event tasks shown in the event dialog; deleting an event deletes its tasks (after asking);
+  moving an event to another calendar keeps its tasks and notes; tasks and notes can be added while creating an event;
+  tasks whose event is gone are marked and can be kept or deleted.
 - **1.8.0** – Tasks on events (with *2/5* progress on the event), several linked notes per event (also Google,
   Outlook and ICS, kept only in Obsidian), tasks in the calendar (light time blocks you can drag, one counter per
   day), *Tasks today* in the mini calendar, three new task settings for the calendar.
