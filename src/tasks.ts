@@ -1,7 +1,7 @@
 import { Events } from "obsidian";
 import type OmniCalendarPlugin from "./main";
 import { SmartListId, Subtask, Task, TaskData, TaskList, TaskPriority } from "./types";
-import { addDays, parseLocal, startOfDay, toDateKey, uid } from "./dateUtils";
+import { addDays, MS_DAY, parseLocal, startOfDay, timeKeyToMinutes, toDateKey, uid } from "./dateUtils";
 
 export const DEFAULT_TASK_LIST: TaskList = { id: "tasks", name: "Tasks", color: "#7c5cff" };
 
@@ -16,7 +16,6 @@ export const SMART_LISTS: { id: SmartListId; name: string; icon: string }[] = [
 ];
 
 export const PRIORITY_NAMES: Record<TaskPriority, string> = { 0: "None", 1: "Low", 2: "Medium", 3: "High" };
-
 
 export interface TaskGroup {
 	key: string;
@@ -59,11 +58,9 @@ export function normalizeTaskData(raw: unknown): TaskData {
 	return { lists, items };
 }
 
-/** "10:30" → minutes since midnight. */
+/** Minutes since midnight; tasks without a time sort after all timed ones. */
 function minutes(hhmm?: string): number {
-	if (!hhmm) return 24 * 60 + 1;
-	const [h, m] = hhmm.split(":").map(Number);
-	return h * 60 + m;
+	return hhmm ? timeKeyToMinutes(hhmm) : 24 * 60 + 1;
 }
 
 /** Priority (high first), then date, then time (timed before untimed), then creation order. */
@@ -190,7 +187,7 @@ export class TaskStore extends Events {
 	splitDone(done: Task[], now = Date.now()): { recent: Task[]; older: Task[] } {
 		const days = this.plugin.settings.tasksDoneVisibleDays;
 		if (days < 0) return { recent: done, older: [] };
-		const limit = now - days * 86400000;
+		const limit = now - days * MS_DAY;
 		const recent: Task[] = [];
 		const older: Task[] = [];
 		for (const t of done) ((t.completedAt ?? now) >= limit ? recent : older).push(t);
@@ -319,7 +316,7 @@ export class TaskStore extends Events {
 /** "Today", "Tomorrow" or e.g. "Wednesday, 18 November". */
 export function dayTitle(date: string, today = startOfDay(new Date())): string {
 	const d = parseLocal(date);
-	const diff = Math.round((startOfDay(d).getTime() - startOfDay(today).getTime()) / 86400000);
+	const diff = Math.round((startOfDay(d).getTime() - startOfDay(today).getTime()) / MS_DAY);
 	if (diff === 0) return "Today";
 	if (diff === 1) return "Tomorrow";
 	if (diff === -1) return "Yesterday";

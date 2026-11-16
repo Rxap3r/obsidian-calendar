@@ -5,8 +5,9 @@ import { providerFor } from "./sync/providers";
 import { ApiError } from "./sync/http";
 import { IcsCalendar, isRemoteUrl, normalizeIcsUrl } from "./ics";
 import {
-	addDays, addMonths, addMinutes, dayDiff, isValidDate, parseLocal, startOfDay, toDateKey, uid,
+	addDays, addMonths, addMinutes, dayDiff, isValidDate, parseLocal, startOfDay, toDateKey, toDateTimeKey, uid,
 } from "./dateUtils";
+import { errorMessage } from "./util";
 
 const MAX_LOCAL_OCCURRENCES = 5000;
 
@@ -62,6 +63,11 @@ export class CalendarStore extends Events {
 		if (source.type === "ics") return "ICS";
 		const acc = this.plugin.accounts.getAccount(source.accountId);
 		return `${source.type === "google" ? "Google" : "Outlook"}${acc?.label ? ` · ${acc.label}` : ""}`;
+	}
+
+	/** The service a connected calendar belongs to, as shown in messages: "Google Calendar" or "Outlook". */
+	serviceName(sourceId: string): string {
+		return this.getSource(sourceId)?.type === "google" ? "Google Calendar" : "Outlook";
 	}
 
 	defaultLocalSource(): CalendarSource {
@@ -398,43 +404,37 @@ export class CalendarStore extends Events {
 		if (occ.allDay) {
 			await this.updateEvent(occ.eventId, { start: toDateKey(start), end: toDateKey(addDays(end, -1)) });
 		} else {
-			const k = (d: Date) => `${toDateKey(d)}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-			await this.updateEvent(occ.eventId, { start: k(start), end: k(end) });
+			await this.updateEvent(occ.eventId, { start: toDateTimeKey(start), end: toDateTimeKey(end) });
 		}
 	}
 
 	async refreshSource(source: CalendarSource): Promise<void> {
-		if (this.isRemoteSource(source)) {
-			this.status.set(source.id, { ...this.status.get(source.id), loading: true, error: undefined });
-			this.notify();
-			try {
-				await this.refreshRemote(source);
-			} catch (e) {
-				const msg = e instanceof Error ? e.message : String(e);
-				console.error(`Omni Calendar: failed to refresh "${source.name}": ${msg}`);
-				this.status.set(source.id, { ...this.status.get(source.id), loading: false, error: msg });
-			}
-			this.notify();
-			return;
-		}
-		if (source.type !== "ics") return;
+		const remote = this.isRemoteSource(source);
+		if (!remote && source.type !== "ics") return;
 		this.status.set(source.id, { ...this.status.get(source.id), loading: true, error: undefined });
 		this.notify();
 		try {
-			const raw = await this.fetchRaw(source);
-			if (!/BEGIN:VCALENDAR/i.test(raw)) {
-				throw new Error("Response is not an iCalendar (.ics) file. Check that you used the ICS / iCal link.");
-			}
-			const cal = new IcsCalendar(source, raw);
-			this.ics.set(source.id, cal);
-			this.status.set(source.id, { lastFetched: Date.now(), eventCount: cal.eventCount, loading: false });
-			if (isRemoteUrl(source.url ?? "")) await this.saveCache(source.id, raw);
+			if (remote) await this.refreshRemote(source);
+			else await this.refreshIcs(source);
 		} catch (e) {
-			const msg = e instanceof Error ? e.message : String(e);
-			console.error(`Omni Calendar: failed to refresh "${source.name}"`, e);
+			const msg = errorMessage(e);
+			// Account calendars: only the message is logged, never the error object itself.
+			if (remote) console.error(`Omni Calendar: failed to refresh "${source.name}": ${msg}`);
+			else console.error(`Omni Calendar: failed to refresh "${source.name}"`, e);
 			this.status.set(source.id, { ...this.status.get(source.id), loading: false, error: msg });
 		}
 		this.notify();
+	}
+
+	private async refreshIcs(source: CalendarSource): Promise<void> {
+		const raw = await this.fetchRaw(source);
+		if (!/BEGIN:VCALENDAR/i.test(raw)) {
+			throw new Error("Response is not an iCalendar (.ics) file. Check that you used the ICS / iCal link.");
+		}
+		const cal = new IcsCalendar(source, raw);
+		this.ics.set(source.id, cal);
+		this.status.set(source.id, { lastFetched: Date.now(), eventCount: cal.eventCount, loading: false });
+		if (isRemoteUrl(source.url ?? "")) await this.saveCache(source.id, raw);
 	}
 
 	async refreshAll(): Promise<void> {

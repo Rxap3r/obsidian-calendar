@@ -4,7 +4,7 @@ export const MS_MIN = 60 * 1000;
 export const MS_HOUR = 60 * MS_MIN;
 export const MS_DAY = 24 * MS_HOUR;
 
-const pad = (n: number) => String(n).padStart(2, "0");
+export const pad = (n: number) => String(n).padStart(2, "0");
 
 export function startOfDay(d: Date): Date {
 	return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -61,6 +61,17 @@ export function toDateTimeKey(d: Date): string {
 	return `${toDateKey(d)}T${toTimeKey(d)}`;
 }
 
+/** "10:30" → minutes since midnight. */
+export function timeKeyToMinutes(v: string): number {
+	const [h, m] = v.split(":").map(Number);
+	return h * 60 + m;
+}
+
+/** Minutes since midnight → "10:30" (wraps around after 24 hours). */
+export function minutesToTimeKey(n: number): string {
+	return `${pad(Math.floor(n / 60) % 24)}:${pad(n % 60)}`;
+}
+
 /** Parse "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm[:ss]" as local time. */
 export function parseLocal(s: string): Date {
 	const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(s.trim());
@@ -90,6 +101,21 @@ export function formatTime(d: Date, use24h: boolean): string {
 	return m === 0 ? `${h}${ap}` : `${h}:${pad(m)}${ap}`;
 }
 
+/**
+ * A stored time ("14:30") as shown in the time fields: "14:30" or "2:30 PM".
+ * Note: `formatTime` above writes the 12-hour form more compactly ("2:30pm") for the calendar, where space is tight.
+ */
+export function formatTimeKey(v: string, use24h: boolean): string {
+	if (use24h) return v;
+	const [h, m] = v.split(":").map(Number);
+	return `${h % 12 || 12}:${pad(m)} ${h < 12 ? "AM" : "PM"}`;
+}
+
+/** "10:00 – 11:30". */
+export function formatTimeRange(start: Date, end: Date, use24h: boolean): string {
+	return `${formatTime(start, use24h)} – ${formatTime(end, use24h)}`;
+}
+
 export function formatHour(h: number, use24h: boolean): string {
 	if (use24h) return `${pad(h)}:00`;
 	const ap = h >= 12 ? "pm" : "am";
@@ -115,6 +141,11 @@ export function overlapsDay(start: Date, end: Date, day: Date): boolean {
 	const de = addDays(ds, 1);
 	if (end.getTime() === start.getTime()) return start >= ds && start < de;
 	return start < de && end > ds;
+}
+
+/** The items (events, occurrences) that touch the given day. */
+export function onDay<T extends { start: Date; end: Date }>(items: T[], day: Date): T[] {
+	return items.filter((o) => overlapsDay(o.start, o.end, day));
 }
 
 export function uid(): string {

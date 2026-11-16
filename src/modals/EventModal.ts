@@ -3,8 +3,9 @@ import type OmniCalendarPlugin from "../main";
 import { CalendarStore } from "../store";
 import { CalendarOccurrence, EventInput, LocalEvent, Recurrence, RecurrenceFreq } from "../types";
 import { confirmAction } from "./ConfirmModal";
-import { DateField, TimeField, keepFocusOnTap } from "../timePicker";
+import { DateField, TimeField, keepFocusOnTap } from "../pickers";
 import { addDays, addMinutes, isValidDate, parseLocal, toDateKey, toTimeKey } from "../dateUtils";
+import { errorMessage } from "../util";
 
 export interface EventModalInit {
 	/** Existing event to edit. */
@@ -497,7 +498,7 @@ export class EventModal extends Modal {
 						saved.push(t.name);
 						savedIds.push(t.id);
 					} catch (e) {
-						failed.push(`${t.name}: ${e instanceof Error ? e.message : String(e)}`);
+						failed.push(`${t.name}: ${errorMessage(e)}`);
 					}
 				}
 				if (firstLocal) this.init.event = firstLocal;
@@ -512,7 +513,7 @@ export class EventModal extends Modal {
 			}
 			if (close) this.close();
 		} catch (e) {
-			new Notice(`Could not save: ${e instanceof Error ? e.message : String(e)}`, 8000);
+			new Notice(`Could not save: ${errorMessage(e)}`, 8000);
 		} finally {
 			this.busy = false;
 			this.modalEl.removeClass("ch-busy");
@@ -533,7 +534,7 @@ export class EventModal extends Modal {
 			new Notice(`Deleted "${occ.title}" from ${where}`);
 			this.close();
 		} catch (e) {
-			new Notice(`Could not delete: ${e instanceof Error ? e.message : String(e)}`, 8000);
+			new Notice(`Could not delete: ${errorMessage(e)}`, 8000);
 		} finally {
 			this.busy = false;
 		}

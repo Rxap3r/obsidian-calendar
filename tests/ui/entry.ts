@@ -15,12 +15,12 @@
 import OmniCalendarPlugin from "../../src/main";
 import { CalendarView } from "../../src/views/CalendarView";
 import { MiniCalendarView } from "../../src/views/MiniCalendarView";
-import { OmniCalendarSettingTab } from "../../src/settings";
+import { OmniCalendarSettingTab } from "../../src/settings/SettingTab";
 import { IcsCalendar } from "../../src/ics";
 import { TasksView } from "../../src/views/TasksView";
 import { TaskModal } from "../../src/modals/TaskModal";
 import { TFile } from "obsidian";
-import * as timeMod from "../../src/timePicker";
+import * as timeMod from "../../src/pickers";
 import * as eventMod from "../../src/modals/EventModal";
 import * as dateMod from "../../src/dateUtils";
 

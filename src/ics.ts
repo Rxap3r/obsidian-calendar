@@ -1,6 +1,6 @@
 import ICAL from "ical.js";
 import { CalendarOccurrence, CalendarSource } from "./types";
-import { addDays, zonedTimeToDate } from "./dateUtils";
+import { addDays, pad, zonedTimeToDate } from "./dateUtils";
 
 /** Common Windows time zone names (used by Outlook / Exchange) mapped to IANA names. */
 const WINDOWS_TZ: Record<string, string> = {
@@ -192,7 +192,6 @@ export function buildIcs(
 	events: { uid: string; title: string; start: Date; end: Date; allDay: boolean; location?: string; description?: string; rrule?: string; exdates?: Date[] }[],
 	calName: string
 ): string {
-	const pad = (n: number) => String(n).padStart(2, "0");
 	const dateVal = (d: Date) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
 	const utcVal = (d: Date) =>
 		`${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;

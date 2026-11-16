@@ -41,7 +41,7 @@ test("desktop: settings keep their scroll position, don't reveal the sidebar, de
 		const side = row(/Calendar in sidebar/).querySelector("select");
 		side.value = "mini"; side.dispatchEvent(new Event("change")); await new Promise((r) => setTimeout(r, 50));
 		out.reveals = ws.reveals;
-		const mini = plugin.sidebarLeaves("omni-calendar-mini")[0];
+		const mini = plugin.sidebar.leaves("omni-calendar-mini")[0];
 		out.miniSelected = !!mini && mini.parent.selected === mini;
 		const wrap = tab.containerEl.querySelector(".ch-settings-tabs-wrap");
 		out.bg = getComputedStyle(wrap, "::before").backgroundColor;

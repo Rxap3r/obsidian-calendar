@@ -1,25 +1,21 @@
-import { ItemView, setIcon, WorkspaceLeaf } from "obsidian";
-import type OmniCalendarPlugin from "../main";
+import { setIcon } from "obsidian";
 import { CalendarOccurrence } from "../types";
 import {
-	addDays, addMonths, formatDate, formatTime, isoWeek, isSameDay, overlapsDay, startOfDay, startOfMonth,
+	addDays, addMonths, formatDate, formatTime, isoWeek, isSameDay, MS_MIN, onDay, startOfDay, startOfMonth,
 	startOfWeek, weekdayNames,
 } from "../dateUtils";
 import { EventModal } from "../modals/EventModal";
-import { occurrenceMenu, openOccurrence, tooltip } from "./shared";
-
-export const VIEW_TYPE_MINI = "omni-calendar-mini";
+import { rangeLabel } from "../periods";
+import { plural } from "../util";
+import { OmniView } from "./OmniView";
+import { VIEW_TYPE_MINI } from "./viewTypes";
+import { markDayCell, occurrenceMenu, openOccurrence, tooltip } from "./shared";
 
 /** Compact month calendar + upcoming events, meant for the left/right sidebar. */
-export class MiniCalendarView extends ItemView {
+export class MiniCalendarView extends OmniView {
 	private month: Date = startOfMonth(new Date());
 	private selected: Date = startOfDay(new Date());
-	private renderQueued = false;
 	private lastDay = startOfDay(new Date()).getTime();
-
-	constructor(leaf: WorkspaceLeaf, private plugin: OmniCalendarPlugin) {
-		super(leaf);
-	}
 
 	getViewType() {
 		return VIEW_TYPE_MINI;
@@ -43,22 +39,13 @@ export class MiniCalendarView extends ItemView {
 					this.lastDay = d;
 				}
 				this.render();
-			}, 5 * 60 * 1000)
+			}, 5 * MS_MIN)
 		);
 		this.render();
 	}
 
 	async onClose() {
 		this.contentEl.empty();
-	}
-
-	private queueRender() {
-		if (this.renderQueued) return;
-		this.renderQueued = true;
-		window.requestAnimationFrame(() => {
-			this.renderQueued = false;
-			this.render();
-		});
 	}
 
 	render() {
@@ -106,15 +93,14 @@ export class MiniCalendarView extends ItemView {
 			if (s.showWeekNumbers && i % 7 === 0) grid.createDiv({ cls: "ch-mini-wn", text: String(isoWeek(addDays(day, 3))) });
 			const cell = grid.createDiv({ cls: "ch-mini-day" });
 			cell.createSpan({ text: String(day.getDate()) });
-			if (day.getMonth() !== this.month.getMonth()) cell.addClass("ch-other-month");
-			if (isSameDay(day, today)) cell.addClass("ch-today");
+			markDayCell(cell, day, this.month);
 			if (isSameDay(day, this.selected)) cell.addClass("ch-selected");
-			const dayOccs = occs.filter((o) => overlapsDay(o.start, o.end, day));
+			const dayOccs = onDay(occs, day);
 			if (dayOccs.length) {
 				const dots = cell.createDiv({ cls: "ch-mini-dots" });
 				const colors = Array.from(new Set(dayOccs.map((o) => o.color))).slice(0, 3);
 				for (const c of colors) dots.createSpan({ cls: "ch-mini-dot" }).style.backgroundColor = c;
-				cell.setAttr("aria-label", `${dayOccs.length} event${dayOccs.length > 1 ? "s" : ""}`);
+				cell.setAttr("aria-label", plural(dayOccs.length, "event"));
 			}
 			cell.onclick = () => {
 				this.selected = day;
@@ -133,7 +119,7 @@ export class MiniCalendarView extends ItemView {
 		addBtn.onclick = () => new EventModal(this.plugin, { start: this.selected }).open();
 		const selOccs = this.plugin.store.getOccurrencesForDay(this.selected);
 		if (!selOccs.length) sel.createDiv({ cls: "ch-empty", text: "No events" });
-		for (const o of selOccs) this.item(sel, o, false);
+		for (const o of selOccs) this.item(sel, o);
 
 		// Upcoming
 		const days = upcomingDays(s);
@@ -152,7 +138,7 @@ export class MiniCalendarView extends ItemView {
 					up.createDiv({ cls: "ch-mini-upcoming-date", text: formatDate(o.start, { weekday: "short", day: "numeric", month: "short" }) });
 					lastKey = key;
 				}
-				this.item(up, o, false);
+				this.item(up, o);
 			}
 			if (upOccs.length > MAX_UPCOMING) {
 				const more = up.createEl("button", { cls: "ch-mini-more", text: `${upOccs.length - MAX_UPCOMING} more – open agenda` });
@@ -161,14 +147,13 @@ export class MiniCalendarView extends ItemView {
 		}
 	}
 
-	private item(parent: HTMLElement, o: CalendarOccurrence, showDate: boolean) {
+	private item(parent: HTMLElement, o: CalendarOccurrence) {
 		const s = this.plugin.settings;
 		const row = parent.createDiv({ cls: "ch-mini-item" });
 		row.style.setProperty("--ch-event-color", o.color);
 		if (o.end < new Date()) row.addClass("ch-past");
 		row.createSpan({ cls: "ch-mini-item-bar" });
-		const time = o.allDay ? "All day" : formatTime(o.start, s.use24h);
-		row.createSpan({ cls: "ch-mini-item-time", text: showDate ? `${formatDate(o.start, { day: "numeric", month: "short" })} ${time}` : time });
+		row.createSpan({ cls: "ch-mini-item-time", text: o.allDay ? "All day" : formatTime(o.start, s.use24h) });
 		row.createSpan({ cls: "ch-mini-item-title", text: o.title });
 		row.setAttr("title", tooltip(this.plugin, o));
 		row.onclick = () => openOccurrence(this.plugin, o);
@@ -185,14 +170,4 @@ const MAX_UPCOMING = 100;
 /** Days shown under "Upcoming"; -1 means "same as the agenda length". */
 export function upcomingDays(s: { sidebarUpcomingDays: number; agendaDays: number }): number {
 	return s.sidebarUpcomingDays < 0 ? s.agendaDays : s.sidebarUpcomingDays;
-}
-
-/** "tomorrow", "in the next 7 days", "in the next 2 weeks", "in the next month" … */
-export function rangeLabel(days: number): string {
-	if (days === 1) return "tomorrow";
-	if (days === 14 || days === 21 || days === 28) return `in the next ${days / 7} weeks`;
-	if (days === 30 || days === 31) return "in the next month";
-	if (days === 60 || days === 90 || days === 180) return `in the next ${days / 30} months`;
-	if (days === 365) return "in the next year";
-	return `in the next ${days} days`;
 }

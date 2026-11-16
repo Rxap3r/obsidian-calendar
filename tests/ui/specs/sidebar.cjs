@@ -5,10 +5,10 @@ test("desktop: sidebar setting (Off / Mini / Full, side, user closes)", {}, asyn
 	const out = await page.evaluate(async () => {
 		const snap = () => ws.leaves.filter((l) => l.root.name !== "main").map((l) => `${l.root.name}:${String(l.vs.type).replace("omni-calendar-", "")}`).join(" ") || "-";
 		const res = {};
-		plugin.settings.sidebarView = "full"; plugin.settings.sidebarSide = "left"; await plugin.applySidebar(true); res.full = snap();
-		plugin.settings.sidebarSide = "right"; await plugin.applySidebar(true); res.right = snap();
-		plugin.settings.sidebarView = "none"; await plugin.applySidebar(true); res.off = snap();
-		await plugin.toggleSidebar("mini"); res.toggle = snap() + "/" + plugin.settings.sidebarView;
+		plugin.settings.sidebarView = "full"; plugin.settings.sidebarSide = "left"; await plugin.sidebar.apply(true); res.full = snap();
+		plugin.settings.sidebarSide = "right"; await plugin.sidebar.apply(true); res.right = snap();
+		plugin.settings.sidebarView = "none"; await plugin.sidebar.apply(true); res.off = snap();
+		await plugin.sidebar.toggle("mini"); res.toggle = snap() + "/" + plugin.settings.sidebarView;
 		await new Promise((r) => setTimeout(r, 350));
 		ws.leaves.find((l) => l.root.name === "right").detach(); ws.fireLayoutChange(); res.closed = snap() + "/" + plugin.settings.sidebarView;
 		res.mainKept = ws.leaves.some((l) => l.root.name === "main");
@@ -21,8 +21,8 @@ test("desktop: day planner in sidebar opens in Day view and remembers its own vi
 	const r = await page.evaluate(async () => {
 		const out = {};
 		plugin.settings.defaultView = "month";
-		await plugin.toggleSidebar("full");
-		const leaf = plugin.sidebarLeaves("omni-calendar-view")[0];
+		await plugin.sidebar.toggle("full");
+		const leaf = plugin.sidebar.leaves("omni-calendar-view")[0];
 		out.opens = leaf.getViewState().state.mode;
 		const L0 = ws.mk(ws.rightSplit); L0.app = plugin.app; const V0 = new view.constructor(L0, plugin);
 		out.titles = [view.getDisplayText(), V0.getDisplayText(), mini.getDisplayText()];
@@ -33,9 +33,9 @@ test("desktop: day planner in sidebar opens in Day view and remembers its own vi
 		out.remembered = plugin.settings.sidebarCalendarMode;
 		[...view.contentEl.querySelectorAll(".ch-segmented button")].find((b) => b.textContent === "Agenda").click();
 		out.afterMain = plugin.settings.sidebarCalendarMode;
-		await plugin.toggleSidebar("full"); for (const l of plugin.sidebarLeaves("omni-calendar-view")) l.detach();
-		await plugin.toggleSidebar("full");
-		out.reopens = plugin.sidebarLeaves("omni-calendar-view")[0].getViewState().state.mode;
+		await plugin.sidebar.toggle("full"); for (const l of plugin.sidebar.leaves("omni-calendar-view")) l.detach();
+		await plugin.sidebar.toggle("full");
+		out.reopens = plugin.sidebar.leaves("omni-calendar-view")[0].getViewState().state.mode;
 		tab.constructor.tab = "display"; tab.display();
 		out.label = [...tab.containerEl.querySelectorAll("option")].find((o) => o.value === "full")?.text ?? null;
 		return out;
@@ -49,17 +49,17 @@ test("desktop: ⤢ in the Day planner – switch to mini (default), close, or ke
 	const r = await page.evaluate(async () => {
 		const run = async (after) => {
 			if (after) plugin.settings.sidebarOnExpand = after;
-			plugin.settings.sidebarView = "full"; await plugin.applySidebar(false);
-			const L = plugin.sidebarLeaves("omni-calendar-view")[0]; L.app = plugin.app;
+			plugin.settings.sidebarView = "full"; await plugin.sidebar.apply(false);
+			const L = plugin.sidebar.leaves("omni-calendar-view")[0]; L.app = plugin.app;
 			const V = new view.constructor(L, plugin); await V.onOpen();
 			const btn = V.contentEl.querySelector('[aria-label^="Open calendar"]');
 			const label = btn.getAttribute("aria-label");
 			btn.click(); await new Promise((r) => setTimeout(r, 50));
 			ws.fireLayoutChange(); // Obsidian fires this right after; must not undo the change
 			const main = ws.leaves.filter((l) => l.root === ws.rootSplit && l.vs.type === "omni-calendar-view").length;
-			const miniLeaves = plugin.sidebarLeaves("omni-calendar-mini");
+			const miniLeaves = plugin.sidebar.leaves("omni-calendar-mini");
 			return { label, setting: plugin.settings.sidebarView, mini: miniLeaves.length, sameTab: miniLeaves[0] === L,
-				planner: plugin.sidebarLeaves("omni-calendar-view").length, main: main > 0 };
+				planner: plugin.sidebar.leaves("omni-calendar-view").length, main: main > 0 };
 		};
 		return { def: plugin.settings.sidebarOnExpand, mini: await run(), close: await run("close"), keep: await run("keep") };
 	});
@@ -82,8 +82,8 @@ test("desktop: Day planner 'Close' → chosen sidebar tab is shown (left and rig
 		out.hiddenForMini = settingRows();
 		plugin.settings.sidebarOnExpand = "close";
 		const press = async () => {
-			plugin.settings.sidebarView = "full"; await plugin.applySidebar(false);
-			const L = plugin.sidebarLeaves("omni-calendar-view")[0]; L.app = plugin.app;
+			plugin.settings.sidebarView = "full"; await plugin.sidebar.apply(false);
+			const L = plugin.sidebar.leaves("omni-calendar-view")[0]; L.app = plugin.app;
 			const V = new view.constructor(L, plugin); await V.onOpen();
 			V.contentEl.querySelector('[aria-label^="Open calendar"]').click(); await new Promise((r) => setTimeout(r, 50));
 		};
@@ -93,7 +93,7 @@ test("desktop: Day planner 'Close' → chosen sidebar tab is shown (left and rig
 		plugin.settings.sidebarSide = "left"; out.leftOpts = settingRows();
 		plugin.settings.sidebarAfterClose = "search"; await press();
 		out.left = ws.tabGroups.left.selected === se;
-		out.planner = plugin.sidebarLeaves("omni-calendar-view").length;
+		out.planner = plugin.sidebar.leaves("omni-calendar-view").length;
 		return out;
 	});
 	eq(r.hiddenForMini, null, "extra setting only with Close");

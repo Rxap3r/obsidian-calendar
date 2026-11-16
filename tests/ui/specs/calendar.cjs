@@ -73,8 +73,8 @@ test("desktop: dragging an event in the week view lands exactly where the previe
 	// Screenshot of the preview (drawn directly: screenshots taken during a live browser drag show an old frame).
 	await page.evaluate(() => {
 		const col = document.querySelector('.ch-tg-col[data-date="2026-11-12"]');
-		view.dragInfo = { key: [...view.rendered.keys()].find((k) => view.rendered.get(k).title === "Design review"), offsetMin: 0, durMin: 90, color: "#2f9e44" };
-		view.showDropPreview(col, new Date(2026, 10, 12), 14 * 60 + 15);
+		view.drag.grabbed = { key: [...view.drag.rendered.keys()].find((k) => view.drag.rendered.get(k).title === "Design review"), offsetMin: 0, durMin: 90, color: "#2f9e44" };
+		view.drag.showPreview(col, new Date(2026, 10, 12), 14 * 60 + 15);
 	});
 	await page.screenshot({ path: path.join(SHOTS, "drag-move-preview.png"), clip: { x: 0, y: 40, width: 1120, height: 560 } });
 });

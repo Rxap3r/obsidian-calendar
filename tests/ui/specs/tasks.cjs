@@ -205,10 +205,10 @@ test("desktop: tasks sidebar toggle, main switch, menu entries, settings tab", {
 		const menu = () => { plugin.showCalendarMenu({ x: 1, y: 1 }); return window.lastMenu.items.map((i) => i.t); };
 		window.__ts = 0; // reset ribbon double-show guard
 		plugin.ribbonMenuShownAt = 0; out.menuOn = menu().filter((t) => /task/i.test(t));
-		await plugin.toggleTasksSidebar();
-		out.sidebar = plugin.sidebarLeaves("omni-calendar-tasks").map((l) => l.getRoot().name);
+		await plugin.sidebar.toggleTasks();
+		out.sidebar = plugin.sidebar.leaves("omni-calendar-tasks").map((l) => l.getRoot().name);
 		out.setting = plugin.settings.tasksSidebar;
-		plugin.settings.tasksEnabled = false; await plugin.applyTasksSidebar(false);
+		plugin.settings.tasksEnabled = false; await plugin.sidebar.applyTasks(false);
 		out.afterOff = plugin.app.workspace.getLeavesOfType("omni-calendar-tasks").length;
 		plugin.ribbonMenuShownAt = 0; out.menuOff = menu().filter((t) => /task/i.test(t));
 		tab.constructor.tab = "tasks"; tab.display();
@@ -234,10 +234,10 @@ test("desktop: tasks in the sidebar – button opens the Tasks page with the sam
 		out.sideHasBtn = !!btn;
 		out.narrow = side.contentEl.querySelector(".ch-tasks").classList.contains("ch-narrow");
 		btn.click(); await new Promise((r) => setTimeout(r, 50));
-		const main = plugin.app.workspace.getLeavesOfType("omni-calendar-tasks").filter((l) => !plugin.isInSidebar(l));
+		const main = plugin.app.workspace.getLeavesOfType("omni-calendar-tasks").filter((l) => !plugin.sidebar.contains(l));
 		out.mainOpened = main.length;
 		out.mainList = main[0]?.getViewState().state.list ?? null;
-		out.sideKept = plugin.sidebarLeaves("omni-calendar-tasks").length;
+		out.sideKept = plugin.sidebar.leaves("omni-calendar-tasks").length;
 		return out;
 	});
 	eq(r, { mainHasBtn: null, sideHasBtn: true, narrow: true, mainOpened: 1, mainList: "tomorrow", sideKept: 1 }, "open full Tasks page from sidebar");

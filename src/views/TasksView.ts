@@ -1,35 +1,22 @@
-import { ItemView, Menu, Modal, Notice, Setting, setIcon, TFile, ViewStateResult, WorkspaceLeaf } from "obsidian";
-import type OmniCalendarPlugin from "../main";
-import { SmartListId, Task, TaskList, TaskPriority } from "../types";
-import { DEFAULT_TASK_LIST, PRIORITY_NAMES, SMART_LISTS, TaskGroup } from "../tasks";
-import { addDays, formatDate, parseLocal, toDateKey } from "../dateUtils";
+import { Menu, setIcon, ViewStateResult } from "obsidian";
+import { SmartListId, Task, TaskList } from "../types";
+import { DEFAULT_TASK_LIST, SMART_LISTS, TaskGroup } from "../tasks";
+import { addDays, MS_MIN, toDateKey } from "../dateUtils";
+import { periodLabel } from "../periods";
+import { plural } from "../util";
 import { TaskModal } from "../modals/TaskModal";
+import { ListModal } from "../modals/ListModal";
 import { confirmAction } from "../modals/ConfirmModal";
-import { PALETTE } from "../settings";
-
-export const VIEW_TYPE_TASKS = "omni-calendar-tasks";
+import { deleteTaskList } from "../modals/confirmations";
+import { OmniView } from "./OmniView";
+import { renderTaskRow } from "./tasks/taskRow";
+import { VIEW_TYPE_TASKS } from "./viewTypes";
 
 /** Below this width the list navigation becomes a scrollable bar above the tasks. */
 const NARROW = 620;
 
-/** Open a linked note in the main area (in a new tab). */
-export async function openLinkedNote(plugin: OmniCalendarPlugin, path: string) {
-	const file = plugin.app.vault.getAbstractFileByPath(path);
-	if (!(file instanceof TFile)) {
-		new Notice("This note doesn't exist any more.");
-		return;
-	}
-	await plugin.mainAreaLeaf().openFile(file);
-}
-
-/** "10:30–11:00", "10:30" or "". */
-export function taskTimeLabel(t: Task): string {
-	if (!t.start) return "";
-	return t.end ? `${t.start}–${t.end}` : t.start;
-}
-
 /** The Tasks page: lists on the left (a bar on top when narrow), the selected list's tasks on the right. */
-export class TasksView extends ItemView {
+export class TasksView extends OmniView {
 	/** Selected list: a smart list id ("today", …) or a user list id. */
 	selected: string = "today";
 	private rootEl!: HTMLElement;
@@ -37,11 +24,6 @@ export class TasksView extends ItemView {
 	private collapsedSubtasks = new Set<string>();
 	/** "Show older" was clicked in the Done list / section (reset when another list is selected). */
 	private showOlder = false;
-	private renderQueued = false;
-
-	constructor(leaf: WorkspaceLeaf, private plugin: OmniCalendarPlugin) {
-		super(leaf);
-	}
 
 	getViewType() {
 		return VIEW_TYPE_TASKS;
@@ -82,7 +64,7 @@ export class TasksView extends ItemView {
 		ro.observe(this.contentEl);
 		this.register(() => ro.disconnect());
 		// Re-group at midnight ("Tomorrow" becomes "Today").
-		this.registerInterval(window.setInterval(() => this.render(), 10 * 60 * 1000));
+		this.registerInterval(window.setInterval(() => this.render(), 10 * MS_MIN));
 		this.narrow = this.contentEl.clientWidth > 0 && this.contentEl.clientWidth < NARROW;
 		this.render();
 	}
@@ -97,23 +79,6 @@ export class TasksView extends ItemView {
 		this.selected = id;
 		this.render();
 		this.app.workspace.requestSaveLayout();
-	}
-
-	private queueRender() {
-		if (this.renderQueued) return;
-		this.renderQueued = true;
-		window.requestAnimationFrame(() => {
-			this.renderQueued = false;
-			this.render();
-		});
-	}
-
-	private inSidebar(): boolean {
-		try {
-			return this.plugin.isInSidebar(this.leaf);
-		} catch {
-			return false;
-		}
 	}
 
 	private listName(id: string): string {
@@ -274,7 +239,15 @@ export class TasksView extends ItemView {
 				body = grp;
 			}
 			const showDate = g.key === "!overdue" || g.key === "}later" || isDone;
-			for (const t of g.tasks) this.renderTask(body, t, showDate);
+			for (const t of g.tasks) {
+				renderTaskRow(this.plugin, body, t, {
+					showDate,
+					// The list name only helps when tasks of several lists are shown.
+					showList: this.isSmart(id) || id !== t.listId,
+					collapsed: this.collapsedSubtasks.has(t.id),
+					onToggleSubtasks: () => this.toggleSubtasks(t.id),
+				});
+			}
 			if (isDone) this.renderDoneFooter(body, id, older.length, allDone.length);
 		}
 	}
@@ -295,11 +268,16 @@ export class TasksView extends ItemView {
 			const clear = foot.createEl("button", { cls: "ch-tasks-link ch-tasks-clear", text: "Clear completed" });
 			clear.onclick = async () => {
 				const where = userList ? ` in “${userList.name}”` : "";
-				const ok = await confirmAction(this.app, "Clear completed tasks", `Delete all ${total} completed task${total === 1 ? "" : "s"}${where}? This can't be undone.`);
+				const ok = await confirmAction(this.app, "Clear completed tasks", `Delete all ${plural(total, "completed task")}${where}? This can't be undone.`);
 				if (ok) await store.clearDone(userList?.id);
 			};
 		}
 		if (!foot.childElementCount) foot.remove();
+	}
+
+	private toggleSubtasks(taskId: string) {
+		if (!this.collapsedSubtasks.delete(taskId)) this.collapsedSubtasks.add(taskId);
+		this.render();
 	}
 
 	/** Defaults for a task created while this list is selected. */
@@ -320,126 +298,7 @@ export class TasksView extends ItemView {
 		return { listId: this.selected };
 	}
 
-	private renderTask(parent: HTMLElement, t: Task, showDate: boolean) {
-		const store = this.plugin.tasks;
-		const list = store.list(t.listId);
-		const row = parent.createDiv({ cls: "ch-task", attr: { "data-task": t.id } });
-		row.style.setProperty("--ch-event-color", list.color);
-		row.toggleClass("is-done", t.done);
-		row.addClass(`ch-prio-${t.priority}`);
-
-		const line = row.createDiv({ cls: "ch-task-line" });
-		const check = line.createEl("button", { cls: "ch-task-checkbox", attr: { role: "checkbox", "aria-checked": String(t.done), "aria-label": t.done ? "Mark as not done" : "Mark as done" } });
-		if (t.done) setIcon(check, "check");
-		check.onclick = (e) => {
-			e.stopPropagation();
-			void store.setDone(t.id, !t.done);
-		};
-
-		const body = line.createDiv({ cls: "ch-task-body" });
-		body.createDiv({ cls: "ch-task-title", text: t.title });
-		const meta = body.createDiv({ cls: "ch-task-meta" });
-		const time = taskTimeLabel(t);
-		if (showDate && t.date) meta.createSpan({ cls: "ch-task-meta-date", text: formatDate(parseLocal(t.date), { weekday: "short", day: "numeric", month: "short" }) });
-		if (time) {
-			const m = meta.createSpan({ cls: "ch-task-meta-time" });
-			setIcon(m.createSpan({ cls: "ch-task-meta-icon" }), "clock");
-			m.appendText(time);
-		}
-		// The list name only helps when there is more than one list.
-		if (store.lists.length > 1 && (this.isSmart(this.selected) || this.selected !== t.listId)) {
-			const m = meta.createSpan({ cls: "ch-task-meta-list" });
-			m.createSpan({ cls: "ch-tasks-nav-dot" });
-			m.appendText(list.name);
-		}
-		if (t.subtasks.length) {
-			const doneN = t.subtasks.filter((s) => s.done).length;
-			const m = meta.createSpan({ cls: "ch-task-meta-subs", attr: { "aria-label": "Show or hide subtasks" } });
-			setIcon(m.createSpan({ cls: "ch-task-meta-icon" }), this.collapsedSubtasks.has(t.id) ? "chevron-right" : "chevron-down");
-			m.appendText(`${doneN}/${t.subtasks.length}`);
-			m.onclick = (e) => {
-				e.stopPropagation();
-				if (this.collapsedSubtasks.has(t.id)) this.collapsedSubtasks.delete(t.id);
-				else this.collapsedSubtasks.add(t.id);
-				this.render();
-			};
-		}
-		if (t.notes) setIcon(meta.createSpan({ cls: "ch-task-meta-icon ch-task-has-notes", attr: { "aria-label": "Has notes" } }), "align-left");
-		if (!meta.childElementCount) meta.remove();
-
-		if (t.priority > 0) {
-			const flag = line.createSpan({ cls: "ch-task-prio", attr: { "aria-label": `${PRIORITY_NAMES[t.priority]} priority` }, text: "!".repeat(t.priority) });
-			flag.addClass(`ch-prio-${t.priority}`);
-		}
-
-		// Subtasks (one level), shown inline and tickable.
-		if (t.subtasks.length && !this.collapsedSubtasks.has(t.id)) {
-			const subs = row.createDiv({ cls: "ch-task-subs" });
-			for (const s of t.subtasks) {
-				const sr = subs.createDiv({ cls: "ch-task-sub" });
-				sr.toggleClass("is-done", s.done);
-				const cb = sr.createEl("button", { cls: "ch-task-checkbox ch-small", attr: { role: "checkbox", "aria-checked": String(s.done) } });
-				if (s.done) setIcon(cb, "check");
-				cb.onclick = (e) => {
-					e.stopPropagation();
-					void store.setSubtaskDone(t.id, s.id, !s.done);
-				};
-				sr.createSpan({ cls: "ch-task-sub-title", text: s.title });
-				sr.onclick = (e) => e.stopPropagation();
-			}
-		}
-
-		// Linked notes as small clickable chips.
-		if (t.links.length) {
-			const links = row.createDiv({ cls: "ch-task-linkchips" });
-			for (const path of t.links) {
-				const chip = links.createEl("a", { cls: "ch-task-linkchip", attr: { title: path } });
-				setIcon(chip.createSpan({ cls: "ch-task-meta-icon" }), "file-text");
-				chip.appendText(path.replace(/\.md$/, "").split("/").pop() ?? path);
-				chip.onclick = (e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					void openLinkedNote(this.plugin, path);
-				};
-			}
-		}
-
-		row.onclick = () => new TaskModal(this.plugin, t).open();
-		row.addEventListener("contextmenu", (e) => {
-			e.preventDefault();
-			this.taskMenu(t, e);
-		});
-	}
-
 	// ------------------------------------------------------------------ menus
-
-	private taskMenu(t: Task, e: MouseEvent) {
-		const store = this.plugin.tasks;
-		const menu = new Menu();
-		const today = new Date();
-		const when = (title: string, icon: string, date: string | undefined) =>
-			menu.addItem((i) => i.setTitle(title).setIcon(icon).onClick(() => void store.update(t.id, { date })));
-		menu.addItem((i) => i.setTitle(t.done ? "Mark as not done" : "Mark as done").setIcon("check").onClick(() => void store.setDone(t.id, !t.done)));
-		menu.addItem((i) => i.setTitle("Edit…").setIcon("pencil").onClick(() => new TaskModal(this.plugin, t).open()));
-		menu.addSeparator();
-		when("Today", "sun", toDateKey(today));
-		when("Tomorrow", "sunrise", toDateKey(addDays(today, 1)));
-		when("Next week", "calendar-range", toDateKey(addDays(today, 7)));
-		when("No date", "inbox", undefined);
-		menu.addSeparator();
-		([3, 2, 1, 0] as TaskPriority[]).forEach((p) =>
-			menu.addItem((i) =>
-				i.setTitle(`Priority: ${PRIORITY_NAMES[p]}`).setIcon("flag").setChecked(t.priority === p).onClick(() => void store.update(t.id, { priority: p }))
-			)
-		);
-		menu.addSeparator();
-		menu.addItem((i) =>
-			i.setTitle("Delete").setIcon("trash").setWarning(true).onClick(async () => {
-				if (await confirmAction(this.app, "Delete task", `Delete “${t.title}”?`)) await store.remove(t.id);
-			})
-		);
-		menu.showAtMouseEvent(e);
-	}
 
 	private listMenu(l: TaskList, e: MouseEvent) {
 		const menu = new Menu();
@@ -447,12 +306,7 @@ export class TasksView extends ItemView {
 		if (l.id !== DEFAULT_TASK_LIST.id) {
 			menu.addItem((i) =>
 				i.setTitle("Delete list").setIcon("trash").setWarning(true).onClick(async () => {
-					const n = this.plugin.tasks.items.filter((t) => t.listId === l.id).length;
-					const msg = n ? `Delete “${l.name}”? Its ${n} task${n === 1 ? "" : "s"} will move to “${DEFAULT_TASK_LIST.name}”.` : `Delete “${l.name}”?`;
-					if (await confirmAction(this.app, "Delete list", msg)) {
-						await this.plugin.tasks.removeList(l.id);
-						if (this.selected === l.id) this.select("today");
-					}
+					if ((await deleteTaskList(this.plugin, l)) && this.selected === l.id) this.select("today");
 				})
 			);
 		}
@@ -465,60 +319,4 @@ export class TasksView extends ItemView {
 			if (created) this.select(created.id);
 		}).open();
 	}
-}
-
-/** Small dialog: list name + colour. */
-export class ListModal extends Modal {
-	private name: string;
-	private color: string;
-	constructor(private plugin: OmniCalendarPlugin, private list: TaskList | undefined, private done: (created?: TaskList) => void) {
-		super(plugin.app);
-		this.name = list?.name ?? "";
-		const used = new Set(plugin.tasks.lists.map((x) => x.color));
-		this.color = list?.color ?? PALETTE.find((c) => !used.has(c)) ?? PALETTE[plugin.tasks.lists.length % PALETTE.length];
-	}
-	onOpen() {
-		this.setTitle(this.list ? "Edit list" : "New list");
-		this.modalEl.addClass("ch-list-modal");
-		new Setting(this.contentEl).setName("Name").addText((t) => {
-			t.setPlaceholder("e.g. Work").setValue(this.name).onChange((v) => (this.name = v));
-			t.inputEl.addEventListener("keydown", (e) => {
-				if (e.key === "Enter") {
-					e.preventDefault();
-					void this.save();
-				}
-			});
-			window.setTimeout(() => t.inputEl.focus(), 10);
-		});
-		new Setting(this.contentEl).setName("Colour").addColorPicker((c) => c.setValue(this.color).onChange((v) => (this.color = v)));
-		new Setting(this.contentEl)
-			.setClass("ch-modal-buttons")
-			.addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()))
-			.addButton((b) => b.setButtonText(this.list ? "Save" : "Create").setCta().onClick(() => void this.save()));
-	}
-	onClose() {
-		this.contentEl.empty();
-	}
-	private async save() {
-		const name = this.name.trim();
-		if (!name) {
-			new Notice("Please enter a name.");
-			return;
-		}
-		if (this.list) {
-			await this.plugin.tasks.updateList(this.list.id, { name, color: this.color });
-			this.done();
-		} else {
-			this.done(await this.plugin.tasks.addList(name, this.color));
-		}
-		this.close();
-	}
-}
-
-/** 30 → "30 days", 14 → "2 weeks", 365 → "year", 730 → "2 years". */
-export function periodLabel(days: number): string {
-	if (days % 365 === 0) return days === 365 ? "year" : `${days / 365} years`;
-	if (days % 30 === 0 && days >= 60) return `${days / 30} months`;
-	if (days % 7 === 0 && days >= 14 && days < 30) return `${days / 7} weeks`;
-	return days === 1 ? "day" : `${days} days`;
 }
