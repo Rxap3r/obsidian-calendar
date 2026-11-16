@@ -1,6 +1,7 @@
 import type OmniCalendarPlugin from "../../main";
 import { CalendarOccurrence } from "../../types";
-import { addDays, formatDate, formatTime, isSameDay, onDay, startOfDay } from "../../dateUtils";
+import { addDays, formatDate, formatTime, isSameDay, onDay, startOfDay, toDateKey } from "../../dateUtils";
+import { dayTaskCounter } from "./tasks";
 import { occurrenceMenu, openOccurrence, taskHint } from "../shared";
 import { CalendarHost } from "./host";
 
@@ -14,23 +15,24 @@ export function renderAgenda(host: CalendarHost) {
 	);
 	const occs = host.occurrences(start, end);
 	const wrap = host.bodyEl.createDiv({ cls: "ch-agenda" });
-	if (!occs.length) {
-		wrap.createDiv({ cls: "ch-empty", text: "No events in this period." });
-		return;
-	}
 	const today = new Date();
+	let shown = 0;
 	for (let i = 0; i < s.agendaDays; i++) {
 		const day = addDays(start, i);
 		const dayOccs = onDay(occs, day);
-		if (!dayOccs.length) continue;
+		// Days with only tasks are listed too (with their counter).
+		if (!dayOccs.length && !host.plugin.tasks.forCalendarDay(toDateKey(day)).length) continue;
+		shown++;
 		const group = wrap.createDiv({ cls: "ch-agenda-day" });
 		if (isSameDay(day, today)) group.addClass("ch-today");
 		const h = group.createDiv({ cls: "ch-agenda-date" });
 		h.createSpan({ cls: "ch-agenda-daynum", text: String(day.getDate()) });
 		h.createSpan({ cls: "ch-agenda-dayname", text: `${formatDate(day, { weekday: "long" })} · ${formatDate(day, { month: "long", year: "numeric" })}` });
 		h.onclick = () => host.goTo(day, "day");
+		dayTaskCounter(host.plugin, h, toDateKey(day), true);
 		for (const o of dayOccs) agendaItem(host.plugin, group, o, day);
 	}
+	if (!shown) wrap.createDiv({ cls: "ch-empty", text: "No events in this period." });
 }
 
 function agendaItem(plugin: OmniCalendarPlugin, parent: HTMLElement, o: CalendarOccurrence, day: Date) {

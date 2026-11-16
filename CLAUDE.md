@@ -79,10 +79,13 @@ Shared helpers live in one place. Before writing a small helper (error text, plu
 | `views/OmniView.ts` | Base of the three views: `queueRender`, `inSidebar` |
 | `views/viewTypes.ts` | The view type ids |
 | `views/CalendarView.ts` | Calendar / day planner, the frame only: toolbar, navigation, filter, responsive layout switch |
-| `views/calendar/` | What the calendar draws: `month.ts` (grid + compact grid), `timeGrid.ts` (week/day, sideways-scrolling week), `agenda.ts`, `eventDrag.ts` (drag & drop + preview), `slotSelection.ts` (press/drag to create, touch gestures), `layout.ts` (sizes, overlapping events), `host.ts` (what they need from the view) |
+| `views/calendar/` | What the calendar draws: `month.ts` (grid + compact grid), `timeGrid.ts` (week/day, sideways-scrolling week), `agenda.ts`, `eventDrag.ts` (drag & drop of events **and tasks** + preview), `slotSelection.ts` (press/drag to create, touch gestures), `layout.ts` (sizes, overlapping events and tasks), `tasks.ts` (tasks in the calendar: time blocks, the per-day counter ☐ 3), `host.ts` (what they need from the view) |
+| `eventLinks.ts` | `eventKey(occ)`: the stable key that tasks and linked notes of an event are stored under (`local:<id>`, `local:<id>@<date>` for one repeat, `<calendar>:<remote id>`, ICS occurrence key) |
+| `views/eventExtras.ts`, `views/linkedNotes.ts` | The event's **Tasks** and **Linked notes** sections (event dialog + read-only details); the shared linked-notes block (also in the task dialog) |
+| `modals/DayTasksModal.ts` | The day's tasks, opened from the counter in the calendar |
 | `views/MiniCalendarView.ts` | Sidebar mini calendar |
 | `views/AgendaBlock.ts` | The `omni-calendar` code block |
-| `views/shared.ts` | Event chips, context menu, open event, day-cell marking |
+| `views/shared.ts` | Event chips, context menu (incl. linked notes, *Add task…*), open event, the "2/5" task hint, day-cell marking |
 | `tasks.ts` | Task data layer (`TaskStore`): lists, smart lists, grouping/sorting, link rename/delete, `normalizeTaskData` |
 | `views/TasksView.ts`, `views/tasks/` | Tasks page (`omni-calendar-tasks`): list nav (bar when narrow), groups, quick add; `tasks/taskRow.ts` (one task + its menu), `tasks/helpers.ts` |
 | `modals/TaskModal.ts`, `ListModal.ts`, `NotePickerModal.ts` | Task dialog (priority, date, time range, subtasks, linked notes); list name + colour; vault note search with "create note" |
@@ -121,6 +124,10 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
   duplicate buttons for users.
 - View types `omni-calendar-view`, `omni-calendar-mini`, the code block language `omni-calendar`, and secret IDs
   `omni-calendar-<accountId>-rt|cs`.
+- **Event links (1.8):** tasks point to an event with `task.event = { key, title, date }` (`eventKey()`). Linked notes of a local
+  event are in `LocalEvent.links`; those of Google/Outlook/ICS events and of single repeats are in `data.eventLinks[key]`.
+  Both are stored only in Obsidian, never sent to the providers. The old `notePath` is migrated into `links` on load.
+  Tasks of an event without a time are not counted in the calendar's day counter (the event shows "2/5" instead).
 - `data.json` shape. When changing settings, add a migration in `normalizePluginData` (`settingsData.ts`; see `sidebarOnStartup` → `sidebarView`).
 - Command ids (`commands.ts`). Users' hotkeys are stored by them; a test checks the list.
 
@@ -220,7 +227,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - update paths on vault rename/move, and drop them on delete.
     - Events: migrate the existing single `notePath` into the list. Remote events store their links locally, keyed by remote ID.
   - **1.7 (done):** Tasks page (full + sidebar), lists, task editing, subtasks, quick add, **linked notes on tasks**, Tasks settings tab, menu entry and commands.
-  - **1.8:** calendar integration, tasks on events (dialog section, "2/5" hint), **linked notes on events** (local + remote), "Tasks today" in the mini calendar.
+  - **1.8 (done):** calendar integration, tasks on events (dialog section, "2/5" hint), **linked notes on events** (local + remote), "Tasks today" in the mini calendar. Tasks on a repeating event belong to the clicked repeat only; the "template" behaviour is 1.9.
   - **Details view (with 1.8 or right after; see README roadmap):** clicking an event or task opens a large
     read-only view by default, with an **Edit** button for the edit dialog. It also needs a small **"Edit notes"**
     button: inline editing of only the event description or task notes (Save/Cancel), never triggered by just clicking

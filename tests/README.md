@@ -6,7 +6,7 @@ Two automated test suites. Neither needs Obsidian, a real phone, or real Google 
 npm test            # build + both suites
 npm run test:sync   # sign-in (OAuth/PKCE) and Google / Outlook connectors – Node only
 npm run test:ui     # views, dialogs, settings, touch gestures – headless Chromium
-npm run test:ui -- tasks    # one topic file (see below): data, calendar, events, sidebar, settings, pickers, tasks
+npm run test:ui -- tasks    # one topic file (see below): data, calendar, calendartasks, events, sidebar, settings, pickers, tasks
 npm run test:ui -- mobile   # only UI tests whose name contains "mobile"
 ```
 
@@ -48,6 +48,7 @@ On GitHub, every push runs both suites (`.github/workflows/ci.yml`); screenshots
   | `settings.cjs` | settings tabs and tab bar, scroll position, period settings, deleting calendars, commands |
   | `pickers.cjs` | own date/time pickers, dialog focus rules (tablet keyboard bugs) |
   | `tasks.cjs` | Tasks page, task dialog, lists, completed tasks, tasks sidebar |
+  | `calendartasks.cjs` | 1.8: tasks on events ("2/5"), linked notes on events, tasks in the calendar (blocks, day counter, drag), *Tasks today* |
 
   Add new tests to the matching file. Make a new file only for a genuinely new topic; it's picked up automatically.
   To save tokens, only open the file you need.

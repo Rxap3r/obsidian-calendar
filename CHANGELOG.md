@@ -15,6 +15,13 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
   Works for local, Google, Outlook and ICS events; for the last three the links are kept only in Obsidian.
   *Create note* now adds the new note to this list. An event's earlier note is moved into the list automatically.
   A single repeat of a repeating event keeps its own notes.
+- **Tasks in the calendar:** tasks with a time appear in Week and Day as light, dashed blocks. Tick them off there, click to
+  edit, or drag them to another time or day (dropping on the all-day row keeps only the date).
+  Tasks with only a date are shown as one small counter per day (☐ 3); tap it to see, tick off or add the day's tasks.
+  The month view and the agenda show the counter per day; on the phone, days with tasks get a tiny mark.
+- **Tasks today in the mini calendar:** today's and overdue tasks, ready to tick off, plus what was done today.
+- New settings in *Settings → Omni Calendar → Tasks*: *Tasks in the calendar*, *Completed tasks in the calendar*
+  (struck through or hidden), *Tasks today in the mini calendar*.
 
 ## Known bugs
 

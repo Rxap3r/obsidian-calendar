@@ -88,7 +88,7 @@ follows, so it never pops back unexpectedly. Commands can be given hotkeys in *S
 - **Week / Day view:** **click** an empty slot to create an event there. **Click and drag** to create an event covering the selected range (it snaps to 15 minutes). While you drag, a filled preview in the colour of your default calendar shows the exact start and end time. Overlapping events are shown side by side, and a red line marks the current time. Double-click the *all-day* row to create an all-day event.
 - **On touch screens:** swipe scrolls as usual, **tap** an empty slot to create an event there, and **press and hold** (about half a second), then drag, to select a time range.
 - **Drag and drop:** drag a local, non-recurring event to another day (month view) or another time (week/day view) to move it. In week/day view a preview block shows exactly where the event will land, with its new time; it snaps to 15 minutes.
-- **Click an event** to edit it. For an external event this shows its details instead. **Right-click an event** for a menu with *Edit*, *Create/Open note*, *Duplicate*, *Delete this occurrence* and *Delete*.
+- **Click an event** to edit it. For an external event this shows its details instead. **Right-click an event** for a menu with *Edit*, the event's linked notes, *Create/Open note*, *Link note…*, *Add task…*, *Duplicate*, *Delete this occurrence* and *Delete*.
 
 **Adapts to its width** (handy in a sidebar):
 - In a narrow view (phone, sidebar), *Month* becomes a **compact month grid**, like phone calendar apps. Events show as small coloured bars with short titles, or as dots when it is very narrow. **Tap a day** to list its events below the grid. Tap the day heading there, or double-tap a day, to open it in Day view. *Week* still covers the **whole week** but shows only as many days as fit (e.g. 3). **Swipe left or right** (or scroll sideways, or tap the **‹ ›** arrows) to move day by day. It snaps to each day, and the hour labels stay in place. A small **week bar** under the day headers highlights which days are on screen, and a soft shadow marks the edge that continues. The arrows jump a whole week, and the view opens with today (or the chosen day) first.
@@ -109,7 +109,8 @@ The event dialog has these fields:
 - **All day** on or off, plus **Starts** and **Ends**. If you move the start, the end moves with it so the duration stays the same.
 - **Repeat:** daily, weekly, monthly or yearly, every *N* units. It can end *never*, *on a date* or *after N times*.
 - **Location** and **Description**
-- Buttons: **Create/Open note**, **Delete this occurrence** (recurring events only), **Delete / Delete all**, **Save**
+- **Tasks** and **Linked notes** (with *Create note* / *Link note*) of an existing event, see [tasks on events](#tasks) and [notes for events](#notes-for-events)
+- Buttons: **Delete this occurrence** (recurring events only), **Delete / Delete all**, **Save**
 
 Editing a recurring event changes **every occurrence** of it. To remove a single date, use *Delete this occurrence*.
 
@@ -142,12 +143,21 @@ Dates and times in the event and task dialogs use Omni Calendar's **own pickers*
 
 ### Notes for events
 
-*Create note* makes a note named `YYYY-MM-DD Event title.md` in the notes folder (default `Calendar/`) and opens it.
+Every event can have **several linked notes** (new in **1.8**). They are listed in the event dialog under *Linked notes*;
+click one to open it, × removes the link (the note itself stays).
+- **Link note** searches your vault. If nothing matches, you can create a new note right there.
+- **Create note** makes a note named `YYYY-MM-DD Event title.md` in the notes folder (default `Calendar/`), adds it to the
+  linked notes and opens it. If that note already exists, the button reads *Open note*.
+- This works for **all events**: local, Google, Outlook and subscribed (ICS) ones. For Google, Outlook and ICS events the links
+  are kept **only in Obsidian**; nothing is sent to Google or Microsoft.
+- **Repeating events:** a note linked to one repeat (e.g. the standup on 14 Nov) belongs to that day only.
+- Links follow when a note is renamed or moved, and disappear when it's deleted. Notes are never read or changed.
+- Right-click an event for the same: *Open “…”* for each linked note, *Create note*, *Link note…*.
+- Events from before 1.8 keep their note: it becomes the first linked note.
+
 The note is built from a template you can change in settings. The template can use these placeholders:
 
 `{{title}} {{date}} {{start}} {{end}} {{when}} {{location}} {{calendar}} {{description}}`
-
-A local, non-recurring event remembers its note. After that the button reads *Open note*, and the link still works if you rename the note.
 The command **Create event linked to current note** creates an event from the active note and links the two. If the note's
 filename contains a date (e.g. `2026-11-20 Kickoff`), that date is used.
 
@@ -219,13 +229,42 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   - Links follow when a note is renamed or moved, and disappear when it's deleted. The notes themselves are never changed.
 - **Notes:** free text for the task.
 
+**Tasks on events** (new in **1.8**):
+- The event dialog has a **Tasks** section: type a task and press **Enter**, tick it off right there, click it to edit it.
+  Right-click an event → **Add task…** does the same.
+- The event then shows the progress, e.g. **☐ 2/5**, in the month, week, day and agenda views and in the mini calendar.
+- A new event task gets the event's day as its date, so it also shows up in *Today*, *Upcoming* and so on.
+  In the task lists it shows the event's name; **click the name** to open the event. In the task dialog, the unlink button
+  next to *Event* detaches the task (the task stays).
+- Works for local, **Google, Outlook and subscribed (ICS)** events. These tasks are kept **only in Obsidian**.
+- On a **repeating event**, tasks belong to the repeat you clicked (e.g. only the meeting on 14 Nov).
+  Tasks that repeat with the event are planned for 1.9.
+- Tasks are added once the event is saved; a new event's dialog says so.
+
+**Tasks in the calendar** (new in **1.8**):
+- **Tasks with a time** appear in *Week* and *Day* as **light, dashed blocks** with a tick circle, next to the events.
+  A single time (e.g. *15:00*) is drawn half an hour long.
+  - Tick the circle to complete the task; click the block to edit it; right-click for the task menu.
+  - **Drag** a task block to another time or day; it keeps its length. Dropped on the *all-day* row, it keeps only the date.
+- **Tasks with only a date** don't get their own entries. Each day shows **one small counter** (☐ 3) with the number of open tasks.
+  **Tap it** to see the day's tasks, tick them off, or add one for that day.
+- **Month view:** one small counter per day for all of the day's tasks. On the phone, days with open tasks get a tiny mark,
+  and the counter is next to the selected day. The **agenda** shows the counter next to each day.
+- Tasks that belong to an event and have no time are not counted there: the event shows them (☐ 2/5).
+- Completed tasks are **struck through**, or hidden with *Settings → Omni Calendar → Tasks → Completed tasks in the calendar*.
+- *Settings → Omni Calendar → Tasks → Tasks in the calendar* turns all of this off.
+
+**Tasks today in the mini calendar** (new in **1.8**): below the selected day, a short list of tasks due today and overdue
+ones (marked *overdue*), plus what you ticked off today (struck through). Tick them off right there; **+** adds a task for today;
+the heading opens the Tasks page. Turn it off in *Settings → Omni Calendar → Tasks → Tasks today in the mini calendar*.
+
 **Turning tasks off:** *Settings → Omni Calendar → Tasks → Use tasks*. When it's off, the Tasks page, its menu entries and commands disappear. Your tasks are kept.
 
 Tasks are stored with your local events in the plugin's `data.json`, so they sync the same way (see [Where data is stored](#where-data-is-stored)).
 
 Coming next (see the [roadmap](#roadmap-ideas)):
-- **1.8:** tasks in the calendar, tasks on events, and linked notes for events;
-- **1.9:** repeating tasks.
+- the **details view** for events and tasks (with the progress log and *Create note* for tasks);
+- **1.9:** repeating tasks, and tasks on repeating events that repeat with them.
 
 ## Which connection method should I use?
 
@@ -467,6 +506,9 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 | | Tasks in sidebar | Shows the Tasks page in the sidebar (same side as the calendar), independent of mini calendar / day planner |
 | | Done section in lists | Collapsed "Done" section in your lists and *All* |
 | | Upcoming list | How far ahead the "Upcoming" list looks: standard periods (default 7 days) or custom |
+| | Tasks in the calendar | Timed tasks as light blocks in Week/Day, one counter per day for the others (on by default) |
+| | Completed tasks in the calendar | *Struck through* (default) or *Hidden* |
+| | Tasks today in the mini calendar | The "Tasks today" section in the mini calendar (on by default) |
 | | Show completed tasks from the last | Done shows tasks completed in this period (default 30 days, or *Everything*); older ones behind "Show older" |
 | | Delete completed tasks after | Automatic clean-up: **Never** (default), the standard periods, or custom. Deleting can't be undone |
 | | Default priority / Default list | Used for new tasks |
@@ -493,7 +535,8 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 - **Local events, tasks and settings:** `.obsidian/plugins/omni-calendar/data.json`. Obsidian Sync and other sync tools carry them to your other devices. The plugin reloads automatically when Sync changes this file.
 - **Cached ICS calendars:** `.obsidian/plugins/omni-calendar/cache/*.ics`
 - **Google / Outlook:** account settings (client ID, account label, chosen calendars) are in `data.json`. Sign-in tokens and the Google client secret are **only** in Obsidian's secure storage on each device. Events are kept in memory.
-- **Event notes:** ordinary Markdown files in your notes folder
+- **Event notes:** ordinary Markdown files in your notes folder. Which notes are linked to which event, and the tasks of
+  events, are in `data.json` (also for Google, Outlook and ICS events; nothing is stored at Google or Microsoft).
 
 The plugin only makes network requests to the ICS URLs you configure and, for connected accounts, to Google or Microsoft.
 
@@ -536,12 +579,15 @@ src/
   settings/               settings window: one file per tab, shared controls
   pickers/                own date and time fields
   views/CalendarView.ts   calendar page / day planner (frame: toolbar, navigation)
-  views/calendar/         month, week/day, agenda, drag & drop
+  views/calendar/         month, week/day, agenda, drag & drop, tasks in the calendar
+  views/eventExtras.ts    tasks and linked notes of an event (dialog + details)
+  views/linkedNotes.ts    the "Linked notes" block (events and tasks)
+  eventLinks.ts           the key tasks and notes of an event are stored under
   views/MiniCalendarView.ts  mini calendar
   views/TasksView.ts, views/tasks/   Tasks page
   views/AgendaBlock.ts    the omni-calendar code block
   views/shared.ts         event chips, context menu
-  modals/                 dialogs: event, task, list, sign-in, details, confirmations
+  modals/                 dialogs: event, task, list, day tasks, sign-in, details, confirmations
 ```
 
 ### Releasing a new version (needed for BRAT)
@@ -556,7 +602,7 @@ release tag must exactly match `version` in `manifest.json` (for example `1.0.1`
 
 ## Roadmap ideas
 
-### Tasks (in three releases – step 1 is done in 1.7)
+### Tasks (in three releases – steps 1 and 2 are done in 1.7 and 1.8)
 
 A to-do system that lives **inside Omni Calendar**: tasks are created in the plugin, not read from notes. Reading checkboxes from notes was rejected, because formats vary and too many lines would be picked up as tasks by mistake.
 
@@ -596,7 +642,7 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 - Managing lists: create, rename, colour, delete.
 - New **Tasks** settings tab: on/off, show completed tasks, default priority, default list. Ribbon menu entry **Open tasks** and commands.
 
-**Step 2 – version 1.8: tasks in the calendar and on events**
+**Step 2 – version 1.8: tasks in the calendar and on events ✅**
 - **Tasks with a time range** show as light time blocks in Week/Day, looking clearly different from events.
 - **Tasks with only a date** don't get their own entry. Each day shows one small **counter** ("☑ 3"); tapping it lists the tasks. Month view shows just a small badge.
 - Tick tasks off and drag them to another day directly in the calendar.

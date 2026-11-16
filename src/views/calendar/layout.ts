@@ -39,8 +39,8 @@ export function minutesAt(col: HTMLElement, clientY: number, round: (n: number) 
 	return Math.max(0, Math.min(24 * 60 - SNAP_MIN, round(m / SNAP_MIN) * SNAP_MIN));
 }
 
-/** Assign side-by-side columns to overlapping timed events. */
-export function layoutColumns(occs: CalendarOccurrence[], dayStart: Date, dayEnd: Date) {
+/** Assign side-by-side columns to overlapping timed events (and timed tasks, which share the columns). */
+export function layoutColumns<T extends { start: Date; end: Date } = CalendarOccurrence>(occs: T[], dayStart: Date, dayEnd: Date) {
 	const items = occs
 		.map((occ) => ({
 			occ,
