@@ -10,6 +10,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
   *22:00 →* on the first day and *→ 02:00* on the last. On phones and in narrow views, times in month chips stay
   hidden to save space.
 
+- **Settings tab bar on desktop:** the ‹ › arrows no longer show up when all tabs fit, and when they are needed
+  (narrow window, phone) they sit beside the tabs instead of covering them.
+
 ## Known bugs
 
 - *(none right now)*

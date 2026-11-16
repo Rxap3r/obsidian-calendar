@@ -112,22 +112,30 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 			};
 		}
 
-		// When the tabs do not fit: fade the edge with more tabs and show an arrow button there.
+		// When the tabs do not fit: fade the edge with more tabs and show an arrow button beside the bar.
 		const prev = barWrap.createEl("button", { cls: "ch-tabs-arrow ch-tabs-prev", attr: { "aria-label": "More tabs" } });
+		barWrap.prepend(prev);
 		setIcon(prev, "chevron-left");
 		const next = barWrap.createEl("button", { cls: "ch-tabs-arrow ch-tabs-next", attr: { "aria-label": "More tabs" } });
 		setIcon(next, "chevron-right");
 		prev.onclick = () => bar.scrollBy({ left: -160, behavior: "smooth" });
 		next.onclick = () => bar.scrollBy({ left: 160, behavior: "smooth" });
 		const updateFade = () => {
-			const left = bar.scrollLeft > 2;
-			const right = bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 2;
+			// Not laid out yet (settings window still opening): no arrows; the observer below re-checks.
+			const laidOut = bar.clientWidth > 0;
+			const left = laidOut && bar.scrollLeft > 2;
+			const right = laidOut && bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 2;
 			bar.toggleClass("ch-more-left", left);
 			bar.toggleClass("ch-more-right", right);
 			prev.toggleClass("is-hidden", !left);
 			next.toggleClass("is-hidden", !right);
 		};
 		bar.addEventListener("scroll", updateFade, { passive: true });
+		// Re-check whenever the width changes (window resized, settings opened, arrows shown/hidden).
+		this.tabsObserver?.disconnect();
+		this.tabsObserver = new ResizeObserver(() => updateFade());
+		this.tabsObserver.observe(barWrap);
+		this.tabsObserver.observe(bar);
 		window.requestAnimationFrame(() => {
 			bar.querySelector<HTMLElement>(".ch-settings-tab.is-active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
 			updateFade();
@@ -149,6 +157,12 @@ export class OmniCalendarSettingTab extends PluginSettingTab {
 	}
 
 	private resetScroll = false;
+	private tabsObserver: ResizeObserver | null = null;
+
+	hide(): void {
+		this.tabsObserver?.disconnect();
+		this.tabsObserver = null;
+	}
 
 	/** Collapsible "more info" block, used to keep long explanations out of the way. */
 	private info(el: HTMLElement, summary: string, fill: (box: HTMLElement) => void, cls = "") {

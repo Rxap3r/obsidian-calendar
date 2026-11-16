@@ -782,6 +782,32 @@ test("month view shows start and end time", {}, async ({ page }) => {
 	await page.screenshot({ path: path.join(SHOTS, "month-time-ranges.png"), clip: { x: 0, y: 0, width: 1120, height: 620 } });
 });
 
+test("desktop: settings tab bar – no arrows when everything fits; arrows beside, not over the tabs", {}, async ({ page }) => {
+	// Like Obsidian: the settings content is rendered before the window has its width.
+	await page.evaluate(() => {
+		const m = document.getElementById("main"); m.innerHTML = "";
+		const host = document.createElement("div"); host.style.width = "0px"; host.id = "settings-host"; m.appendChild(host);
+		tab.display(); host.appendChild(tab.containerEl);
+	});
+	await page.waitForTimeout(100);
+	await page.evaluate(() => (document.getElementById("settings-host").style.width = "900px"));
+	await page.waitForTimeout(150);
+	const wide = await page.evaluate(() => [...document.querySelectorAll(".ch-tabs-arrow")].map((a) => getComputedStyle(a).display));
+	eq(wide, ["none", "none"], "wide window: no arrows");
+	await page.evaluate(() => (document.getElementById("settings-host").style.width = "300px"));
+	await page.waitForTimeout(150);
+	const narrow = await page.evaluate(() => {
+		const bar = document.querySelector(".ch-settings-tabs").getBoundingClientRect();
+		const next = document.querySelector(".ch-tabs-next"); const n = next.getBoundingClientRect();
+		return { shown: getComputedStyle(next).display !== "none", beside: n.left >= bar.right - 1 };
+	});
+	eq(narrow, { shown: true, beside: true }, "narrow: right arrow shown, beside the tabs");
+	await page.evaluate(() => (document.getElementById("settings-host").style.width = "900px"));
+	await page.waitForTimeout(150);
+	eq(await page.evaluate(() => [...document.querySelectorAll(".ch-tabs-arrow")].map((a) => getComputedStyle(a).display)), ["none", "none"], "widened again: arrows gone");
+	await page.locator("#settings-host").screenshot({ path: path.join(SHOTS, "settings-tabs-wide.png") });
+});
+
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {
 	await page.evaluate(() => mountTasks());
 	await page.waitForTimeout(100);
