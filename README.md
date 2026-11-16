@@ -598,6 +598,17 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 - The mini calendar gets a small **"Tasks today"** section.
 - **Linked notes on events:** the same as on tasks, for local and Google/Outlook events. For Google/Outlook events the links are stored only in Obsidian. The existing single "Create note" becomes one of the linked notes, and older events with a note keep it.
 
+**Planned with 1.8 (or right after it): details view for events and tasks**
+- **Clicking** an event or task opens a **large read-only view** by default, instead of the edit dialog. Nothing can be changed by accident.
+  - **Event:** title, date/time, calendar, location, description, linked notes, and its tasks (with "2/5").
+  - **Task:** title, date/time range, list, priority, notes, subtasks, linked notes, and its event.
+- An **Edit** button in the view opens the editing dialog.
+- Google, Outlook and ICS events already have a read-only view; everything gets the same look.
+- **Suggested, not yet confirmed by the maintainer:**
+  - quick actions stay possible in the view (tick off the task or a subtask, open a linked note);
+  - a setting *"Clicking opens: Details view (default) / Edit dialog directly"*;
+  - right-click / long-press still offers *Edit* directly.
+
 **Step 3 – version 1.9: repeating**
 - **Repeating tasks**, each occurrence ticked off separately. A repeating task stays **one** task: each completed occurrence is only a small "done on …" entry, not a copy, so Done doesn't fill up with duplicates.
 - **Tasks on repeating events:** the event's task list works as a template, and each occurrence has its own ticks. Ticking one off on 14 Nov doesn't tick it off on 21 Nov.
