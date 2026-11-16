@@ -4,9 +4,17 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet
+## Not released yet (1.8.0)
 
-- *(nothing yet)*
+- **Tasks on events:** the event dialog has a *Tasks* section. Type a task and press Enter, tick it off right there.
+  The event then shows its progress, e.g. *☐ 1/3*, in every view. This also works for Google, Outlook and
+  subscribed (ICS) events; their tasks are kept only in Obsidian. Right-click an event → *Add task…* does the same.
+- **Event tasks in the task lists:** they show the event's name under the task; click it to open the event.
+  The task dialog shows the event too, with a button to detach the task from it.
+- **Several linked notes per event:** *Link note* in the event dialog (and in the right-click menu) searches your vault.
+  Works for local, Google, Outlook and ICS events; for the last three the links are kept only in Obsidian.
+  *Create note* now adds the new note to this list. An event's earlier note is moved into the list automatically.
+  A single repeat of a repeating event keeps its own notes.
 
 ## Known bugs
 

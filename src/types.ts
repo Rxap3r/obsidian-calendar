@@ -26,7 +26,12 @@ export interface LocalEvent {
 	end: string;
 	location?: string;
 	description?: string;
-	/** Vault path of a note linked to this event. */
+	/**
+	 * Vault paths of linked notes (1.8+). Never parsed or modified. For repeating events these are the
+	 * series' notes; a single occurrence keeps its own in `PluginData.eventLinks`.
+	 */
+	links?: string[];
+	/** @deprecated ≤ 1.7: the one note of an event; migrated into `links` on load. */
 	notePath?: string;
 	recurrence?: Recurrence;
 	/** Start dates (YYYY-MM-DD) of occurrences removed from a recurring series. */
@@ -93,7 +98,6 @@ export interface CalendarOccurrence {
 	recurring: boolean;
 	/** For local recurring events: start date of this occurrence (YYYY-MM-DD). */
 	occurrenceDate?: string;
-	notePath?: string;
 	/** Google / Outlook events: identifiers needed to edit or delete the event remotely. */
 	remote?: RemoteRef;
 }
@@ -178,6 +182,12 @@ export interface OmniCalendarSettings {
 	tasksDoneVisibleDays: number;
 	/** Delete completed tasks this many days after completion; 0 = never. */
 	tasksDeleteDoneAfterDays: number;
+	/** Show tasks in the calendar (time blocks, one counter per day). */
+	tasksInCalendar: boolean;
+	/** Completed tasks in the calendar: shown struck through (true) or hidden. */
+	tasksCalendarShowDone: boolean;
+	/** "Tasks today" section in the mini calendar. */
+	tasksInMiniCalendar: boolean;
 	/** @deprecated replaced by sidebarView (migrated on load). */
 	sidebarOnStartup?: SidebarView;
 	notesFolder: string;
@@ -194,6 +204,11 @@ export interface PluginData {
 	events: LocalEvent[];
 	/** Tasks (1.7+). Kept in data.json like local events, so it syncs the same way. */
 	tasks: TaskData;
+	/**
+	 * Linked notes of events that can't store them themselves (1.8+): Google / Outlook and ICS events, and
+	 * single occurrences of repeating local events. Keyed by `eventKey()`. Kept only in Obsidian.
+	 */
+	eventLinks: Record<string, string[]>;
 }
 
 // ---------------------------------------------------------------------- tasks
@@ -233,6 +248,18 @@ export interface Task {
 	createdAt: number;
 	/** Vault paths of linked notes. Never parsed or modified. */
 	links: string[];
+	/** The event this task belongs to (1.8+). Stored only in Obsidian, also for Google / Outlook events. */
+	event?: TaskEventLink;
+}
+
+/** A task's link to an event (or one occurrence of a repeating event). */
+export interface TaskEventLink {
+	/** `eventKey()` of the event occurrence. */
+	key: string;
+	/** The event's title when it was linked (shown in task lists; updated when the event is seen). */
+	title: string;
+	/** Day of the occurrence (YYYY-MM-DD), used to find the event again. */
+	date: string;
 }
 
 export interface TaskData {

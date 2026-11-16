@@ -1,4 +1,4 @@
-import { OmniCalendarSettings, PluginData } from "./types";
+import { LocalEvent, OmniCalendarSettings, PluginData } from "./types";
 import { DEFAULT_SETTINGS } from "./defaults";
 import { normalizeTaskData } from "./tasks";
 import { clamp } from "./util";
@@ -61,12 +61,45 @@ export function normalizePluginData(loaded: Partial<PluginData> | null | undefin
 	// 0 = never.
 	const deleteAfter = Number(settings.tasksDeleteDoneAfterDays);
 	settings.tasksDeleteDoneAfterDays = Number.isFinite(deleteAfter) && deleteAfter >= 1 ? Math.min(3650, Math.round(deleteAfter)) : 0;
+	for (const k of ["tasksInCalendar", "tasksCalendarShowDone", "tasksInMiniCalendar"] as const) {
+		if (typeof settings[k] !== "boolean") settings[k] = DEFAULT_SETTINGS[k];
+	}
 	const tasks = normalizeTaskData(raw.tasks);
 	if (!tasks.lists.some((l) => l.id === settings.tasksDefaultListId)) settings.tasksDefaultListId = tasks.lists[0].id;
 
 	return {
-		data: { settings, events: Array.isArray(raw.events) ? raw.events : [], tasks },
+		data: { settings, events: normalizeEvents(raw.events), tasks, eventLinks: normalizeEventLinks(raw.eventLinks) },
 		firstRun: !loaded,
 		sidebarViewUnset,
 	};
+}
+
+/** Paths of linked notes: strings only, each once. */
+function pathList(value: unknown): string[] {
+	return Array.isArray(value) ? Array.from(new Set(value.filter((p): p is string => typeof p === "string" && !!p))) : [];
+}
+
+/** Local events. Migration ≤ 1.7: the single `notePath` becomes the first linked note. */
+function normalizeEvents(value: unknown): LocalEvent[] {
+	if (!Array.isArray(value)) return [];
+	return value.filter((e) => e && typeof e.id === "string").map((e: LocalEvent) => {
+		const ev: LocalEvent = { ...e };
+		const links = pathList(ev.links);
+		if (ev.notePath && !links.includes(ev.notePath)) links.unshift(ev.notePath);
+		delete ev.notePath;
+		if (links.length) ev.links = links;
+		else delete ev.links;
+		return ev;
+	});
+}
+
+/** Linked notes of Google / Outlook / ICS events and of single repeats (by event key); empty entries are dropped. */
+function normalizeEventLinks(value: unknown): Record<string, string[]> {
+	const out: Record<string, string[]> = {};
+	if (!value || typeof value !== "object" || Array.isArray(value)) return out;
+	for (const [key, paths] of Object.entries(value as Record<string, unknown>)) {
+		const list = pathList(paths);
+		if (list.length) out[key] = list;
+	}
+	return out;
 }

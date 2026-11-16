@@ -5,7 +5,7 @@ import {
 	startOfWeek, toDateKey,
 } from "../../dateUtils";
 import { EventModal } from "../../modals/EventModal";
-import { createChip, occurrenceMenu, openOccurrence, tooltip } from "../shared";
+import { createChip, occurrenceMenu, openOccurrence, taskHint, tooltip } from "../shared";
 import { CalendarHost } from "./host";
 import { HOUR_HEIGHT, HSCROLL_GUTTER, layoutColumns, minutesAt } from "./layout";
 
@@ -150,7 +150,8 @@ function eventBlock(
 	if (occ.readOnly) el.addClass("ch-readonly");
 	if (occ.end < at.now) el.addClass("ch-past");
 	if (height < 36) el.addClass("ch-compact");
-	el.createDiv({ cls: "ch-tg-event-title", text: occ.title });
+	const title = el.createDiv({ cls: "ch-tg-event-title", text: occ.title });
+	taskHint(plugin, title, occ);
 	el.createDiv({
 		cls: "ch-tg-event-time",
 		text: `${formatTimeRange(occ.start, occ.end, s.use24h)}${occ.location ? ` · ${occ.location}` : ""}`,

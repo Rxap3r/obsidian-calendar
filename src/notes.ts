@@ -45,6 +45,13 @@ export function describeWhen(o: CalendarOccurrence, use24h: boolean): string {
 	return `${a} – ${o.end.toLocaleDateString(undefined, dateOpts)} ${formatTime(o.end, use24h)}`;
 }
 
+/** Where "Create note" puts the note of an event occurrence: "<folder>/YYYY-MM-DD Title.md". */
+export function eventNotePath(o: CalendarOccurrence, folderSetting: string): string {
+	const folder = normalizePath(folderSetting || "/");
+	const name = `${toDateKey(o.start)} ${sanitizeFileName(o.title)}.md`;
+	return normalizePath(folder === "/" ? name : `${folder}/${name}`);
+}
+
 /** Create (or open, if it exists) a note for an event occurrence. Returns the file. */
 export async function createEventNote(
 	app: App,
@@ -52,8 +59,7 @@ export async function createEventNote(
 	opts: { folder: string; template: string; calendarName: string; use24h: boolean }
 ): Promise<TFile | null> {
 	const folder = normalizePath(opts.folder || "/");
-	const name = `${toDateKey(o.start)} ${sanitizeFileName(o.title)}.md`;
-	const path = normalizePath(folder === "/" ? name : `${folder}/${name}`);
+	const path = eventNotePath(o, opts.folder);
 
 	const existing = app.vault.getAbstractFileByPath(path);
 	if (existing instanceof TFile) return existing;

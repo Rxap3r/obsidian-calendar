@@ -1,12 +1,20 @@
-import { Menu } from "obsidian";
+import { Menu, setIcon } from "obsidian";
 import { deleteRemoteEvent } from "../modals/confirmations";
 import type OmniCalendarPlugin from "../main";
 import { CalendarOccurrence } from "../types";
-import { formatTime, formatTimeRange, isSameDay } from "../dateUtils";
+import { formatTime, formatTimeRange, isSameDay, toDateKey } from "../dateUtils";
+import { eventKey } from "../eventLinks";
+import { eventNotePath } from "../notes";
+import { NotePickerModal } from "../modals/NotePickerModal";
+import { TaskModal } from "../modals/TaskModal";
+import { noteName, openLinkedNote } from "./tasks/helpers";
 import { EventModal } from "../modals/EventModal";
 import { EventDetailsModal } from "../modals/EventDetailsModal";
 
 export const DRAG_MIME = "application/x-omni-calendar-event";
+
+/** Linked notes listed at most in an event's right-click menu (the dialog shows all). */
+const MENU_MAX_NOTES = 5;
 
 /** Open the editor for local events or the details view for external events. */
 export function openOccurrence(plugin: OmniCalendarPlugin, occ: CalendarOccurrence) {
@@ -27,16 +35,27 @@ export function openOccurrence(plugin: OmniCalendarPlugin, occ: CalendarOccurren
 export function occurrenceMenu(plugin: OmniCalendarPlugin, occ: CalendarOccurrence, evt: MouseEvent) {
 	const menu = new Menu();
 	menu.addItem((i) => i.setTitle(occ.readOnly ? "Show details" : "Edit").setIcon(occ.readOnly ? "info" : "pencil").onClick(() => openOccurrence(plugin, occ)));
+	// Linked notes (also for Google / Outlook / ICS events – kept only in Obsidian).
+	const links = plugin.store.linksFor(occ);
+	for (const path of links.slice(0, MENU_MAX_NOTES)) {
+		menu.addItem((i) => i.setTitle(`Open “${noteName(path)}”`).setIcon("file-text").onClick(() => void openLinkedNote(plugin, path)));
+	}
+	if (!links.includes(eventNotePath(occ, plugin.settings.notesFolder))) {
+		menu.addItem((i) => i.setTitle(plugin.hasEventNote(occ) ? "Open note" : "Create note").setIcon("file-plus").onClick(() => void plugin.createNoteForEvent(occ)));
+	}
 	menu.addItem((i) =>
-		i.setTitle(occ.notePath ? "Open note" : "Create note").setIcon("file-plus").onClick(() => {
-			if (occ.eventId) {
-				const ev = plugin.store.getEvent(occ.eventId);
-				if (ev) void plugin.openNoteForLocalEvent(ev, occ.occurrenceDate);
-			} else {
-				void plugin.openNoteForOccurrence(occ);
-			}
-		})
+		i.setTitle("Link note…").setIcon("link").onClick(() =>
+			new NotePickerModal(plugin.app, plugin.settings.notesFolder, links, (path) => void plugin.store.addLink(occ, path)).open()
+		)
 	);
+	if (plugin.settings.tasksEnabled) {
+		menu.addItem((i) =>
+			i.setTitle("Add task…").setIcon("check-square").onClick(() => {
+				const date = toDateKey(occ.start);
+				new TaskModal(plugin, undefined, { date, event: { key: eventKey(occ), title: occ.title, date } }).open();
+			})
+		);
+	}
 	if (!occ.readOnly && occ.eventId) {
 		const id = occ.eventId;
 		menu.addSeparator();
@@ -44,8 +63,9 @@ export function occurrenceMenu(plugin: OmniCalendarPlugin, occ: CalendarOccurren
 			i.setTitle("Duplicate").setIcon("copy").onClick(async () => {
 				const ev = plugin.store.getEvent(id);
 				if (!ev) return;
-				const { id: _id, created: _c, updated: _u, notePath: _n, ...rest } = ev;
-				void _id; void _c; void _u; void _n;
+				// The copy starts without linked notes and tasks.
+				const { id: _id, created: _c, updated: _u, links: _l, ...rest } = ev;
+				void _id; void _c; void _u; void _l;
 				await plugin.store.addEvent({ ...rest, title: `${ev.title} (copy)` });
 			})
 		);
@@ -92,6 +112,7 @@ export function createChip(
 		chip.createSpan({ cls: "ch-chip-time", text: opts.day ? timeRangeForDay(occ, opts.day, plugin.settings.use24h) : formatTime(occ.start, plugin.settings.use24h) });
 	}
 	chip.createSpan({ cls: "ch-chip-title", text: occ.title });
+	taskHint(plugin, chip, occ);
 	chip.setAttr("title", tooltip(plugin, occ));
 	chip.addEventListener("click", (e) => {
 		e.stopPropagation();
@@ -118,7 +139,22 @@ export function createChip(
 export function tooltip(plugin: OmniCalendarPlugin, occ: CalendarOccurrence): string {
 	const src = plugin.store.getSource(occ.sourceId);
 	const time = occ.allDay ? "All day" : formatTimeRange(occ.start, occ.end, plugin.settings.use24h);
-	return [occ.title, time, occ.location, src?.name].filter(Boolean).join("\n");
+	const tasks = plugin.settings.tasksEnabled ? plugin.tasks.forEvent(eventKey(occ)) : [];
+	const progress = tasks.length ? `Tasks: ${tasks.filter((t) => t.done).length}/${tasks.length} done` : "";
+	return [occ.title, time, occ.location, src?.name, progress].filter(Boolean).join("\n");
+}
+
+/** The small "☑ 2/5" progress of an event's tasks (nothing when it has none, or tasks are off). */
+export function taskHint(plugin: OmniCalendarPlugin, parent: HTMLElement, occ: CalendarOccurrence): HTMLElement | null {
+	if (!plugin.settings.tasksEnabled) return null;
+	const tasks = plugin.tasks.forEvent(eventKey(occ));
+	if (!tasks.length) return null;
+	const done = tasks.filter((t) => t.done).length;
+	const el = parent.createSpan({ cls: "ch-task-hint", attr: { "aria-label": `${done} of ${tasks.length} tasks done` } });
+	el.toggleClass("is-complete", done === tasks.length);
+	setIcon(el.createSpan({ cls: "ch-task-hint-icon" }), done === tasks.length ? "check-square" : "square");
+	el.appendText(`${done}/${tasks.length}`);
+	return el;
 }
 
 /** Local or writable remote events that are not part of a recurring series can be dragged. */

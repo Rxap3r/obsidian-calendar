@@ -8,6 +8,7 @@ import {
 	addDays, addMonths, addMinutes, dayDiff, isValidDate, parseLocal, startOfDay, toDateKey, toDateTimeKey, uid,
 } from "./dateUtils";
 import { errorMessage } from "./util";
+import { eventKey } from "./eventLinks";
 
 /** Safety limit for the repeats of one local event looked at per query. */
 const MAX_LOCAL_OCCURRENCES = 5000;
@@ -97,6 +98,9 @@ export class CalendarStore extends Events {
 
 	async deleteEvent(id: string): Promise<void> {
 		this.plugin.data.events = this.events.filter((e) => e.id !== id);
+		// Linked notes of single repeats go with the event (the notes themselves stay).
+		const links = this.plugin.data.eventLinks;
+		for (const key of Object.keys(links)) if (key.startsWith(`local:${id}@`)) delete links[key];
 		await this.plugin.persist();
 		this.notify();
 	}
@@ -113,6 +117,80 @@ export class CalendarStore extends Events {
 
 	getEvent(id: string): LocalEvent | undefined {
 		return this.events.find((e) => e.id === id);
+	}
+
+	// ---------------------------------------------------------------- linked notes
+
+	/**
+	 * Linked notes of an event occurrence. A local event keeps them itself; Google / Outlook / ICS events
+	 * and single repeats keep them in `eventLinks` (only in Obsidian). A repeat also shows the series' notes.
+	 */
+	linksFor(occ: CalendarOccurrence): string[] {
+		const ev = occ.eventId ? this.getEvent(occ.eventId) : undefined;
+		const own = ev && !occ.recurring ? [] : this.plugin.data.eventLinks[eventKey(occ)] ?? [];
+		return Array.from(new Set([...(ev?.links ?? []), ...own]));
+	}
+
+	/** Replace the linked notes of an occurrence (see `linksFor`). New links of a repeat belong to that repeat only. */
+	async setLinks(occ: CalendarOccurrence, links: string[]): Promise<void> {
+		const unique = Array.from(new Set(links));
+		const ev = occ.eventId ? this.getEvent(occ.eventId) : undefined;
+		const map = this.plugin.data.eventLinks;
+		const key = eventKey(occ);
+		if (ev && !occ.recurring) {
+			ev.links = unique.length ? unique : undefined;
+		} else {
+			const series = (ev?.links ?? []).filter((p) => unique.includes(p));
+			if (ev) ev.links = series.length ? series : undefined;
+			const own = unique.filter((p) => !series.includes(p));
+			if (own.length) map[key] = own;
+			else delete map[key];
+		}
+		await this.plugin.persist();
+		this.notify();
+	}
+
+	async addLink(occ: CalendarOccurrence, path: string): Promise<void> {
+		const links = this.linksFor(occ);
+		if (!links.includes(path)) await this.setLinks(occ, [...links, path]);
+	}
+
+	/** A note was renamed / moved: keep the event links. Returns true if something changed. */
+	renameLink(oldPath: string, newPath: string): boolean {
+		let changed = false;
+		const swap = (list: string[] | undefined) => {
+			const i = list?.indexOf(oldPath) ?? -1;
+			if (list && i >= 0) {
+				list[i] = newPath;
+				changed = true;
+			}
+		};
+		for (const ev of this.events) swap(ev.links);
+		for (const list of Object.values(this.plugin.data.eventLinks)) swap(list);
+		if (changed) this.notify();
+		return changed;
+	}
+
+	/** A note was deleted: drop its event links. */
+	removeLink(path: string): boolean {
+		let changed = false;
+		for (const ev of this.events) {
+			if (ev.links?.includes(path)) {
+				ev.links = ev.links.filter((p) => p !== path);
+				if (!ev.links.length) ev.links = undefined;
+				changed = true;
+			}
+		}
+		const map = this.plugin.data.eventLinks;
+		for (const [key, list] of Object.entries(map)) {
+			if (!list.includes(path)) continue;
+			const rest = list.filter((p) => p !== path);
+			if (rest.length) map[key] = rest;
+			else delete map[key];
+			changed = true;
+		}
+		if (changed) this.notify();
+		return changed;
 	}
 
 	/** Start / exclusive end of a local event's first occurrence. */
@@ -153,7 +231,6 @@ export class CalendarStore extends Events {
 				readOnly: false,
 				recurring,
 				occurrenceDate: toDateKey(s),
-				notePath: ev.notePath,
 			});
 		};
 
@@ -203,21 +280,7 @@ export class CalendarStore extends Events {
 			for (const e of this.remote.get(source.id) ?? []) {
 				if (e.start >= rangeEnd) continue;
 				if (e.end < rangeStart || (e.end.getTime() === rangeStart.getTime() && e.end.getTime() !== e.start.getTime())) continue;
-				out.push({
-					key: `${source.id}:${e.id}`,
-					sourceId: source.id,
-					title: e.title,
-					start: e.start,
-					end: e.end,
-					allDay: e.allDay,
-					location: e.location,
-					description: e.description,
-					url: e.url,
-					color: source.color,
-					readOnly: !!source.readOnly || !this.plugin.accounts.getAccount(source.accountId),
-					recurring: !!e.seriesId,
-					remote: { id: e.id, seriesId: e.seriesId, etag: e.etag },
-				});
+				out.push(this.remoteOccurrence(source, e));
 			}
 		}
 		for (const source of this.settings.sources) {
@@ -240,6 +303,46 @@ export class CalendarStore extends Events {
 	getOccurrencesForDay(day: Date, hidden?: Set<string>): CalendarOccurrence[] {
 		const s = startOfDay(day);
 		return this.getOccurrences(s, addDays(s, 1), hidden);
+	}
+
+	private remoteOccurrence(source: CalendarSource, e: RemoteEvent): CalendarOccurrence {
+		return {
+			key: `${source.id}:${e.id}`,
+			sourceId: source.id,
+			title: e.title,
+			start: e.start,
+			end: e.end,
+			allDay: e.allDay,
+			location: e.location,
+			description: e.description,
+			url: e.url,
+			color: source.color,
+			readOnly: !!source.readOnly || !this.plugin.accounts.getAccount(source.accountId),
+			recurring: !!e.seriesId,
+			remote: { id: e.id, seriesId: e.seriesId, etag: e.etag },
+		};
+	}
+
+	/**
+	 * Find an event occurrence again by its `eventKey()` (e.g. for a task that belongs to it).
+	 * Local and Google / Outlook events are found wherever they were moved; ICS events on `date`.
+	 */
+	findOccurrence(key: string, date?: string): CalendarOccurrence | undefined {
+		const local = /^local:([^@]+)(?:@(\d{4}-\d{2}-\d{2}))?$/.exec(key);
+		if (local) {
+			const ev = this.getEvent(local[1]);
+			if (!ev) return undefined;
+			const day = local[2] ? parseLocal(local[2]) : CalendarStore.bounds(ev).start;
+			return this.getOccurrencesForDay(day).find((o) => o.eventId === ev.id && (!local[2] || o.occurrenceDate === local[2]));
+		}
+		for (const [sourceId, events] of this.remote) {
+			const source = this.getSource(sourceId);
+			if (!source?.enabled || !key.startsWith(`${sourceId}:`)) continue;
+			const e = events.find((x) => `${sourceId}:${x.id}` === key);
+			if (e) return this.remoteOccurrence(source, e);
+		}
+		if (!date) return undefined;
+		return this.getOccurrencesForDay(parseLocal(date)).find((o) => eventKey(o) === key);
 	}
 
 	// ---------------------------------------------------------------- external calendars

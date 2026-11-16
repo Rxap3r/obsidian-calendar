@@ -88,6 +88,8 @@ export class CalendarView extends OmniView implements CalendarHost {
 		this.buildToolbar();
 		this.bodyEl = this.contentEl.createDiv({ cls: "ch-body" });
 		this.registerEvent(this.plugin.store.on("changed", () => this.queueRender()));
+		// Tasks are shown in the calendar, and events show their tasks' progress.
+		this.registerEvent(this.plugin.tasks.on("changed", () => this.queueRender()));
 		// The view can be dragged between sidebar and main area – keep the button in sync.
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.updateLocationButton()));
 		// Re-layout when the view is resized (e.g. dragging the sidebar edge).

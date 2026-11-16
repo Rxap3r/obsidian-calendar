@@ -5,6 +5,7 @@ import { DateField, TimeField, keepFocusOnTap } from "../pickers";
 import { addDays, isValidDate, parseLocal, toDateKey, toTimeKey } from "../dateUtils";
 import { errorMessage } from "../util";
 import { deleteRemoteEvent } from "./confirmations";
+import { eventExtras } from "../views/eventExtras";
 import { EventForm, EventModalInit, formForNew, formFromLocal, formFromRemote, LocalEventData } from "./eventForm";
 
 /** Create / edit an event: a local one, or one in a connected Google / Outlook calendar. */
@@ -21,6 +22,7 @@ export class EventModal extends Modal {
 	private untilField: DateField | null = null;
 	private recurEls: HTMLElement[] = [];
 	private busy = false;
+	private stopExtras: (() => void) | null = null;
 
 	constructor(private plugin: OmniCalendarPlugin, private init: EventModalInit = {}) {
 		super(plugin.app);
@@ -144,14 +146,24 @@ export class EventModal extends Modal {
 				t.inputEl.rows = 4;
 			});
 
+		// Tasks and linked notes of an existing event (kept in Obsidian, also for Google / Outlook events).
+		const occ = this.occurrence();
+		if (occ) {
+			this.stopExtras = eventExtras(this.plugin, contentEl.createDiv({ cls: "ch-event-extras" }), occ, {
+				// The note is made from what the dialog shows now: save first (local events).
+				beforeCreateNote: async () => {
+					if (!this.init.event) return undefined;
+					await this.save(false);
+					return this.occurrence();
+				},
+				afterCreateNote: () => this.close(),
+			});
+		} else if (!this.init.event && !remote) {
+			contentEl.createDiv({ cls: "ch-modal-hint ch-muted ch-extras-hint", text: "Tasks and linked notes can be added once the event is saved." });
+		}
+
 		const buttons = new Setting(contentEl).setClass("ch-modal-buttons");
 		if (remote) {
-			buttons.addButton((b) =>
-				b.setButtonText("Create note").onClick(async () => {
-					await this.plugin.openNoteForOccurrence(remote);
-					this.close();
-				})
-			);
 			if (remote.recurring) {
 				buttons.addButton((b) =>
 					b.setButtonText("Delete this occurrence").setWarning().onClick(() => void this.deleteRemote(false))
@@ -163,14 +175,6 @@ export class EventModal extends Modal {
 		}
 		if (this.init.event) {
 			const ev = this.init.event;
-			buttons.addButton((b) =>
-				b.setButtonText(ev.notePath ? "Open note" : "Create note").onClick(async () => {
-					await this.save(false);
-					const saved = this.plugin.store.getEvent(ev.id);
-					if (saved) await this.plugin.openNoteForLocalEvent(saved, this.init.occurrenceDate);
-					this.close();
-				})
-			);
 			if (ev.recurrence && this.init.occurrenceDate) {
 				buttons.addButton((b) =>
 					b.setButtonText("Delete this occurrence").setWarning().onClick(async () => {
@@ -191,6 +195,15 @@ export class EventModal extends Modal {
 		buttons.addButton((b) => b.setButtonText("Save").setCta().onClick(() => void this.save()));
 
 		this.refreshVisibility();
+	}
+
+	/** The occurrence this dialog edits (null for a new event). */
+	private occurrence(): CalendarOccurrence | undefined {
+		if (this.init.remote) return this.init.remote;
+		const ev = this.init.event;
+		if (!ev) return undefined;
+		const date = this.init.occurrenceDate;
+		return this.plugin.store.findOccurrence(ev.recurrence && date ? `local:${ev.id}@${date}` : `local:${ev.id}`);
 	}
 
 	private untilEl(): HTMLElement | null {
@@ -427,7 +440,7 @@ export class EventModal extends Modal {
 					await store.createRemote(t, input);
 				} else {
 					// Only the first local copy is linked to the note the event was created from.
-					const ev = await store.addEvent({ ...data, calendarId: t.id, exdates: [], notePath: firstLocal ? undefined : this.init.notePath });
+					const ev = await store.addEvent({ ...data, calendarId: t.id, exdates: [], links: !firstLocal && this.init.notePath ? [this.init.notePath] : undefined });
 					firstLocal = firstLocal ?? ev;
 				}
 				saved.push(t);
@@ -462,6 +475,7 @@ export class EventModal extends Modal {
 
 	onClose() {
 		EventModal.openCount = Math.max(0, EventModal.openCount - 1);
+		this.stopExtras?.();
 		this.contentEl.empty();
 	}
 }

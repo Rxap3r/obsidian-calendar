@@ -636,6 +636,31 @@
 .ch-task-list-setting .setting-item-control { gap: 6px; }
 .ch-task-modal .ch-task-sub-row .ch-input, .ch-task-modal .ch-task-add-sub { max-width: none; }
 
+/* ---------------------------------------------------------------- tasks and linked notes on events (1.8) */
+.ch-section-buttons { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.ch-event-tasks-progress { font-weight: normal; color: var(--text-muted); font-size: 0.85em; margin-right: auto; }
+.ch-event-task-list { display: flex; flex-direction: column; gap: 2px; }
+.ch-event-task {
+	--ch-event-color: var(--interactive-accent);
+	display: flex; align-items: center; gap: 8px; padding: 3px 4px; border-radius: var(--radius-s); cursor: pointer;
+}
+.ch-event-task:hover { background: var(--background-modifier-hover); }
+.ch-event-task-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-event-task.is-done .ch-event-task-title { text-decoration: line-through; color: var(--text-muted); }
+.ch-event-task-when { flex: none; font-size: 0.8em; color: var(--text-muted); }
+.ch-event-extras .ch-event-task-add { display: block; width: 100%; max-width: none; box-sizing: border-box; margin-top: 4px; }
+.ch-extras-hint { margin-top: 10px; }
+.ch-task-hint {
+	display: inline-flex; align-items: center; gap: 2px; flex: none; margin-left: 4px;
+	font-size: 0.85em; font-weight: normal; opacity: 0.85; white-space: nowrap; vertical-align: middle;
+}
+.ch-task-hint-icon { display: inline-flex; }
+.ch-task-hint-icon svg { width: 11px; height: 11px; }
+.ch-task-hint.is-complete { opacity: 0.6; }
+.ch-task-meta-event { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-task-meta-event:hover { color: var(--text-accent); }
+.ch-task-event-name { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+
 /* ---------------------------------------------------------------- our own time picker (same on every device) */
 .ch-timefield { position: relative; display: inline-flex; flex: 1 1 100px; max-width: 140px; min-width: 0; }
 .ch-timefield-input { width: 100%; max-width: none !important; min-width: 0; box-sizing: border-box; cursor: pointer; font-variant-numeric: tabular-nums; }

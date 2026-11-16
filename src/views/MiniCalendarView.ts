@@ -9,7 +9,7 @@ import { rangeLabel } from "../periods";
 import { plural } from "../util";
 import { OmniView } from "./OmniView";
 import { VIEW_TYPE_MINI } from "./viewTypes";
-import { markDayCell, occurrenceMenu, openOccurrence, tooltip } from "./shared";
+import { markDayCell, occurrenceMenu, openOccurrence, taskHint, tooltip } from "./shared";
 
 /** Compact month calendar + upcoming events, meant for the left/right sidebar. */
 export class MiniCalendarView extends OmniView {
@@ -30,6 +30,8 @@ export class MiniCalendarView extends OmniView {
 	async onOpen() {
 		this.contentEl.addClass("ch-mini");
 		this.registerEvent(this.plugin.store.on("changed", () => this.queueRender()));
+		// Tasks are shown in the calendar, and events show their tasks' progress.
+		this.registerEvent(this.plugin.tasks.on("changed", () => this.queueRender()));
 		// Re-render after midnight and periodically so "today" and past events stay accurate.
 		this.registerInterval(
 			window.setInterval(() => {
@@ -155,6 +157,7 @@ export class MiniCalendarView extends OmniView {
 		row.createSpan({ cls: "ch-mini-item-bar" });
 		row.createSpan({ cls: "ch-mini-item-time", text: o.allDay ? "All day" : formatTime(o.start, s.use24h) });
 		row.createSpan({ cls: "ch-mini-item-title", text: o.title });
+		taskHint(this.plugin, row, o);
 		row.setAttr("title", tooltip(this.plugin, o));
 		row.onclick = () => openOccurrence(this.plugin, o);
 		row.oncontextmenu = (e) => {
