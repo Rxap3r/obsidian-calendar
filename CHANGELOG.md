@@ -10,6 +10,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
   they stayed in *Tasks today* (or *Tomorrow*, …) for the old day. Now, when an event moves to another day – in the
   dialog, by dragging, or in Google/Outlook itself – its tasks move by the same number of days. A task on the event's day
   stays on it; one you set two days earlier stays two days earlier. Times are kept.
+- **Drag to create over several days:** in the week view, dragging to create an event can now continue into the next
+  days, e.g. from Wednesday 12:00 to Thursday 06:00. The preview is drawn on each day and reads *Wed 12:00 – Thu 06:00*.
+  Before, the selection stopped at midnight. On the phone: press and hold, then drag into the next day.
 
 ## Known bugs
 
