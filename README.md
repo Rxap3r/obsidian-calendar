@@ -608,7 +608,7 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
   - Not by simply clicking the text, so nothing is changed by accident.
   - For Google/Outlook events the description is saved there.
 - Google, Outlook and ICS events already have a read-only view; everything gets the same look.
-- **Suggested, not yet confirmed by the maintainer:**
+- **Also agreed:**
   - quick actions stay possible in the view (tick off the task or a subtask, open a linked note);
   - a setting *"Clicking opens: Details view (default) / Edit dialog directly"*;
   - right-click / long-press still offers *Edit* directly.
@@ -617,7 +617,7 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 - Each task gets a **log** section: type what you've already done or what happened, then **send** it.
 - Each entry stays in the task like a **sticky note** with **date and time**. New entries go **below** the older ones, so the history reads top to bottom.
 - It's different from subtasks: those are things *to do*, the log records what was *done*.
-- **Suggested, not yet confirmed:**
+- **Also agreed:**
   - adding entries also works in the details view without "Edit";
   - a small "📝 3" hint in the task list;
   - entries can be corrected or deleted (the original time stays);
