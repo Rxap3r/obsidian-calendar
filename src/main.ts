@@ -1,5 +1,5 @@
 import { Menu, Notice, Platform, Plugin, TFile, WorkspaceLeaf } from "obsidian";
-import { OmniCalendarSettings, CalendarOccurrence, LocalEvent, PluginData, ViewMode } from "./types";
+import { OmniCalendarSettings, CalendarOccurrence, PluginData, ViewMode } from "./types";
 import { OmniCalendarSettingTab } from "./settings/SettingTab";
 import { normalizePluginData } from "./settingsData";
 import { CalendarStore } from "./store";
@@ -14,8 +14,8 @@ import { AgendaBlock } from "./views/AgendaBlock";
 import { VIEW_TYPE_CALENDAR, VIEW_TYPE_MINI, VIEW_TYPE_TASKS } from "./views/viewTypes";
 import { TaskModal } from "./modals/TaskModal";
 import { EventModal } from "./modals/EventModal";
-import { createEventNote } from "./notes";
-import { MS_DAY, MS_HOUR, MS_MIN, parseLocal, startOfDay, toDateKey } from "./dateUtils";
+import { createEventNote, eventNotePath } from "./notes";
+import { MS_DAY, MS_HOUR, MS_MIN, startOfDay, toDateKey } from "./dateUtils";
 
 export default class OmniCalendarPlugin extends Plugin {
 	data!: PluginData;
@@ -96,15 +96,13 @@ export default class OmniCalendarPlugin extends Plugin {
 	/** Keep linked note paths in sync when notes are renamed / deleted. */
 	private followNoteChanges() {
 		this.registerEvent(this.app.vault.on("rename", async (file, oldPath) => {
-			let changed = false;
-			for (const ev of this.data.events) if (ev.notePath === oldPath) { ev.notePath = file.path; changed = true; }
-			if (this.tasks.renameLink(oldPath, file.path)) changed = true;
+			const events = this.store.renameLink(oldPath, file.path);
+			const changed = this.tasks.renameLink(oldPath, file.path) || events;
 			if (changed) await this.persist();
 		}));
 		this.registerEvent(this.app.vault.on("delete", async (file) => {
-			let changed = false;
-			for (const ev of this.data.events) if (ev.notePath === file.path) { ev.notePath = undefined; changed = true; }
-			if (this.tasks.removeLink(file.path)) changed = true;
+			const events = this.store.removeLink(file.path);
+			const changed = this.tasks.removeLink(file.path) || events;
 			if (changed) await this.persist();
 		}));
 	}
@@ -232,29 +230,25 @@ export default class OmniCalendarPlugin extends Plugin {
 
 	// ------------------------------------------------------------------ notes
 
-	async openNoteForOccurrence(occ: CalendarOccurrence) {
+	/** True when "Create note" would only open an existing note (the button then reads "Open note"). */
+	hasEventNote(occ: CalendarOccurrence): boolean {
+		return this.app.vault.getAbstractFileByPath(eventNotePath(occ, this.settings.notesFolder)) instanceof TFile;
+	}
+
+	/**
+	 * "Create note" for an event: creates the note from the template (or finds the existing one),
+	 * adds it to the event's linked notes and opens it.
+	 */
+	async createNoteForEvent(occ: CalendarOccurrence): Promise<TFile | null> {
 		const file = await createEventNote(this.app, occ, {
 			folder: this.settings.notesFolder,
 			template: this.settings.noteTemplate,
 			calendarName: this.store.getSource(occ.sourceId)?.name ?? "",
 			use24h: this.settings.use24h,
 		});
-		if (file) await this.app.workspace.getLeaf("tab").openFile(file);
+		if (!file) return null;
+		await this.store.addLink(occ, file.path);
+		await this.mainAreaLeaf().openFile(file);
 		return file;
-	}
-
-	async openNoteForLocalEvent(ev: LocalEvent, occurrenceDate?: string) {
-		if (ev.notePath) {
-			const f = this.app.vault.getAbstractFileByPath(ev.notePath);
-			if (f instanceof TFile) {
-				await this.app.workspace.getLeaf("tab").openFile(f);
-				return;
-			}
-		}
-		const day = occurrenceDate ? parseLocal(occurrenceDate) : parseLocal(ev.start);
-		const occ = this.store.getOccurrencesForDay(day).find((o) => o.eventId === ev.id);
-		if (!occ) return;
-		const file = await this.openNoteForOccurrence(occ);
-		if (file && !ev.recurrence) await this.store.updateEvent(ev.id, { notePath: file.path });
 	}
 }

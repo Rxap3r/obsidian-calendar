@@ -47,6 +47,7 @@ export class Events {
 	private h: Record<string, ((...a: any[]) => void)[]> = {};
 	on(n: string, f: (...a: any[]) => void) { (this.h[n] ??= []).push(f); return { n, f }; }
 	trigger(n: string, ...a: any[]) { (this.h[n] ?? []).forEach((f) => f(...a)); }
+	offref(ref: { n: string; f: (...a: any[]) => void }) { this.h[ref.n] = (this.h[ref.n] ?? []).filter((x) => x !== ref.f); }
 }
 export function setIcon(el: HTMLElement, name: string) {
 	if (!el) return;

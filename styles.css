@@ -636,6 +636,83 @@
 .ch-task-list-setting .setting-item-control { gap: 6px; }
 .ch-task-modal .ch-task-sub-row .ch-input, .ch-task-modal .ch-task-add-sub { max-width: none; }
 
+/* ---------------------------------------------------------------- tasks and linked notes on events (1.8) */
+.ch-section-buttons { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.ch-event-tasks-progress { font-weight: normal; color: var(--text-muted); font-size: 0.85em; margin-right: auto; }
+.ch-event-task-list { display: flex; flex-direction: column; gap: 2px; }
+.ch-event-task {
+	--ch-event-color: var(--interactive-accent);
+	display: flex; align-items: center; gap: 8px; padding: 3px 4px; border-radius: var(--radius-s); cursor: pointer;
+}
+.ch-event-task:hover { background: var(--background-modifier-hover); }
+.ch-event-task-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-event-task.is-done .ch-event-task-title { text-decoration: line-through; color: var(--text-muted); }
+.ch-event-task-when { flex: none; font-size: 0.8em; color: var(--text-muted); }
+.ch-event-extras .ch-event-task-add { display: block; width: 100%; max-width: none; box-sizing: border-box; margin-top: 4px; }
+.ch-extras-hint { margin-top: 10px; }
+.ch-task-hint {
+	display: inline-flex; align-items: center; gap: 2px; flex: none; margin-left: 4px;
+	font-size: 0.85em; font-weight: normal; opacity: 0.85; white-space: nowrap; vertical-align: middle;
+}
+.ch-task-hint-icon { display: inline-flex; }
+.ch-task-hint-icon svg { width: 11px; height: 11px; }
+.ch-task-hint.is-complete { opacity: 0.6; }
+.ch-task-meta-event { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-task-meta-event:hover { color: var(--text-accent); }
+.ch-task-event-name { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+
+/* ---------------------------------------------------------------- tasks in the calendar (1.8) */
+.ch-day-tasks {
+	display: inline-flex; align-items: center; gap: 3px; flex: none;
+	height: auto; min-height: 0; padding: 0 5px; margin: 0; box-shadow: none;
+	font-size: 0.75em; line-height: 1.5; font-weight: 600; border-radius: 8px; cursor: pointer;
+	color: var(--text-accent); background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+	border: 1px solid color-mix(in srgb, var(--interactive-accent) 35%, transparent);
+}
+.ch-day-tasks:hover { background: color-mix(in srgb, var(--interactive-accent) 22%, transparent); }
+.ch-day-tasks.is-done { color: var(--text-faint); background: transparent; border-color: var(--background-modifier-border); }
+.ch-day-tasks-icon { display: inline-flex; }
+.ch-day-tasks-icon svg { width: 11px; height: 11px; }
+.ch-cell-head .ch-day-tasks { margin-left: auto; margin-right: 4px; }
+.ch-tg-allday-cell .ch-day-tasks { margin: 1px 0 2px; }
+.ch-agenda-date .ch-day-tasks { align-self: center; }
+.ch-mc-day-head .ch-day-tasks { margin-left: auto; }
+.ch-mc-cell { position: relative; }
+.ch-mc-taskmark {
+	position: absolute; top: 3px; right: 3px; width: 5px; height: 5px; border-radius: 1px;
+	border: 1px solid var(--text-accent); pointer-events: none;
+}
+.ch-tg-task {
+	--ch-event-color: var(--interactive-accent);
+	position: absolute; box-sizing: border-box; overflow: hidden; cursor: pointer; z-index: 1;
+	padding: 2px 4px; font-size: 0.78em; border-radius: 4px;
+	/* Light and dashed, so a task never looks like an event. */
+	background: color-mix(in srgb, var(--ch-event-color) 7%, var(--background-primary));
+	border: 1px dashed color-mix(in srgb, var(--ch-event-color) 70%, transparent);
+}
+.ch-tg-task:hover { z-index: 3; box-shadow: var(--shadow-s); }
+.ch-tg-task-line { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.ch-tg-task-title { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-tg-task-time { color: var(--text-muted); font-size: 0.92em; padding-left: 20px; white-space: nowrap; overflow: hidden; }
+.ch-tg-task.ch-compact { display: flex; gap: 4px; white-space: nowrap; }
+.ch-tg-task.ch-compact .ch-tg-task-time { padding-left: 0; }
+.ch-tg-task.is-done { opacity: 0.6; }
+.ch-tg-task.is-done .ch-tg-task-title { text-decoration: line-through; }
+.ch-tg-task .ch-task-checkbox { margin: 0; }
+.ch-day-tasks-modal .ch-day-tasks-add { display: block; width: 100%; max-width: none; box-sizing: border-box; margin-bottom: 8px; }
+.ch-day-tasks-list { max-height: 60vh; overflow-y: auto; }
+.ch-day-tasks-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.ch-day-tasks-new { display: inline-flex; align-items: center; gap: 4px; }
+
+.ch-mini-tasks-title { cursor: pointer; }
+.ch-mini-tasks-title:hover { color: var(--text-accent); }
+.ch-mini-task { display: flex; align-items: center; gap: 8px; padding: 3px 4px; border-radius: var(--radius-s); cursor: pointer; font-size: 0.9em; }
+.ch-mini-task:hover { background: var(--background-modifier-hover); }
+.ch-mini-task-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-mini-task.is-done .ch-mini-task-title { text-decoration: line-through; color: var(--text-muted); }
+.ch-mini-task-when { flex: none; font-size: 0.85em; color: var(--text-muted); }
+.ch-mini-task-when.ch-overdue { color: var(--color-red); }
+
 /* ---------------------------------------------------------------- our own time picker (same on every device) */
 .ch-timefield { position: relative; display: inline-flex; flex: 1 1 100px; max-width: 140px; min-width: 0; }
 .ch-timefield-input { width: 100%; max-width: none !important; min-width: 0; box-sizing: border-box; cursor: pointer; font-variant-numeric: tabular-nums; }

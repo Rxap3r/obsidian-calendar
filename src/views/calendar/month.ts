@@ -1,7 +1,8 @@
 import { setIcon } from "obsidian";
 import {
-	addDays, addMonths, dayDiff, formatDate, isoWeek, isSameDay, onDay, startOfDay, startOfMonth, startOfWeek, weekdayNames,
+	addDays, addMonths, dayDiff, formatDate, isoWeek, isSameDay, onDay, startOfDay, startOfMonth, startOfWeek, toDateKey, weekdayNames,
 } from "../../dateUtils";
+import { dayTaskCounter } from "./tasks";
 import { EventModal } from "../../modals/EventModal";
 import { createChip, markDayCell } from "../shared";
 import { CalendarHost } from "./host";
@@ -46,6 +47,9 @@ export function renderMonth(host: CalendarHost) {
 				e.stopPropagation();
 				new EventModal(plugin, { start: day }).open();
 			};
+			// The day's tasks as one small badge.
+			const tasks = dayTaskCounter(plugin, header, toDateKey(day), true);
+			if (tasks) header.insertBefore(tasks, plus);
 
 			const list = cell.createDiv({ cls: "ch-cell-events" });
 			const dayOccs = onDay(occs, day);
@@ -100,6 +104,8 @@ export function renderMonthCompact(host: CalendarHost, dots: boolean) {
 			markDayCell(cell, day, monthStart);
 			if (isSameDay(day, selected)) cell.addClass("ch-selected");
 			cell.createDiv({ cls: "ch-mc-num" }).createSpan({ text: String(day.getDate()) });
+			// A tiny mark for days with open tasks; the selected day's list below shows the counter.
+			if (host.plugin.tasks.forCalendarDay(toDateKey(day)).some((t) => !t.done)) cell.createDiv({ cls: "ch-mc-taskmark", attr: { "aria-hidden": "true" } });
 			const dayOccs = onDay(occs, day);
 			const marks = cell.createDiv({ cls: "ch-mc-marks" });
 			if (dots) {
@@ -131,6 +137,7 @@ export function renderMonthCompact(host: CalendarHost, dots: boolean) {
 	const open = lh.createEl("button", { cls: "ch-mc-day-title", text: formatDate(selected, { weekday: "long", day: "numeric", month: "long" }) });
 	open.setAttr("aria-label", "Open day view");
 	open.onclick = () => host.goTo(selected, "day");
+	dayTaskCounter(host.plugin, lh, toDateKey(selected), true);
 	const add = lh.createEl("button", { cls: "ch-icon-btn", attr: { "aria-label": "New event" } });
 	setIcon(add, "plus");
 	add.onclick = () => new EventModal(host.plugin, { start: selected }).open();

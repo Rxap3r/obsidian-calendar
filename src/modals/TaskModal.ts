@@ -4,8 +4,9 @@ import { Task, TaskPriority } from "../types";
 import { PRIORITY_NAMES, newSubtask } from "../tasks";
 import { addDays, toDateKey } from "../dateUtils";
 import { confirmAction } from "./ConfirmModal";
-import { NotePickerModal } from "./NotePickerModal";
-import { noteName, openLinkedNote } from "../views/tasks/helpers";
+import { linkedNotesBlock } from "../views/linkedNotes";
+import { openTaskEvent } from "../views/tasks/helpers";
+import { openOccurrence } from "../views/shared";
 import { DateField, TimeField, keepFocusOnTap } from "../pickers";
 
 /** Create / edit a task: title, list, priority, date, time (range), subtasks, linked notes, notes. */
@@ -14,7 +15,6 @@ export class TaskModal extends Modal {
 	private readonly isNew: boolean;
 	private timeRow!: HTMLElement;
 	private subtasksEl!: HTMLElement;
-	private linksEl!: HTMLElement;
 	private dateField!: DateField;
 
 	constructor(private plugin: OmniCalendarPlugin, task?: Task, init: Partial<Task> = {}) {
@@ -47,6 +47,23 @@ export class TaskModal extends Modal {
 			for (const l of this.plugin.tasks.lists) d.addOption(l.id, l.name);
 			d.setValue(t.listId).onChange((v) => (t.listId = v));
 		});
+
+		// The event this task belongs to (set from the event dialog or the event's menu).
+		if (t.event) {
+			const ev = new Setting(contentEl).setName("Event").setClass("ch-task-event-setting");
+			const name = ev.controlEl.createEl("a", { cls: "ch-task-event-name", text: t.event.title || "Event" });
+			setIcon(name.createSpan({ cls: "ch-btn-icon" }), "calendar");
+			name.onclick = (e) => {
+				e.preventDefault();
+				openTaskEvent(this.plugin, t, (occ) => openOccurrence(this.plugin, occ));
+			};
+			ev.addExtraButton((b) =>
+				b.setIcon("unlink").setTooltip("Remove from event (keep the task)").onClick(() => {
+					t.event = undefined;
+					ev.settingEl.remove();
+				})
+			);
+		}
 
 		// Priority as four buttons.
 		const prio = new Setting(contentEl).setName("Priority").setClass("ch-task-prio-setting");
@@ -126,17 +143,7 @@ export class TaskModal extends Modal {
 		});
 
 		// Linked notes.
-		const lh = contentEl.createDiv({ cls: "ch-task-section-head" });
-		lh.createSpan({ text: "Linked notes" });
-		const link = lh.createEl("button", { cls: "ch-task-link-btn", text: "Link note" });
-		setIcon(link.createSpan({ cls: "ch-btn-icon" }), "link");
-		link.onclick = () =>
-			new NotePickerModal(this.app, this.plugin.settings.notesFolder, t.links, (path) => {
-				if (!t.links.includes(path)) t.links.push(path);
-				this.renderLinks();
-			}).open();
-		this.linksEl = contentEl.createDiv({ cls: "ch-task-links" });
-		this.renderLinks();
+		linkedNotesBlock(this.plugin, contentEl, { get: () => t.links, set: (links) => void (t.links = links) });
 
 		new Setting(contentEl)
 			.setName("Notes")
@@ -186,28 +193,6 @@ export class TaskModal extends Modal {
 				this.renderSubtasks();
 			};
 		});
-	}
-
-	private renderLinks() {
-		const el = this.linksEl;
-		el.empty();
-		const t = this.task;
-		if (!t.links.length) el.createDiv({ cls: "ch-empty ch-task-links-empty", text: "No linked notes" });
-		for (const path of t.links) {
-			const row = el.createDiv({ cls: "ch-task-link-row" });
-			setIcon(row.createSpan({ cls: "ch-task-link-icon" }), "file-text");
-			const name = row.createEl("a", { cls: "ch-task-link-name", text: noteName(path), attr: { title: path } });
-			name.onclick = (e) => {
-				e.preventDefault();
-				void openLinkedNote(this.plugin, path);
-			};
-			const del = row.createEl("button", { cls: "ch-icon-btn", attr: { "aria-label": "Remove link" } });
-			setIcon(del, "x");
-			del.onclick = () => {
-				t.links = t.links.filter((p) => p !== path);
-				this.renderLinks();
-			};
-		}
 	}
 
 	private async save() {

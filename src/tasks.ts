@@ -1,6 +1,6 @@
 import { Events } from "obsidian";
 import type OmniCalendarPlugin from "./main";
-import { SmartListId, Subtask, Task, TaskData, TaskList, TaskPriority } from "./types";
+import { SmartListId, Subtask, Task, TaskData, TaskEventLink, TaskList, TaskPriority } from "./types";
 import { addDays, MS_DAY, parseLocal, startOfDay, timeKeyToMinutes, toDateKey, uid } from "./dateUtils";
 
 export const DEFAULT_TASK_LIST: TaskList = { id: "tasks", name: "Tasks", color: "#7c5cff" };
@@ -50,12 +50,20 @@ export function normalizeTaskData(raw: unknown): TaskData {
 			completedAt: typeof t.completedAt === "number" ? t.completedAt : t.done ? Date.now() : undefined,
 			createdAt: typeof t.createdAt === "number" ? t.createdAt : Date.now(),
 			links: (Array.isArray(t.links) ? t.links : []).filter((p) => typeof p === "string"),
+			event: normalizeEventLink(t.event),
 		}));
 	for (const t of items) {
 		if (!t.date) t.start = undefined;
 		if (!t.start) t.end = undefined;
 	}
 	return { lists, items };
+}
+
+/** A task's event link, or undefined when it is incomplete. */
+function normalizeEventLink(raw: unknown): TaskEventLink | undefined {
+	const e = raw as Partial<TaskEventLink> | undefined;
+	if (!e || typeof e.key !== "string" || !e.key || !/^\d{4}-\d{2}-\d{2}$/.test(e.date ?? "")) return undefined;
+	return { key: e.key, title: String(e.title ?? ""), date: e.date as string };
 }
 
 /** Minutes since midnight; tasks without a time sort after all timed ones. */
@@ -102,9 +110,50 @@ export class TaskStore extends Events {
 		return this.items.find((t) => t.id === id);
 	}
 
+	/** Tasks by event key, rebuilt after changes (see `forEvent`). */
+	private byEvent: { items: Task[]; version: number; map: Map<string, Task[]> } | null = null;
+	private version = 0;
+
 	private async save() {
+		this.version++;
 		await this.plugin.persist();
 		this.trigger("changed");
+	}
+
+	/** The tasks that belong to an event occurrence (by `eventKey()`), in list order. */
+	forEvent(key: string): Task[] {
+		if (!this.byEvent || this.byEvent.items !== this.items || this.byEvent.version !== this.version) {
+			const map = new Map<string, Task[]>();
+			for (const t of this.items) {
+				if (!t.event) continue;
+				const list = map.get(t.event.key);
+				if (list) list.push(t);
+				else map.set(t.event.key, [t]);
+			}
+			for (const list of map.values()) list.sort((a, b) => Number(a.done) - Number(b.done) || compareTasks(a, b));
+			this.byEvent = { items: this.items, version: this.version, map };
+		}
+		return this.byEvent.map.get(key) ?? [];
+	}
+
+	/** Keep the event's title and day in its tasks up to date (shown in task lists). */
+	async refreshEventInfo(key: string, title: string, date: string) {
+		const stale = this.items.filter((t) => t.event?.key === key && (t.event.title !== title || t.event.date !== date));
+		if (!stale.length) return;
+		for (const t of stale) t.event = { key, title, date };
+		await this.save();
+	}
+
+	/**
+	 * Tasks shown in the calendar on one day (YYYY-MM-DD): the day's tasks, except completed ones when
+	 * the setting hides them. Tasks of an event are left out unless they have a time: the event shows them ("2/5").
+	 */
+	forCalendarDay(date: string): Task[] {
+		const s = this.plugin.settings;
+		if (!s.tasksEnabled || !s.tasksInCalendar) return [];
+		return this.items
+			.filter((t) => t.date === date && (s.tasksCalendarShowDone || !t.done) && (!t.event || !!t.start))
+			.sort((a, b) => Number(a.done) - Number(b.done) || compareTasks(a, b));
 	}
 
 	// ------------------------------------------------------------------ tasks
@@ -232,7 +281,10 @@ export class TaskStore extends Events {
 				changed = true;
 			}
 		}
-		if (changed) this.trigger("changed");
+		if (changed) {
+			this.version++;
+			this.trigger("changed");
+		}
 		return changed;
 	}
 
@@ -245,7 +297,10 @@ export class TaskStore extends Events {
 				changed = true;
 			}
 		}
-		if (changed) this.trigger("changed");
+		if (changed) {
+			this.version++;
+			this.trigger("changed");
+		}
 		return changed;
 	}
 

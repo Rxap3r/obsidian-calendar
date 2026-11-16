@@ -5,7 +5,8 @@ import { PRIORITY_NAMES } from "../../tasks";
 import { addDays, formatDate, parseLocal, toDateKey } from "../../dateUtils";
 import { TaskModal } from "../../modals/TaskModal";
 import { confirmAction } from "../../modals/ConfirmModal";
-import { noteName, openLinkedNote, taskTimeLabel } from "./helpers";
+import { noteName, openLinkedNote, openTaskEvent, taskTimeLabel } from "./helpers";
+import { openOccurrence } from "../shared";
 
 export interface TaskRowOptions {
 	/** Show the task's date (in groups that mix several days: Overdue, Later, Done). */
@@ -49,6 +50,15 @@ export function renderTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t
 		const m = meta.createSpan({ cls: "ch-task-meta-list" });
 		m.createSpan({ cls: "ch-tasks-nav-dot" });
 		m.appendText(list.name);
+	}
+	if (t.event) {
+		const m = meta.createSpan({ cls: "ch-task-meta-event", attr: { "aria-label": "Open event", title: t.event.title } });
+		setIcon(m.createSpan({ cls: "ch-task-meta-icon" }), "calendar");
+		m.appendText(t.event.title || "Event");
+		m.onclick = (e) => {
+			e.stopPropagation();
+			openTaskEvent(plugin, t, (occ) => openOccurrence(plugin, occ));
+		};
 	}
 	if (t.subtasks.length) {
 		const doneN = t.subtasks.filter((s) => s.done).length;

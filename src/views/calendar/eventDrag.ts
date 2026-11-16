@@ -1,9 +1,12 @@
 import { Notice } from "obsidian";
 import type OmniCalendarPlugin from "../../main";
-import { CalendarOccurrence } from "../../types";
-import { addDays, addMinutes, dayDiff, formatTimeRange, MS_MIN, startOfDay } from "../../dateUtils";
+import { CalendarOccurrence, Task } from "../../types";
+import {
+	addDays, addMinutes, dayDiff, formatTimeRange, minutesToTimeKey, MS_MIN, startOfDay, timeKeyToMinutes, toDateKey,
+} from "../../dateUtils";
 import { errorMessage } from "../../util";
 import { canDrag, DRAG_MIME } from "../shared";
+import { TASK_MIME } from "./tasks";
 import { HOUR_HEIGHT, minutesAt } from "./layout";
 
 /** Transparent 1×1 image used to hide the browser's drag picture (the drop preview replaces it). */
@@ -18,7 +21,7 @@ export class EventDrag {
 	 * The event being dragged in the week / day grid: where it was grabbed (minutes after its start) and
 	 * its length, so the drop lands exactly where the preview shows it.
 	 */
-	private grabbed: { key: string; offsetMin: number; durMin: number; color: string } | null = null;
+	private grabbed: { key: string; offsetMin: number; durMin: number; color: string; title: string } | null = null;
 	private preview: HTMLElement | null = null;
 
 	constructor(private plugin: OmniCalendarPlugin) {}
@@ -29,19 +32,28 @@ export class EventDrag {
 	}
 
 	/**
-	 * Accept dropped events on a day (month cell / all-day row), or on a time column when
-	 * `timeFromEvent` gives the start time in minutes.
+	 * Accept dropped events and tasks on a day (month cell / all-day row), or on a time column when
+	 * `timeFromEvent` gives the start time in minutes. A task dropped on the all-day row
+	 * (`clearTaskTime`) loses its time; on a month cell it keeps it.
 	 */
-	dropTarget(el: HTMLElement, day: Date, timeFromEvent: ((e: DragEvent) => number) | null = null) {
+	dropTarget(el: HTMLElement, day: Date, timeFromEvent: ((e: DragEvent) => number) | null = null, opts: { clearTaskTime?: boolean } = {}) {
 		el.addEventListener("dragover", (e) => {
-			if (!e.dataTransfer?.types.includes(DRAG_MIME)) return;
+			if (!isOurDrag(e)) return;
 			e.preventDefault();
-			e.dataTransfer.dropEffect = "move";
+			if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
 			el.addClass("ch-drop-target");
 		});
 		el.addEventListener("dragleave", () => el.removeClass("ch-drop-target"));
 		el.addEventListener("drop", async (e) => {
 			el.removeClass("ch-drop-target");
+			const taskId = e.dataTransfer?.getData(TASK_MIME);
+			if (taskId) {
+				e.preventDefault();
+				const minutes = timeFromEvent ? timeFromEvent(e) : null;
+				this.clearPreview();
+				await this.moveTask(taskId, day, minutes, !!opts.clearTaskTime);
+				return;
+			}
 			const key = e.dataTransfer?.getData(DRAG_MIME);
 			if (!key) return;
 			e.preventDefault();
@@ -74,7 +86,7 @@ export class EventDrag {
 		const dropStart = (clientY: number) => minutesAt(col, clientY, Math.round, this.grabbed?.offsetMin ?? 0);
 		this.dropTarget(col, day, (e) => dropStart(e.clientY));
 		col.addEventListener("dragover", (e) => {
-			if (!this.grabbed || !e.dataTransfer?.types.includes(DRAG_MIME)) return;
+			if (!this.grabbed || !isOurDrag(e)) return;
 			this.showPreview(col, day, dropStart(e.clientY));
 		});
 	}
@@ -92,7 +104,7 @@ export class EventDrag {
 			// Where in the event it was grabbed (also for events that started on an earlier day).
 			const r = el.getBoundingClientRect();
 			const offsetMin = ((e.clientY - r.top) / HOUR_HEIGHT) * 60 + (segStart.getTime() - occ.start.getTime()) / MS_MIN;
-			this.grabbed = { key: occ.key, offsetMin, durMin: (occ.end.getTime() - occ.start.getTime()) / MS_MIN, color: occ.color };
+			this.grabbed = { key: occ.key, offsetMin, durMin: (occ.end.getTime() - occ.start.getTime()) / MS_MIN, color: occ.color, title: occ.title };
 			// Hide the browser's drag picture: the snapping preview shows the real result instead.
 			if (e.dataTransfer && EMPTY_DRAG_IMAGE.complete) e.dataTransfer.setDragImage(EMPTY_DRAG_IMAGE, 0, 0);
 		});
@@ -101,6 +113,47 @@ export class EventDrag {
 			this.grabbed = null;
 			this.clearPreview();
 		});
+	}
+
+	/** Make a task block of the week / day grid draggable to another time or day. */
+	grabbableTask(el: HTMLElement, t: Task, slot: { start: Date; end: Date }) {
+		el.draggable = true;
+		el.addEventListener("dragstart", (e) => {
+			e.dataTransfer?.setData(TASK_MIME, t.id);
+			e.dataTransfer?.setData("text/plain", t.title);
+			el.addClass("ch-dragging");
+			const r = el.getBoundingClientRect();
+			const offsetMin = ((e.clientY - r.top) / HOUR_HEIGHT) * 60;
+			const color = this.plugin.tasks.list(t.listId).color;
+			this.grabbed = { key: `task:${t.id}`, offsetMin, durMin: (slot.end.getTime() - slot.start.getTime()) / MS_MIN, color, title: t.title };
+			if (e.dataTransfer && EMPTY_DRAG_IMAGE.complete) e.dataTransfer.setDragImage(EMPTY_DRAG_IMAGE, 0, 0);
+		});
+		el.addEventListener("dragend", () => {
+			el.removeClass("ch-dragging");
+			this.grabbed = null;
+			this.clearPreview();
+		});
+	}
+
+	/**
+	 * A task was dropped on a day: on a time (`minutes`) it gets that time and keeps its length; on the
+	 * all-day row (`clearTime`) it keeps only the date; on a month cell it keeps its time.
+	 */
+	async moveTask(id: string, day: Date, minutes: number | null, clearTime: boolean) {
+		const t = this.plugin.tasks.get(id);
+		if (!t) return;
+		const date = toDateKey(day);
+		let { start, end } = t;
+		if (minutes !== null) {
+			const length = t.start && t.end ? timeKeyToMinutes(t.end) - timeKeyToMinutes(t.start) : 0;
+			start = minutesToTimeKey(minutes);
+			// The end stays on the same day; a range that would pass midnight keeps only its start.
+			end = length > 0 && minutes + length < 24 * 60 ? minutesToTimeKey(minutes + length) : undefined;
+		} else if (clearTime) {
+			start = end = undefined;
+		}
+		if (date === t.date && start === t.start && end === t.end) return;
+		await this.plugin.tasks.update(id, { date, start, end });
 	}
 
 	/** The block that shows where (and when) a dragged event will land. */
@@ -112,7 +165,7 @@ export class EventDrag {
 			p?.remove();
 			p = this.preview = col.createDiv({ cls: "ch-tg-selection ch-drop-preview" });
 			p.createDiv({ cls: "ch-tg-selection-time" });
-			p.createDiv({ cls: "ch-tg-selection-title", text: this.rendered.get(info.key)?.title ?? "" });
+			p.createDiv({ cls: "ch-tg-selection-title", text: info.title });
 			p.style.setProperty("--ch-event-color", info.color);
 		}
 		const endMin = startMin + info.durMin;
@@ -128,4 +181,10 @@ export class EventDrag {
 		this.preview?.remove();
 		this.preview = null;
 	}
+}
+
+/** An event or a task of ours is being dragged. */
+function isOurDrag(e: DragEvent): boolean {
+	const types = e.dataTransfer?.types ?? [];
+	return types.includes(DRAG_MIME) || types.includes(TASK_MIME);
 }

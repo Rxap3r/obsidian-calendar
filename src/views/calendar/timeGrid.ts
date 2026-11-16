@@ -5,9 +5,10 @@ import {
 	startOfWeek, toDateKey,
 } from "../../dateUtils";
 import { EventModal } from "../../modals/EventModal";
-import { createChip, occurrenceMenu, openOccurrence, tooltip } from "../shared";
+import { createChip, occurrenceMenu, openOccurrence, taskHint, tooltip } from "../shared";
 import { CalendarHost } from "./host";
 import { HOUR_HEIGHT, HSCROLL_GUTTER, layoutColumns, minutesAt } from "./layout";
+import { dayTaskCounter, taskBlock, TaskSlot, timedTaskSlots } from "./tasks";
 
 /**
  * Week / day view: a time grid for `days` days starting at `first`. When only `visible` days fit,
@@ -49,12 +50,14 @@ export function renderTimeGrid(host: CalendarHost, first: Date, days: number, vi
 	for (let i = 0; i < days; i++) {
 		const day = addDays(first, i);
 		const cell = adRow.createDiv({ cls: "ch-tg-allday-cell" });
+		// Tasks without a time: one counter for the day.
+		dayTaskCounter(plugin, cell, toDateKey(day), false);
 		for (const o of onDay(allDay, day)) {
 			const chip = createChip(plugin, cell, o, { draggable: true });
 			if (!isSameDay(o.start, day)) chip.addClass("ch-continued");
 		}
 		cell.addEventListener("dblclick", () => new EventModal(plugin, { start: day, allDay: true }).open());
-		host.drag.dropTarget(cell, day);
+		host.drag.dropTarget(cell, day, null, { clearTaskTime: true });
 	}
 
 	// Scrollable hour grid
@@ -81,8 +84,11 @@ export function renderTimeGrid(host: CalendarHost, first: Date, days: number, vi
 
 		const dayStart = startOfDay(day);
 		const dayEnd = addDays(dayStart, 1);
-		for (const { occ, colIdx, colCount } of layoutColumns(onDay(timed, day), dayStart, dayEnd)) {
-			eventBlock(host, col, occ, { dayStart, dayEnd, colIdx, colCount, now: today });
+		// Events and timed tasks share the columns, so they never cover each other.
+		const items: (CalendarOccurrence | TaskSlot)[] = [...onDay(timed, day), ...timedTaskSlots(plugin, toDateKey(day))];
+		for (const { occ: item, colIdx, colCount } of layoutColumns(items, dayStart, dayEnd)) {
+			if ("task" in item) taskBlock(host, col, item, { colIdx, colCount });
+			else eventBlock(host, col, item, { dayStart, dayEnd, colIdx, colCount, now: today });
 		}
 	}
 	updateNowLine(host.bodyEl);
@@ -150,7 +156,8 @@ function eventBlock(
 	if (occ.readOnly) el.addClass("ch-readonly");
 	if (occ.end < at.now) el.addClass("ch-past");
 	if (height < 36) el.addClass("ch-compact");
-	el.createDiv({ cls: "ch-tg-event-title", text: occ.title });
+	const title = el.createDiv({ cls: "ch-tg-event-title", text: occ.title });
+	taskHint(plugin, title, occ);
 	el.createDiv({
 		cls: "ch-tg-event-time",
 		text: `${formatTimeRange(occ.start, occ.end, s.use24h)}${occ.location ? ` · ${occ.location}` : ""}`,

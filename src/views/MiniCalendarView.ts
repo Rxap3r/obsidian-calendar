@@ -1,15 +1,19 @@
 import { setIcon } from "obsidian";
-import { CalendarOccurrence } from "../types";
+import { CalendarOccurrence, Task } from "../types";
+import { compareTasks } from "../tasks";
+import { TaskModal } from "../modals/TaskModal";
+import { taskMenu } from "./tasks/taskRow";
+import { taskTimeLabel } from "./tasks/helpers";
 import {
 	addDays, addMonths, formatDate, formatTime, isoWeek, isSameDay, MS_MIN, onDay, startOfDay, startOfMonth,
-	startOfWeek, weekdayNames,
+	startOfWeek, toDateKey, weekdayNames,
 } from "../dateUtils";
 import { EventModal } from "../modals/EventModal";
 import { rangeLabel } from "../periods";
 import { plural } from "../util";
 import { OmniView } from "./OmniView";
 import { VIEW_TYPE_MINI } from "./viewTypes";
-import { markDayCell, occurrenceMenu, openOccurrence, tooltip } from "./shared";
+import { markDayCell, occurrenceMenu, openOccurrence, taskHint, tooltip } from "./shared";
 
 /** Compact month calendar + upcoming events, meant for the left/right sidebar. */
 export class MiniCalendarView extends OmniView {
@@ -30,6 +34,8 @@ export class MiniCalendarView extends OmniView {
 	async onOpen() {
 		this.contentEl.addClass("ch-mini");
 		this.registerEvent(this.plugin.store.on("changed", () => this.queueRender()));
+		// Tasks are shown in the calendar, and events show their tasks' progress.
+		this.registerEvent(this.plugin.tasks.on("changed", () => this.queueRender()));
 		// Re-render after midnight and periodically so "today" and past events stay accurate.
 		this.registerInterval(
 			window.setInterval(() => {
@@ -121,6 +127,8 @@ export class MiniCalendarView extends OmniView {
 		if (!selOccs.length) sel.createDiv({ cls: "ch-empty", text: "No events" });
 		for (const o of selOccs) this.item(sel, o);
 
+		if (s.tasksEnabled && s.tasksInMiniCalendar) this.tasksToday(el);
+
 		// Upcoming
 		const days = upcomingDays(s);
 		if (days > 0) {
@@ -147,6 +155,51 @@ export class MiniCalendarView extends OmniView {
 		}
 	}
 
+	/** "Tasks today": open tasks due today or overdue, plus the ones ticked off today (struck through). */
+	private tasksToday(el: HTMLElement) {
+		const store = this.plugin.tasks;
+		const now = new Date();
+		const today = toDateKey(now);
+		const open = store.tasksFor("today", now).sort(compareTasks);
+		const doneToday = this.plugin.settings.tasksCalendarShowDone
+			? store.items.filter((t) => t.done && t.date && t.date <= today && (t.completedAt ?? 0) >= startOfDay(now).getTime())
+			: [];
+		const sec = el.createDiv({ cls: "ch-mini-section ch-mini-tasks" });
+		const head = sec.createDiv({ cls: "ch-mini-section-head" });
+		const title = head.createSpan({ cls: "ch-mini-tasks-title", text: "Tasks today" });
+		title.setAttr("aria-label", "Open tasks");
+		title.onclick = () => void this.plugin.openTasks("today");
+		const add = head.createEl("button", { cls: "ch-icon-btn clickable-icon", attr: { "aria-label": "New task for today" } });
+		setIcon(add, "plus");
+		add.onclick = () => new TaskModal(this.plugin, undefined, { date: today }).open();
+		if (!open.length && !doneToday.length) sec.createDiv({ cls: "ch-empty", text: "No tasks today" });
+		for (const t of [...open.slice(0, MAX_TASKS), ...doneToday]) this.taskItem(sec, t, today);
+		if (open.length > MAX_TASKS) {
+			const more = sec.createEl("button", { cls: "ch-mini-more", text: `${open.length - MAX_TASKS} more – open tasks` });
+			more.onclick = () => void this.plugin.openTasks("today");
+		}
+	}
+
+	private taskItem(parent: HTMLElement, t: Task, today: string) {
+		const row = parent.createDiv({ cls: "ch-mini-task", attr: { "data-task": t.id } });
+		row.style.setProperty("--ch-event-color", this.plugin.tasks.list(t.listId).color);
+		row.toggleClass("is-done", t.done);
+		const check = row.createEl("button", { cls: "ch-task-checkbox ch-small", attr: { role: "checkbox", "aria-checked": String(t.done), "aria-label": t.done ? "Mark as not done" : "Mark as done" } });
+		if (t.done) setIcon(check, "check");
+		check.onclick = (e) => {
+			e.stopPropagation();
+			void this.plugin.tasks.setDone(t.id, !t.done);
+		};
+		row.createSpan({ cls: "ch-mini-task-title", text: t.title });
+		const when = t.date && t.date < today ? "overdue" : taskTimeLabel(t);
+		if (when) row.createSpan({ cls: `ch-mini-task-when${when === "overdue" ? " ch-overdue" : ""}`, text: when });
+		row.onclick = () => new TaskModal(this.plugin, t).open();
+		row.oncontextmenu = (e) => {
+			e.preventDefault();
+			taskMenu(this.plugin, t, e);
+		};
+	}
+
 	private item(parent: HTMLElement, o: CalendarOccurrence) {
 		const s = this.plugin.settings;
 		const row = parent.createDiv({ cls: "ch-mini-item" });
@@ -155,6 +208,7 @@ export class MiniCalendarView extends OmniView {
 		row.createSpan({ cls: "ch-mini-item-bar" });
 		row.createSpan({ cls: "ch-mini-item-time", text: o.allDay ? "All day" : formatTime(o.start, s.use24h) });
 		row.createSpan({ cls: "ch-mini-item-title", text: o.title });
+		taskHint(this.plugin, row, o);
 		row.setAttr("title", tooltip(this.plugin, o));
 		row.onclick = () => openOccurrence(this.plugin, o);
 		row.oncontextmenu = (e) => {
@@ -163,6 +217,9 @@ export class MiniCalendarView extends OmniView {
 		};
 	}
 }
+
+/** Open tasks listed at most under "Tasks today" (the rest is on the Tasks page). */
+const MAX_TASKS = 8;
 
 /** Events listed at most under "Upcoming" (the rest is reachable via the agenda). */
 const MAX_UPCOMING = 100;

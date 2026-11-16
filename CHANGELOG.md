@@ -16,6 +16,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.8.0** – Tasks on events (with *2/5* progress on the event), several linked notes per event (also Google,
+  Outlook and ICS, kept only in Obsidian), tasks in the calendar (light time blocks you can drag, one counter per
+  day), *Tasks today* in the mini calendar, three new task settings for the calendar.
 - **1.7.7** – Month view shows start and end times; dragged events in the week/day view land where the preview
   shows; old repeating events no longer disappear; settings tab arrows only when needed; internal clean-up
   (smaller files, tests on GitHub).

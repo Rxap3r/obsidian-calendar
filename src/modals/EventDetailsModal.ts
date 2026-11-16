@@ -3,6 +3,7 @@ import type OmniCalendarPlugin from "../main";
 import { CalendarOccurrence } from "../types";
 import { describeWhen } from "../notes";
 import { EventModal } from "./EventModal";
+import { eventExtras } from "../views/eventExtras";
 
 /** Strip HTML that some providers (Outlook) put into descriptions. */
 function plainText(s: string): string {
@@ -11,8 +12,10 @@ function plainText(s: string): string {
 	return doc.body.textContent ?? s;
 }
 
-/** Read-only details for events from subscribed (external) calendars. */
+/** Read-only details for events from subscribed (external) calendars, with their tasks and linked notes. */
 export class EventDetailsModal extends Modal {
+	private stopExtras: (() => void) | null = null;
+
 	constructor(private plugin: OmniCalendarPlugin, private occ: CalendarOccurrence) {
 		super(plugin.app);
 	}
@@ -40,6 +43,8 @@ export class EventDetailsModal extends Modal {
 			contentEl.createDiv({ cls: "ch-details-description", text: plainText(occ.description) });
 		}
 
+		this.stopExtras = eventExtras(this.plugin, contentEl.createDiv({ cls: "ch-event-extras" }), occ, { afterCreateNote: () => this.close() });
+
 		const buttons = new Setting(contentEl).setClass("ch-modal-buttons");
 		buttons.addButton((b) =>
 			b.setButtonText("Copy to local calendar").onClick(() => {
@@ -54,15 +59,11 @@ export class EventDetailsModal extends Modal {
 				}).open();
 			})
 		);
-		buttons.addButton((b) =>
-			b.setButtonText("Create note").setCta().onClick(async () => {
-				await this.plugin.openNoteForOccurrence(occ);
-				this.close();
-			})
-		);
+		buttons.addButton((b) => b.setButtonText("Close").setCta().onClick(() => this.close()));
 	}
 
 	onClose() {
+		this.stopExtras?.();
 		this.contentEl.empty();
 	}
 }

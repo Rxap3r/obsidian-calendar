@@ -46,6 +46,43 @@ export function tasksTab(ctx: SettingsContext, el: HTMLElement) {
 		s.tasksUpcomingDays, {},
 		1, 3650, (v) => { s.tasksUpcomingDays = v; store.trigger("changed"); });
 
+	new Setting(el).setName("In the calendar").setHeading();
+	new Setting(el)
+		.setName("Tasks in the calendar")
+		.setDesc("Tasks with a time appear as light blocks in Week and Day. Tasks with only a date are counted once per day (☐ 3); tap the counter to see them.")
+		.addToggle((t) =>
+			t.setValue(s.tasksInCalendar).onChange(async (v) => {
+				s.tasksInCalendar = v;
+				await ctx.save(true);
+				store.trigger("changed");
+			})
+		);
+	if (s.tasksInCalendar) {
+		new Setting(el)
+			.setName("Completed tasks in the calendar")
+			.setDesc("Ticked-off tasks stay visible, struck through, or are hidden from the calendar.")
+			.addDropdown((d) =>
+				d
+					.addOptions({ show: "Struck through", hide: "Hidden" })
+					.setValue(s.tasksCalendarShowDone ? "show" : "hide")
+					.onChange(async (v) => {
+						s.tasksCalendarShowDone = v === "show";
+						await ctx.save();
+						store.trigger("changed");
+					})
+			);
+	}
+	new Setting(el)
+		.setName("Tasks today in the mini calendar")
+		.setDesc("A small “Tasks today” section in the mini calendar: today's and overdue tasks, to tick off directly.")
+		.addToggle((t) =>
+			t.setValue(s.tasksInMiniCalendar).onChange(async (v) => {
+				s.tasksInMiniCalendar = v;
+				await ctx.save();
+				store.trigger("changed");
+			})
+		);
+
 	new Setting(el).setName("Completed tasks").setHeading();
 	periodSetting(ctx, el, "Show completed tasks from the last", "The Done list and Done sections show tasks completed in this period. Older ones stay available behind “Show older”.",
 		s.tasksDoneVisibleDays, { after: [[-1, "Everything"]] },
