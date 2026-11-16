@@ -13,6 +13,10 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 - **Settings tab bar on desktop:** the ‹ › arrows no longer show up when all tabs fit, and when they are needed
   (narrow window, phone) they sit beside the tabs instead of covering them.
 
+- **Dragging events in the week/day view lands where you see it.** The event used to be placed with its *start* at
+  the mouse position, so grabbing it in the middle moved it too far. Now a preview block in the event's colour shows
+  exactly where it will land, with the new time (e.g. *14:15 – 15:45*), snapping to the nearest 15 minutes.
+
 ## Known bugs
 
 - *(none right now)*

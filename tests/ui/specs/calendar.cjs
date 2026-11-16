@@ -50,6 +50,35 @@ test("desktop: drag & drop moves a local event (month)", {}, async ({ page }) =>
 	eq([gym.start, gym.end], ["2026-11-25T18:00", "2026-11-25T19:30"], "Gym moved to the 25th");
 });
 
+test("desktop: dragging an event in the week view lands exactly where the preview shows", {}, async ({ page }) => {
+	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "week"));
+	await page.waitForTimeout(250);
+	const ev = page.locator(".ch-tg-event", { hasText: "Design review" });
+	const box = await ev.boundingBox();
+	const H = 48; // px per hour
+	// Grab the event 45 minutes below its top edge, move it 2 hours down and one day to the left.
+	const x0 = box.x + box.width / 2, y0 = box.y + (45 / 60) * H;
+	const colW = (await page.locator(".ch-tg-col").first().boundingBox()).width;
+	await page.mouse.move(x0, y0);
+	await page.mouse.down();
+	await page.mouse.move(x0 - colW, y0 + 2 * H, { steps: 12 });
+	await page.waitForTimeout(100);
+	const preview = await page.evaluate(() => { const p = document.querySelector(".ch-drop-preview"); return p && { time: p.querySelector(".ch-tg-selection-time").textContent, day: p.closest(".ch-tg-col").dataset.date }; });
+	await page.mouse.up();
+	await page.waitForTimeout(150);
+	const e = await page.evaluate(() => { const x = plugin.data.events.find((x) => x.title === "Design review"); return [x.start, x.end]; });
+	eq(preview, { time: "12:00 – 13:30", day: "2026-11-13" }, "preview while dragging");
+	eq(e, ["2026-11-13T12:00", "2026-11-13T13:30"], "event lands where the preview showed (not at the mouse position)");
+	eq(await page.$$eval(".ch-drop-preview", (x) => x.length), 0, "preview removed after dropping");
+	// Screenshot of the preview (drawn directly: screenshots taken during a live browser drag show an old frame).
+	await page.evaluate(() => {
+		const col = document.querySelector('.ch-tg-col[data-date="2026-11-12"]');
+		view.dragInfo = { key: [...view.rendered.keys()].find((k) => view.rendered.get(k).title === "Design review"), offsetMin: 0, durMin: 90, color: "#2f9e44" };
+		view.showDropPreview(col, new Date(2026, 10, 12), 14 * 60 + 15);
+	});
+	await page.screenshot({ path: path.join(SHOTS, "drag-move-preview.png"), clip: { x: 0, y: 40, width: 1120, height: 560 } });
+});
+
 test("month view shows start and end time", {}, async ({ page }) => {
 	await page.evaluate(async () => {
 		await plugin.store.addEvent({ calendarId: "personal", allDay: false, exdates: [], title: "Night shift", start: "2026-11-18T22:00", end: "2026-11-19T02:00" });

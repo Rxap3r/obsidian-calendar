@@ -27,6 +27,9 @@ const HSCROLL_GUTTER = 44;
 const LONG_PRESS_MS = 400;
 /** Touch: movement (px) that counts as scrolling instead of a tap / long press. */
 const TOUCH_SLOP = 8;
+/** Transparent 1×1 image used to hide the browser's drag picture (the drop preview replaces it). */
+const EMPTY_DRAG_IMAGE = new Image();
+EMPTY_DRAG_IMAGE.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
 
 interface ViewState {
 	mode?: ViewMode;
@@ -49,6 +52,12 @@ export class CalendarView extends ItemView {
 	/** The time-slot selection in progress (at most one). */
 	private selection: { cancel: () => void } | null = null;
 	private layoutKey = "";
+	/**
+	 * The event being dragged in the week/day grid: where it was grabbed (minutes after its start) and
+	 * its length, so the drop lands exactly where the preview shows it.
+	 */
+	private dragInfo: { key: string; offsetMin: number; durMin: number; color: string } | null = null;
+	private dropPreview: HTMLElement | null = null;
 	/** Day whose events are listed below the compact month grid. */
 	private monthSelected: Date | null = null;
 	/** Occurrences currently on screen, by key (used for drag & drop). */
@@ -484,6 +493,7 @@ export class CalendarView extends ItemView {
 				ns = addDays(occ.start, dayDiff(occ.start, day));
 			} else if (timeFromEvent) {
 				ns = addMinutes(startOfDay(day), timeFromEvent(e));
+				this.clearDropPreview();
 			} else {
 				ns = new Date(day.getFullYear(), day.getMonth(), day.getDate(), occ.start.getHours(), occ.start.getMinutes());
 			}
@@ -585,7 +595,18 @@ export class CalendarView extends ItemView {
 				return Math.max(0, Math.min(24 * 60 - SNAP_MIN, Math.floor(m / SNAP_MIN) * SNAP_MIN));
 			};
 			this.enableSlotSelection(col, day, minutesFromY);
-			this.makeDayDropTarget(col, day, (e) => minutesFromY(e.clientY));
+			// Dropping: the event's top edge goes where the preview shows it (grab point taken into account),
+			// rounded to the nearest 15 minutes.
+			const dropStart = (clientY: number) => {
+				const rect = col.getBoundingClientRect();
+				const m = ((clientY - rect.top) / HOUR_HEIGHT) * 60 - (this.dragInfo?.offsetMin ?? 0);
+				return Math.max(0, Math.min(24 * 60 - SNAP_MIN, Math.round(m / SNAP_MIN) * SNAP_MIN));
+			};
+			this.makeDayDropTarget(col, day, (e) => dropStart(e.clientY));
+			col.addEventListener("dragover", (e) => {
+				if (!this.dragInfo || !e.dataTransfer?.types.includes(DRAG_MIME)) return;
+				this.showDropPreview(col, day, dropStart(e.clientY));
+			});
 
 			const dayStart = startOfDay(day);
 			const dayEnd = addDays(dayStart, 1);
@@ -625,8 +646,18 @@ export class CalendarView extends ItemView {
 					el.addEventListener("dragstart", (e) => {
 						e.dataTransfer?.setData(DRAG_MIME, occ.key);
 						el.addClass("ch-dragging");
+						// Where in the event it was grabbed (also for events that started on an earlier day).
+						const r = el.getBoundingClientRect();
+						const offsetMin = ((e.clientY - r.top) / HOUR_HEIGHT) * 60 + (segStart.getTime() - occ.start.getTime()) / MS_MIN;
+						this.dragInfo = { key: occ.key, offsetMin, durMin: (occ.end.getTime() - occ.start.getTime()) / MS_MIN, color: occ.color };
+						// Hide the browser's drag picture: the snapping preview shows the real result instead.
+						if (e.dataTransfer && EMPTY_DRAG_IMAGE.complete) e.dataTransfer.setDragImage(EMPTY_DRAG_IMAGE, 0, 0);
 					});
-					el.addEventListener("dragend", () => el.removeClass("ch-dragging"));
+					el.addEventListener("dragend", () => {
+						el.removeClass("ch-dragging");
+						this.dragInfo = null;
+						this.clearDropPreview();
+					});
 				}
 			}
 		}
@@ -826,6 +857,33 @@ export class CalendarView extends ItemView {
 		const s = this.plugin.settings;
 		const id = s.defaultTargets[0] ?? s.defaultCalendarId;
 		return s.sources.find((c) => c.id === id)?.color ?? "var(--interactive-accent)";
+	}
+
+	/** The block that shows where (and when) a dragged event will land. */
+	private showDropPreview(col: HTMLElement, day: Date, startMin: number) {
+		const info = this.dragInfo;
+		if (!info) return;
+		let p = this.dropPreview;
+		if (!p || p.parentElement !== col) {
+			p?.remove();
+			p = this.dropPreview = col.createDiv({ cls: "ch-tg-selection ch-drop-preview" });
+			p.createDiv({ cls: "ch-tg-selection-time" });
+			p.createDiv({ cls: "ch-tg-selection-title", text: this.rendered.get(info.key)?.title ?? "" });
+			p.style.setProperty("--ch-event-color", info.color);
+		}
+		const endMin = startMin + info.durMin;
+		const shownEnd = Math.min(endMin, 24 * 60);
+		p.style.top = `${(startMin / 60) * HOUR_HEIGHT}px`;
+		p.style.height = `${Math.max(((shownEnd - startMin) / 60) * HOUR_HEIGHT, 18) - 2}px`;
+		p.toggleClass("ch-compact", ((shownEnd - startMin) / 60) * HOUR_HEIGHT < 34);
+		const base = startOfDay(day);
+		const use24 = this.plugin.settings.use24h;
+		(p.firstChild as HTMLElement).setText(`${formatTime(addMinutes(base, startMin), use24)} – ${formatTime(addMinutes(base, endMin), use24)}`);
+	}
+
+	private clearDropPreview() {
+		this.dropPreview?.remove();
+		this.dropPreview = null;
 	}
 
 	private updateNowLine() {

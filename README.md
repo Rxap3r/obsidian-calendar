@@ -87,7 +87,7 @@ follows, so it never pops back unexpectedly. Commands can be given hotkeys in *S
 - **Month view:** events show their **start and end time** (e.g. *10:00–11:30*). Events over midnight show *22:00 →* on the first day and *→ 02:00* on the last. Click a **day number** to open that day. **Double-click** a cell, or click the **+** that appears on hover, to create an event. When a day is full, click "+N more".
 - **Week / Day view:** **click** an empty slot to create an event there. **Click and drag** to create an event covering the selected range (it snaps to 15 minutes). While you drag, a filled preview in the colour of your default calendar shows the exact start and end time. Overlapping events are shown side by side, and a red line marks the current time. Double-click the *all-day* row to create an all-day event.
 - **On touch screens:** swipe scrolls as usual, **tap** an empty slot to create an event there, and **press and hold** (about half a second), then drag, to select a time range.
-- **Drag and drop:** drag a local, non-recurring event to another day (month view) or another time (week/day view) to move it.
+- **Drag and drop:** drag a local, non-recurring event to another day (month view) or another time (week/day view) to move it. In week/day view a preview block shows exactly where the event will land, with its new time; it snaps to 15 minutes.
 - **Click an event** to edit it. For an external event this shows its details instead. **Right-click an event** for a menu with *Edit*, *Create/Open note*, *Duplicate*, *Delete this occurrence* and *Delete*.
 
 **Adapts to its width** (handy in a sidebar):
