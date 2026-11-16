@@ -240,7 +240,9 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
 - Works for local, **Google, Outlook and subscribed (ICS)** events. These tasks are kept **only in Obsidian**.
 - On a **repeating event**, tasks belong to the repeat you clicked (e.g. only the meeting on 14 Nov).
   Tasks that repeat with the event are planned for 1.9.
-- Tasks are added once the event is saved; a new event's dialog says so.
+- **A new event** can get its tasks (and linked notes) right away in its dialog. They are attached when you click
+  *Save*; *Cancel* forgets them. Saved to several calendars, they go with **one** copy, the first calendar in *Save to*
+  (the dialog says which). A new repeating event gets them on its first repeat. *Create note* is offered once the event is saved.
 - **Deleting an event deletes its tasks**, after asking (deleting one repeat deletes only that repeat's tasks).
   Moving an event to another calendar keeps its tasks and linked notes.
 - If an event disappears some other way (e.g. deleted in Google Calendar), its tasks show the event name crossed out

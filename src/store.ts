@@ -183,12 +183,31 @@ export class CalendarStore extends Events {
 	async moveLinks(from: CalendarOccurrence, toKey: string): Promise<void> {
 		const links = this.linksFor(from);
 		if (!links.length) return;
-		const local = /^local:([^@]+)$/.exec(toKey);
+		delete this.plugin.data.eventLinks[eventKey(from)];
+		await this.setLinksAt(toKey, links);
+	}
+
+	/** Store linked notes under an event key (a local event keeps them itself, see `linksFor`). */
+	async setLinksAt(key: string, links: string[]): Promise<void> {
+		if (!links.length) return;
+		const local = /^local:([^@]+)$/.exec(key);
 		const target = local ? this.getEvent(local[1]) : undefined;
 		if (target) target.links = links;
-		else this.plugin.data.eventLinks[toKey] = links;
-		delete this.plugin.data.eventLinks[eventKey(from)];
+		else this.plugin.data.eventLinks[key] = links;
 		await this.plugin.persist();
+		this.notify();
+	}
+
+	/**
+	 * For a new Google / Outlook series (key of the series): the key of its first loaded repeat, so that tasks and
+	 * notes attach to one repeat, like everywhere else. Other keys come back unchanged.
+	 */
+	firstRepeatKey(key: string): string {
+		const i = key.indexOf(":");
+		const sourceId = key.slice(0, i);
+		const id = key.slice(i + 1);
+		const first = (this.remote.get(sourceId) ?? []).filter((e) => e.seriesId === id).sort((a, b) => a.start.getTime() - b.start.getTime())[0];
+		return first ? `${sourceId}:${first.id}` : key;
 	}
 
 	async addLink(occ: CalendarOccurrence, path: string): Promise<void> {

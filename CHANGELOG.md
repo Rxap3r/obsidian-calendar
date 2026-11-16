@@ -13,6 +13,8 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
   existed. If the event has tasks, you're asked first ("Its 2 tasks will be deleted too"). Deleting one repeat
   deletes only that repeat's tasks. Linked notes are only unlinked; the notes stay.
 - **Moving an event to another calendar keeps its tasks and linked notes** (e.g. from Obsidian to Google).
+- **Tasks and linked notes in the new-event dialog:** you no longer have to save an event first. What you add there is
+  attached when you click *Save* (Cancel forgets it). With several calendars, they go with the first calendar's copy.
 - **Tasks whose event is gone** (deleted before this fix, or in Google/Outlook directly) show the event name crossed out.
   Clicking it asks whether to keep the task without the event or delete it.
 

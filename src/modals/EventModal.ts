@@ -7,6 +7,7 @@ import { errorMessage } from "../util";
 import { deleteEvent } from "./confirmations";
 import { eventKey } from "../eventLinks";
 import { eventExtras } from "../views/eventExtras";
+import { attachDraft, draftExtras, EventDraft } from "../views/eventDraft";
 import { EventForm, EventModalInit, formForNew, formFromLocal, formFromRemote, LocalEventData } from "./eventForm";
 
 /** Create / edit an event: a local one, or one in a connected Google / Outlook calendar. */
@@ -24,10 +25,14 @@ export class EventModal extends Modal {
 	private recurEls: HTMLElement[] = [];
 	private busy = false;
 	private stopExtras: (() => void) | null = null;
+	/** New event: tasks and linked notes to attach on save (the note the event is created from is the first). */
+	private draft: EventDraft;
+	private draftUi: { setHint: (text: string) => void } | null = null;
 
 	constructor(private plugin: OmniCalendarPlugin, private init: EventModalInit = {}) {
 		super(plugin.app);
 		this.f = init.remote ? formFromRemote(init.remote) : init.event ? formFromLocal(init.event) : formForNew(plugin, init);
+		this.draft = { tasks: [], links: init.notePath ? [init.notePath] : [] };
 	}
 
 	onOpen() {
@@ -160,7 +165,9 @@ export class EventModal extends Modal {
 				afterCreateNote: () => this.close(),
 			});
 		} else if (!this.init.event && !remote) {
-			contentEl.createDiv({ cls: "ch-modal-hint ch-muted ch-extras-hint", text: "Tasks and linked notes can be added once the event is saved." });
+			// A new event: tasks and notes are kept here and attached when it is saved.
+			this.draftUi = draftExtras(this.plugin, contentEl.createDiv({ cls: "ch-event-extras" }), this.draft);
+			this.updateDraftHint();
 		}
 
 		const buttons = new Setting(contentEl).setClass("ch-modal-buttons");
@@ -290,6 +297,7 @@ export class EventModal extends Modal {
 					: ""
 			);
 			hint.toggle(this.f.targets.length > 1);
+			this.updateDraftHint();
 		};
 		render();
 	}
@@ -430,19 +438,31 @@ export class EventModal extends Modal {
 		const saved: CalendarSource[] = [];
 		const failed: string[] = [];
 		let firstLocal: LocalEvent | null = null;
+		const day = data.start.slice(0, 10);
 		for (const t of targets) {
 			try {
+				// The key of this copy, so the draft's tasks and notes can be attached to it.
+				let key: string | undefined;
 				if (store.isRemoteSource(t)) {
-					await store.createRemote(t, input);
+					const created = await store.createRemote(t, input);
+					key = created && data.recurrence ? store.firstRepeatKey(created) : created;
 				} else {
-					// Only the first local copy is linked to the note the event was created from.
-					const ev = await store.addEvent({ ...data, calendarId: t.id, exdates: [], links: !firstLocal && this.init.notePath ? [this.init.notePath] : undefined });
+					const ev = await store.addEvent({ ...data, calendarId: t.id, exdates: [] });
 					firstLocal = firstLocal ?? ev;
+					key = data.recurrence ? `local:${ev.id}@${day}` : `local:${ev.id}`;
 				}
 				saved.push(t);
+				// Only one copy gets them (the first one saved), so they aren't duplicated.
+				if (key && (this.draft.tasks.length || this.draft.links.length)) await attachDraft(this.plugin, this.draft, key, data.title, day);
 			} catch (e) {
 				failed.push(`${t.name}: ${errorMessage(e)}`);
 			}
+		}
+		// Saved, but no copy told us its id: keep the typed tasks as normal tasks for that day rather than lose them.
+		if (saved.length && this.draft.tasks.length) {
+			for (const title of this.draft.tasks) await this.plugin.tasks.upsert(this.plugin.tasks.draft({ title, date: day }));
+			new Notice(`The tasks couldn't be attached to the event; they were added as normal tasks on that day.`, 8000);
+			this.draft.tasks = [];
 		}
 		// From now on the dialog edits the local copy (e.g. "Create note" saves first).
 		if (firstLocal) this.init.event = firstLocal;
@@ -456,6 +476,12 @@ export class EventModal extends Modal {
 			new Notice(`Saved "${data.title}" to ${names}`);
 		}
 		return true;
+	}
+
+	/** Which copy gets the tasks and notes, when the new event is saved to several calendars. */
+	private updateDraftHint() {
+		const first = this.plugin.store.getSource(this.f.targets[0]);
+		this.draftUi?.setHint(this.f.targets.length > 1 && first ? `Tasks and linked notes go with the copy in ${first.name}.` : "");
 	}
 
 	/** The event moved to another calendar and got a new key: its tasks and linked notes go along. */

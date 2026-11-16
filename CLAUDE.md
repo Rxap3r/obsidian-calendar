@@ -82,6 +82,7 @@ Shared helpers live in one place. Before writing a small helper (error text, plu
 | `views/calendar/` | What the calendar draws: `month.ts` (grid + compact grid), `timeGrid.ts` (week/day, sideways-scrolling week), `agenda.ts`, `eventDrag.ts` (drag & drop of events **and tasks** + preview), `slotSelection.ts` (press/drag to create, touch gestures), `layout.ts` (sizes, overlapping events and tasks), `tasks.ts` (tasks in the calendar: time blocks, the per-day counter ☐ 3), `host.ts` (what they need from the view) |
 | `eventLinks.ts` | `eventKey(occ)`: the stable key that tasks and linked notes of an event are stored under (`local:<id>`, `local:<id>@<date>` for one repeat, `<calendar>:<remote id>`, ICS occurrence key) |
 | `views/eventExtras.ts`, `views/linkedNotes.ts` | The event's **Tasks** and **Linked notes** sections (event dialog + read-only details); the shared linked-notes block (also in the task dialog) |
+| `views/eventDraft.ts` | The same sections in the **new-event** dialog: kept in memory, attached on Save (`attachDraft`) to the first saved copy |
 | `modals/DayTasksModal.ts` | The day's tasks, opened from the counter in the calendar |
 | `views/MiniCalendarView.ts` | Sidebar mini calendar |
 | `views/AgendaBlock.ts` | The `omni-calendar` code block |

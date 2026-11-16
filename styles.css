@@ -656,6 +656,8 @@
 .ch-event-subtask.is-done .ch-event-subtask-title { text-decoration: line-through; color: var(--text-muted); }
 .ch-event-extras .ch-event-task-add { display: block; width: 100%; max-width: none; box-sizing: border-box; margin-top: 4px; }
 .ch-extras-hint { margin-top: 10px; }
+.ch-draft-task { cursor: default; }
+.ch-draft-check { border-style: dashed; opacity: 0.6; cursor: default; }
 .ch-task-hint {
 	display: inline-flex; align-items: center; gap: 2px; flex: none; margin-left: 4px;
 	font-size: 0.85em; font-weight: normal; opacity: 0.85; white-space: nowrap; vertical-align: middle;

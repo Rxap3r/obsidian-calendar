@@ -370,4 +370,81 @@ test("desktop: a task whose event is gone is marked; clicking offers keep or del
 	eq(await page.evaluate(() => plugin.tasks.items.map((t) => [t.title, !!t.event])), [["Orphan A", false]], "kept without event / deleted");
 });
 
+
+/** Open the new-event dialog for Fri 20 Nov, type a title and two tasks, link one note. */
+const newEventWithExtras = async (page, title, mobile = false) => {
+	await page.evaluate(() => new __eventMod.EventModal(plugin, { start: new Date(2026, 10, 20, 9) }).open());
+	await page.waitForTimeout(100); // the dialog puts the cursor in the title first
+	await page.fill(".ch-title-input", title);
+	for (const t of ["Book room", "Send invite"]) {
+		await page.fill(".ch-event-task-add", t);
+		await page.press(".ch-event-task-add", "Enter");
+	}
+	const link = page.locator(".ch-link-note-btn");
+	if (mobile) await link.tap(); else await link.click();
+	await page.evaluate(async () => { const m = window.lastModal; await m.onChooseSuggestion(m.getSuggestions("Inbox")[0]); m.close(); });
+	await page.waitForTimeout(100);
+};
+const saveDialog = async (page) => {
+	await page.click(".ch-modal-buttons button.mod-cta");
+	await page.waitForTimeout(200);
+};
+const attached = (page, title) => page.evaluate((title) => {
+	const ev = plugin.data.events.find((e) => e.title === title);
+	return { tasks: plugin.tasks.items.map((t) => [t.title, t.date, t.event?.key ?? null]), links: ev?.links ?? null, map: plugin.data.eventLinks, evId: ev?.id ?? null };
+}, title);
+
+test("desktop: tasks and notes typed into a new event are attached when it is saved", {}, async ({ page }) => {
+	await newEventWithExtras(page, "Workshop");
+	eq(await page.locator(".ch-draft-task .ch-event-task-title").allTextContents(), ["Book room", "Send invite"], "listed before saving");
+	eq(await page.evaluate(() => plugin.tasks.items.length), 0, "nothing stored before saving");
+	await shot(page, "new-event-draft-tasks");
+	await page.locator(".ch-draft-task", { hasText: "Send invite" }).locator("button").click();
+	await page.fill(".ch-event-task-add", "Send agenda");
+	await page.press(".ch-event-task-add", "Enter");
+	await saveDialog(page);
+	const r = await attached(page, "Workshop");
+	const key = `local:${r.evId}`;
+	eq(r.tasks, [["Book room", "2026-11-20", key], ["Send agenda", "2026-11-20", key]], "tasks on the event, with its day");
+	eq(r.links, ["Inbox.md"], "linked note on the event");
+	// Cancel forgets everything.
+	await newEventWithExtras(page, "Never saved");
+	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).click();
+	await page.waitForTimeout(100);
+	eq(await page.evaluate(() => plugin.tasks.items.length), 2, "cancel: no tasks added");
+});
+
+test("desktop: new event in Google + Obsidian – tasks go with the first calendar's copy only; repeating event → first repeat", {}, async ({ page }) => {
+	await page.evaluate(() => { plugin.store.createRemote = async (src) => `${src.id}:new7`; });
+	await newEventWithExtras(page, "Offsite");
+	await page.locator(".ch-target-chip", { hasText: "Mine (Google)" }).click();
+	await page.locator(".ch-target-chip", { hasText: "Personal" }).click(); // now only Google…
+	await page.locator(".ch-target-chip", { hasText: "Personal" }).click(); // …then Google first, Personal second
+	eq(await page.textContent(".ch-extras-hint"), "Tasks and linked notes go with the copy in Mine (Google).", "says which copy");
+	await saveDialog(page);
+	const r = await attached(page, "Offsite");
+	eq([r.tasks.map((t) => t[2]), r.links, r.map], [["gcal:new7", "gcal:new7"], null, { "gcal:new7": ["Inbox.md"] }], "attached once, to the Google copy");
+	// A repeating local event: they go with its first repeat.
+	await newEventWithExtras(page, "Weekly sync");
+	await page.selectOption(".ch-repeat-row select", "weekly");
+	await saveDialog(page);
+	const w = await attached(page, "Weekly sync");
+	eq(w.tasks.slice(2).map((t) => t[2]), [`local:${w.evId}@2026-11-20`, `local:${w.evId}@2026-11-20`], "first repeat");
+	eq(w.map[`local:${w.evId}@2026-11-20`], ["Inbox.md"], "note on the first repeat");
+	await page.evaluate(() => view.goTo(new Date(2026, 10, 20), "day"));
+	await page.waitForTimeout(150);
+	eq(await page.locator(".ch-tg-event", { hasText: "Weekly sync" }).locator(".ch-task-hint").textContent(), "0/2", "the repeat shows its tasks");
+});
+
+test("mobile: tasks in the new-event dialog", { mobile: true }, async ({ page }) => {
+	await newEventWithExtras(page, "Phone event", true);
+	const w = await page.evaluate(() => document.documentElement.scrollWidth);
+	expect(w <= 390, `no sideways scrolling: ${w}`);
+	await page.locator(".ch-event-tasks").scrollIntoViewIfNeeded();
+	await shot(page, "mobile-new-event-draft-tasks");
+	await page.locator(".ch-modal-buttons button.mod-cta").tap();
+	await page.waitForTimeout(200);
+	eq((await attached(page, "Phone event")).tasks.length, 2, "saved with the event");
+});
+
 };
