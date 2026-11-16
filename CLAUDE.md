@@ -223,6 +223,9 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - Name: "YYYY-MM-DD Title" (or the title only if the task has no date), in `notesFolder`.
     - The note is added to `links` and opened; an existing note just opens ("Open note").
     - Own task note template in Settings → Notes.
+    - **Subtasks too:** "Create note" (name "YYYY-MM-DD Task – Subtask") and linked notes per subtask.
+      This needs `links: string[]` on `Subtask`, validated in `normalizeTaskData`, and included in link rename/delete.
+      The progress log stays on the task only, unless the maintainer asks otherwise.
   - **1.9:** repeating tasks, and per-occurrence tasks on repeating events. A repeating task stays ONE item; completed occurrences are small "done on date" entries, not copies (agreed, to keep Done uncluttered).
   - **Completed tasks (1.7.5):**
     - Done shows the last `tasksDoneVisibleDays` (default 30, -1 = everything), with "Show older";

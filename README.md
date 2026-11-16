@@ -628,6 +628,10 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 - It creates a note named after the date and the task (e.g. *2026-11-24 Prepare workshop*, or just the title without a date) in the notes folder.
 - The note is automatically added to the task's **linked notes** and opened. If it already exists, it just opens ("Open note").
 - A separate **task note template** in *Settings → Notes*, next to the event template (title, date, time, list, priority, subtasks, …).
+- **Also for subtasks:**
+  - "Create note" on a subtask (e.g. *2026-11-24 Prepare workshop – Book room*);
+  - linked notes on a single subtask, shown as small chips next to it;
+  - in the details view, each subtask shows its notes.
 
 **Step 3 – version 1.9: repeating**
 - **Repeating tasks**, each occurrence ticked off separately. A repeating task stays **one** task: each completed occurrence is only a small "done on …" entry, not a copy, so Done doesn't fill up with duplicates.
