@@ -154,4 +154,47 @@ test("mobile: settings tabs stay on one line and scroll", { mobile: true, width:
 	eq(r, { oneLine: true, scrollable: true, nextArrow: true }, "tab bar");
 });
 
+test("settings: deleting a local calendar with events asks in the plugin's own dialog", {}, async ({ page }) => {
+	const state = () => page.evaluate(() => [plugin.settings.sources.some((s) => s.id === "work"), plugin.data.events.filter((e) => e.calendarId === "work").length]);
+	const clickTrash = () => page.evaluate(() => {
+		const m = document.getElementById("main"); m.innerHTML = ""; tab.constructor.tab = "calendars"; tab.display(); m.appendChild(tab.containerEl);
+		const row = [...tab.containerEl.querySelectorAll(".ch-source-row")].find((r) => [...r.querySelectorAll("input")].some((i) => i.value === "Work"));
+		[...row.querySelectorAll("button")].pop().click();
+	});
+	let browserDialogs = 0;
+	page.on("dialog", (d) => { browserDialogs++; void d.dismiss(); });
+	const before = await state();
+	expect(before[0] && before[1] > 0, "the Work calendar has events");
+	await clickTrash();
+	await page.waitForTimeout(100);
+	const text = await page.evaluate(() => window.lastModal.modalEl.textContent);
+	expect(/Delete calendar/.test(text) && text.includes("Work") && text.includes(`${before[1]} events`), `asks with the number of events: ${text}`);
+	await page.evaluate(() => [...window.lastModal.modalEl.querySelectorAll("button")].find((b) => b.textContent === "Cancel").click());
+	await page.waitForTimeout(100);
+	eq(await state(), before, "Cancel keeps the calendar and its events");
+	await clickTrash();
+	await page.waitForTimeout(100);
+	await page.evaluate(() => [...window.lastModal.modalEl.querySelectorAll("button")].find((b) => b.textContent === "Delete").click());
+	await page.waitForTimeout(150);
+	eq(await state(), [false, 0], "Delete removes the calendar and its events");
+	eq(browserDialogs, 0, "no browser confirm box");
+});
+
+test("commands keep their ids; 'Refresh' says when calendars failed", {}, async ({ page }) => {
+	const ids = await page.evaluate(() => plugin.commands.map((c) => c.id).sort());
+	// Users' hotkeys are stored by these ids: never rename them.
+	eq(ids, ["calendar-menu", "export-ics", "new-event", "new-event-from-note", "new-task", "open-agenda", "open-calendar", "open-day", "open-month",
+		"open-sidebar", "open-tasks", "open-week", "refresh", "toggle-sidebar-full", "toggle-sidebar-mini", "toggle-tasks-sidebar"], "command ids");
+	const r = await page.evaluate(async () => {
+		const run = async () => { notices.length = 0; await plugin.commands.find((c) => c.id === "refresh").callback(); await new Promise((res) => setTimeout(res, 300)); return notices.slice(); };
+		const bad = await run(); // the ICS fixture has no address, so its refresh fails
+		for (const s of plugin.settings.sources) if (s.type !== "local") s.enabled = false;
+		plugin.store.status.clear();
+		return { bad, good: await run(), tasksOff: (plugin.settings.tasksEnabled = false, plugin.commands.find((c) => c.id === "new-task").checkCallback(true)) };
+	});
+	expect(r.bad.some((n) => /Calendars refreshed – \d+ failed/.test(n)), `failures are reported: ${r.bad}`);
+	eq(r.good, ["Calendars refreshed"], "all fine");
+	eq(r.tasksOff, false, "task commands are hidden while tasks are off");
+});
+
 };

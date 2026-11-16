@@ -1,6 +1,6 @@
 import { Events, normalizePath, requestUrl, TFile } from "obsidian";
 import type OmniCalendarPlugin from "./main";
-import { CalendarOccurrence, CalendarSource, EventInput, LocalEvent, RemoteEvent, SourceStatus } from "./types";
+import { CalendarOccurrence, CalendarSource, EventInput, LocalEvent, RecurrenceFreq, RemoteEvent, SourceStatus } from "./types";
 import { providerFor } from "./sync/providers";
 import { ApiError } from "./sync/http";
 import { IcsCalendar, isRemoteUrl, normalizeIcsUrl } from "./ics";
@@ -9,6 +9,7 @@ import {
 } from "./dateUtils";
 import { errorMessage } from "./util";
 
+/** Safety limit for the repeats of one local event looked at per query. */
 const MAX_LOCAL_OCCURRENCES = 5000;
 
 /**
@@ -165,16 +166,21 @@ export class CalendarStore extends Events {
 		const interval = Math.max(1, rec.interval || 1);
 		const until = rec.until ? addDays(parseLocal(rec.until), 1) : null;
 		const exdates = new Set(ev.exdates ?? []);
-		for (let i = 0; i < MAX_LOCAL_OCCURRENCES; i++) {
-			if (rec.count && i >= rec.count) break;
-			let s: Date;
+		const nth = (i: number): Date => {
 			switch (rec.freq) {
-				case "daily": s = addDays(start, i * interval); break;
-				case "weekly": s = addDays(start, i * 7 * interval); break;
-				case "monthly": s = addMonths(start, i * interval); break;
-				case "yearly": s = addMonths(start, i * 12 * interval); break;
-				default: s = start;
+				case "daily": return addDays(start, i * interval);
+				case "weekly": return addDays(start, i * 7 * interval);
+				case "monthly": return addMonths(start, i * interval);
+				case "yearly": return addMonths(start, i * 12 * interval);
+				default: return start;
 			}
+		};
+		// Start shortly before the range instead of at the first occurrence: a series that began years
+		// ago is neither walked through on every redraw nor cut off after MAX_LOCAL_OCCURRENCES repeats.
+		const first = firstRepeatNear(rec.freq, interval, start, spanDays, rangeStart);
+		for (let i = first; i < first + MAX_LOCAL_OCCURRENCES; i++) {
+			if (rec.count && i >= rec.count) break;
+			const s = nth(i);
 			if (until && s >= until) break;
 			if (s >= rangeEnd) break;
 			if (exdates.has(toDateKey(s))) continue;
@@ -451,6 +457,25 @@ export class CalendarStore extends Events {
 		if (dayDiff(start, end) !== 0) end = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59);
 		return { start, end };
 	}
+}
+
+/**
+ * Number of a repeat that is safely before `rangeStart` (0 = the first occurrence), so that expanding a
+ * series can begin there. It may be a little too early, never too late: the caller skips what is out of range.
+ */
+export function firstRepeatNear(freq: RecurrenceFreq, interval: number, start: Date, spanDays: number, rangeStart: Date): number {
+	let steps: number;
+	if (freq === "daily" || freq === "weekly") {
+		const stepDays = freq === "daily" ? interval : 7 * interval;
+		// An occurrence can reach into the range for as many days as the event lasts.
+		steps = (dayDiff(start, rangeStart) - spanDays - 1) / stepDays;
+	} else {
+		const stepMonths = freq === "monthly" ? interval : 12 * interval;
+		const months = (rangeStart.getFullYear() - start.getFullYear()) * 12 + rangeStart.getMonth() - start.getMonth();
+		const spanMonths = Math.ceil((spanDays + 1) / 28) + 1;
+		steps = (months - spanMonths) / stepMonths;
+	}
+	return Math.max(0, Math.floor(steps) - 1);
 }
 
 /** Detect links that point to a calendar web page instead of an ICS feed. */

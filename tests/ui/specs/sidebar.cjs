@@ -144,4 +144,21 @@ test("mobile: ribbon tap opens the menu (not the calendar)", { mobile: true }, a
 	eq(r, { opened: 0, menus: 1, title: "Omni Calendar", first: "Open calendar" }, "ribbon");
 });
 
+test("sidebar: a failed change doesn't stop the settings from following the sidebar", {}, async ({ page }) => {
+	const r = await page.evaluate(async () => {
+		const out = {};
+		const orig = ws.getRightLeaf;
+		ws.getRightLeaf = () => { throw new Error("no leaf"); };
+		out.failed = await plugin.sidebar.moveCalendarIn({ mode: "day" }).then(() => false, () => true);
+		ws.getRightLeaf = orig;
+		await new Promise((res) => setTimeout(res, 400));
+		// The user now opens the mini calendar by hand: the setting must follow.
+		await ws.mk(ws.rightSplit).setViewState({ type: "omni-calendar-mini", state: {} });
+		ws.fireLayoutChange();
+		out.view = plugin.settings.sidebarView;
+		return out;
+	});
+	eq(r, { failed: true, view: "mini" }, "setting follows the sidebar again");
+});
+
 };

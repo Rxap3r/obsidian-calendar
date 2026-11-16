@@ -208,7 +208,8 @@ export class Plugin extends Component {
 		(window as any).ribbonEl = d;
 		return d;
 	}
-	addCommand() {}
+	commands: any[] = [];
+	addCommand(c: any) { this.commands.push(c); }
 	registerMarkdownCodeBlockProcessor() {}
 }
 export async function requestUrl(r: any) { const res = await fetch(r.url); return { status: res.status, text: await res.text() }; }
