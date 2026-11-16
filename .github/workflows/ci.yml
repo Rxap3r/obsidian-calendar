@@ -21,10 +21,22 @@ jobs:
         run: npm run test:sync
       # The UI tests drive a headless Chromium with Playwright. It is installed only for this run
       # (it is a test tool, not a dependency of the plugin). See tests/README.md.
+      # The browser download is kept in GitHub's cache between runs (not in the repository). Only the
+      # system libraries it needs are installed each time. Change the version in both places together.
+      - name: Install Playwright
+        run: npm install --no-save playwright@1.63.0
+      - name: Reuse the downloaded test browser
+        id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-1.63.0-${{ runner.os }}
       - name: Install the test browser
-        run: |
-          npm install --no-save playwright@1.63.0
-          npx playwright install --with-deps chromium
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install the test browser's system libraries
+        if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
       - name: UI tests
         run: npm run test:ui
       - name: Keep the screenshots of failed tests
