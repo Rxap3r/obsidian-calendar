@@ -6,6 +6,7 @@ Two automated test suites. Neither needs Obsidian, a real phone, or real Google 
 npm test            # build + both suites
 npm run test:sync   # sign-in (OAuth/PKCE) and Google / Outlook connectors – Node only
 npm run test:ui     # views, dialogs, settings, touch gestures – headless Chromium
+npm run test:ui -- tasks    # one topic file (see below): data, calendar, events, sidebar, settings, pickers, tasks
 npm run test:ui -- mobile   # only UI tests whose name contains "mobile"
 ```
 
@@ -34,7 +35,21 @@ pre-installed. Locally you can use `npm i -D playwright && npx playwright instal
   - a *Work* calendar;
   - `fixtures.ics`, a subscription with time zones, exceptions, EXDATE and a cancelled event;
   - a fake signed-in Google account with a writable and a read-only calendar.
-- `run.cjs` is the test runner. Each test gets a fresh page.
+- `run.cjs` is the test runner (shared setup, helpers, runner). Each test gets a fresh page.
+- **The tests themselves are in `specs/`, one file per topic:**
+
+  | File | Covers |
+  | --- | --- |
+  | `data.cjs` | ICS parsing, local recurrence, task data normalisation |
+  | `calendar.cjs` | month/week/day/agenda, drag & drop, touch, narrow layouts, month times |
+  | `events.cjs` | event dialog, Google/Outlook edits, several target calendars, all-day edge cases |
+  | `sidebar.cjs` | mini calendar, day planner, sidebar settings, ribbon menu |
+  | `settings.cjs` | settings tabs and tab bar, scroll position, period settings |
+  | `pickers.cjs` | own date/time pickers, dialog focus rules (tablet keyboard bugs) |
+  | `tasks.cjs` | Tasks page, task dialog, lists, completed tasks, tasks sidebar |
+
+  Add new tests to the matching file. Make a new file only for a genuinely new topic; it's picked up automatically.
+  To save tokens, only open the file you need.
   - **Time is frozen at 2026-11-14 10:00 Europe/Zurich**, so results are reproducible.
   - Desktop tests run at 1400×900. Mobile tests use a 390×800 touch device (`{ mobile: true }`), which also sets
     Obsidian's `Platform.isMobile`.
@@ -43,6 +58,8 @@ pre-installed. Locally you can use `npm i -D playwright && npx playwright instal
   Failing tests also save a `FAIL-*.png`.
 
 ### Writing a new UI test
+
+Each spec file exports `({ test, expect, eq, shot, path, SHOTS }) => { … }` and registers its tests inside:
 
 ```js
 test("mobile: my feature", { mobile: true }, async ({ page, ctx }) => {
