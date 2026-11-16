@@ -632,6 +632,11 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
   - "Create note" on a subtask (e.g. *2026-11-24 Prepare workshop – Book room*);
   - linked notes on a single subtask, shown as small chips next to it;
   - in the details view, each subtask shows its notes.
+- **Short descriptions for subtasks** (agreed, must stay uncluttered):
+  - an optional line or two per subtask (e.g. *"Room 4, key at reception"*); longer content belongs in a note;
+  - **Task list:** only a small ≡ icon on subtasks that have a description, never the text;
+  - **Details view:** the description in small grey text under the subtask;
+  - **Task dialog:** a small "add description" link per subtask opens a field only when needed (no big text boxes by default).
 
 **Step 3 – version 1.9: repeating**
 - **Repeating tasks**, each occurrence ticked off separately. A repeating task stays **one** task: each completed occurrence is only a small "done on …" entry, not a copy, so Done doesn't fill up with duplicates.

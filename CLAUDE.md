@@ -226,6 +226,12 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - **Subtasks too:** "Create note" (name "YYYY-MM-DD Task – Subtask") and linked notes per subtask.
       This needs `links: string[]` on `Subtask`, validated in `normalizeTaskData`, and included in link rename/delete.
       The progress log stays on the task only, unless the maintainer asks otherwise.
+    - **Short optional description per subtask** (`description?: string` on `Subtask`). It **must stay uncluttered**:
+      - task list: a small ≡ icon only;
+      - details view: small grey text under the subtask;
+      - dialog: an "add description" link that opens a small field on demand.
+
+      Longer content belongs in a note.
   - **1.9:** repeating tasks, and per-occurrence tasks on repeating events. A repeating task stays ONE item; completed occurrences are small "done on date" entries, not copies (agreed, to keep Done uncluttered).
   - **Completed tasks (1.7.5):**
     - Done shows the last `tasksDoneVisibleDays` (default 30, -1 = everything), with "Show older";
