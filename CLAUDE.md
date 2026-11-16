@@ -8,19 +8,32 @@ Read it for the feature set.
 The maintainer (repo owner) tests on a **desktop computer and a phone** (Obsidian mobile) and prefers explanations in
 plain language: what changed, why, and what to check. Avoid jargon. Be honest about what was and wasn't tested.
 
+**Repository:** `Rxap3r/omni-calendar` on GitHub. It was renamed from `obsidian-calendar`; GitHub redirects the old name,
+but use the new one for pull requests and in docs.
+The maintainer merges PRs and pushes the release tag themselves.
+
 ## Workflow rules (important)
 
 1. **Branch:** always work on **`dev-branch`**. Before starting, update it from `main`:
    `git fetch origin main && git merge --ff-only origin/main` (or a normal merge if needed). Never push to `main` directly.
-2. **Version bump with every user-visible change.** Update `manifest.json`, `package.json` and `versions.json` together
-   (patch for fixes and small features, minor for bigger features). Run `npm install --package-lock-only` afterwards.
-   A pull request whose version was already released needs a new number.
-3. **Commit and push** to `dev-branch` after each finished change. Commit messages explain *why*.
-4. **Pull requests only when the maintainer asks** ("pull it", "open a PR", …). Often several changes are collected
-   first. Open the PR from `dev-branch` to `main`. The PR description has *Summary*, *Testing* (say clearly what was
-   not tested on a real device or in real Obsidian) and *After merging* (`git tag X.Y.Z && git push origin X.Y.Z`
-   or run the release workflow).
-5. If the maintainer merged a PR, the next PR needs a new version number.
+2. **Fixes are collected, not released one by one (agreed with the maintainer).** When the maintainer reports a bug,
+   fix it on `dev-branch` right away (with a test) and add a line under **Not released yet** in `CHANGELOG.md`.
+   Write the line in plain language, saying what the user notices. Do **not** open a PR for each fix.
+   If a bug can't be fixed right away, list it under **Known bugs** in `CHANGELOG.md`.
+   Features from the roadmap are also listed under *Not released yet* once they're on `dev-branch`.
+3. **Version number:** `dev-branch` always carries the *next* release number. Set it once, when the first unreleased change
+   lands after a release, in `manifest.json`, `package.json` and `versions.json` together: patch for fixes and small
+   features, minor for bigger features. Then run `npm install --package-lock-only`, and keep the number in the *Not released
+   yet* heading in sync. If the maintainer merged a PR, the next change needs a new number.
+4. **Commit and push** to `dev-branch` after each finished change. Commit messages explain *why*.
+5. **Pull requests only when the maintainer asks** ("pull it", "open a PR", …). Open the PR from `dev-branch` to `main`.
+   The PR description has:
+   - *Summary*: the *Not released yet* list;
+   - *Testing*: say clearly what was not tested on a real device or in real Obsidian;
+   - *After merging*: `git tag X.Y.Z && git push origin X.Y.Z`, or run the release workflow.
+
+   In the same PR, turn *Not released yet* into a `## X.Y.Z` entry under *Released*, and start a new empty
+   *Not released yet* section.
 6. Keep `README.md` in sync with every feature or settings change (paths like *Settings → Omni Calendar → Display*).
    Ideas go into its **Roadmap** section.
 
@@ -33,35 +46,52 @@ npm test             # build + tests/sync (Node) + tests/ui (headless Chromium) 
 ```
 
 - **Always run `npm test` before committing.** For UI changes, also look at the screenshots in `tests/.out/shots/`
-  and add or extend a test in `tests/ui/run.cjs`. Test **desktop and mobile** (`{ mobile: true }`) for any UI change.
+  and add or extend a test in the matching topic file in `tests/ui/specs/`. Open only that file, to save tokens. Test **desktop and mobile** (`{ mobile: true }`) for any UI change.
 - **Release:** pushing a tag equal to `manifest.json`'s version (no `v` prefix) runs `.github/workflows/release.yml`,
   which attaches `main.js`, `manifest.json` and `styles.css` to a GitHub release. BRAT installs from that.
 - `main.js` and `dist/` are git-ignored build output.
+- **GitHub check** (`.github/workflows/ci.yml`): every push builds and runs both test suites. Playwright is installed there only for
+  the run; it is not in `package.json`.
+- The type check is strict and also fails on unused variables and imports (`tsconfig.json`).
 
 ## Architecture (src/)
 
+Files are kept small on purpose: when a file grows past roughly 300–400 lines, split it by topic like the folders below.
+Shared helpers live in one place. Before writing a small helper (error text, plural, colour, date maths), check
+`util.ts`, `dateUtils.ts`, `periods.ts`, `defaults.ts` and `views/shared.ts`.
+
 | File | Purpose |
 | --- | --- |
-| `main.ts` | Plugin entry: views, commands, ribbon icon + calendar menu, sidebar logic (`applySidebar`, `syncSidebarSetting`), settings loading and migrations (`loadPluginData`), notes, .ics export, `omni-calendar` code block |
+| `main.ts` | Plugin entry: start-up, ribbon icon + calendar menu, opening pages (`openCalendar`, `openTasks`), `persist`, refresh timer, event notes |
+| `commands.ts` | All commands (`registerCommands`). The ids must stay stable |
+| `sidebar.ts` | `SidebarManager` (`plugin.sidebar`): mini calendar, day planner and Tasks in the sidebar (`apply`, `applyTasks`, `toggle`, `expand`, `syncSetting`) |
+| `settingsData.ts` | `normalizePluginData`: loading and checking `data.json`, defaults, **migrations** |
+| `defaults.ts` | `DEFAULT_SETTINGS`, `PALETTE`, `nextColor` |
 | `types.ts` | All data types (`OmniCalendarSettings`, `LocalEvent`, `CalendarSource`, `Account`, `CalendarOccurrence`, …) |
 | `store.ts` | Data layer: local events + recurrence expansion, ICS fetching/caching, remote (Google/Outlook) events, writes (`createRemote`, `updateRemote`, `deleteRemote`, `moveOccurrence`), change events |
-| `ics.ts` | ICS parsing via ical.js (time zones incl. Windows names, RRULE, exceptions), `.ics` export |
+| `ics.ts`, `icsExport.ts` | ICS parsing via ical.js (time zones incl. Windows names, RRULE, exceptions); `.ics` export of local events |
 | `sync/oauth.ts` | OAuth 2.0 authorization code + PKCE, loopback redirect server, manual paste fallback, token refresh |
 | `sync/accounts.ts` | Connected accounts, tokens in Obsidian SecretStorage, refresh, sign-out/revoke, calendar list → sources |
 | `sync/providers.ts` | Google Calendar API + Microsoft Graph connectors (list/create/update/delete events) |
 | `sync/http.ts` | Authenticated requests (host allow-list, 401 retry, readable errors) |
 | `sync/builtin.ts` | Built-in app registrations (see Security) |
-| `views/CalendarView.ts` | Full calendar: month (grid, or compact grid when narrow), week/day time grid (swipe mode when narrow), agenda, toolbar, drag & drop, touch gestures, responsive layout |
+| `sync/setupGuides.ts` | The explanation texts of the sign-in dialog (text only) |
+| `views/OmniView.ts` | Base of the three views: `queueRender`, `inSidebar` |
+| `views/viewTypes.ts` | The view type ids |
+| `views/CalendarView.ts` | Calendar / day planner, the frame only: toolbar, navigation, filter, responsive layout switch |
+| `views/calendar/` | What the calendar draws: `month.ts` (grid + compact grid), `timeGrid.ts` (week/day, sideways-scrolling week), `agenda.ts`, `eventDrag.ts` (drag & drop + preview), `slotSelection.ts` (press/drag to create, touch gestures), `layout.ts` (sizes, overlapping events), `host.ts` (what they need from the view) |
 | `views/MiniCalendarView.ts` | Sidebar mini calendar |
-| `views/shared.ts` | Event chips, context menu, open event |
+| `views/AgendaBlock.ts` | The `omni-calendar` code block |
+| `views/shared.ts` | Event chips, context menu, open event, day-cell marking |
 | `tasks.ts` | Task data layer (`TaskStore`): lists, smart lists, grouping/sorting, link rename/delete, `normalizeTaskData` |
-| `views/TasksView.ts` | Tasks page (`omni-calendar-tasks`): list nav (bar when narrow), groups, quick add, task rows, menus, `ListModal` |
-| `modals/TaskModal.ts`, `NotePickerModal.ts` | Task dialog (priority, date, time range, subtasks, linked notes); vault note search with "create note" |
-| `modals/EventModal.ts` | Create/edit dialog (local + remote, multi-calendar "Save to") |
-| `modals/SignInModal.ts` | Account connection (quick sign-in or own app registration, setup guides) |
-| `modals/EventDetailsModal.ts`, `ConfirmModal.ts` | Read-only details, confirmations |
-| `settings.ts` | Settings tab with five tabs: Calendars, Google & Outlook, Display, Tasks, Notes |
-| `notes.ts`, `dateUtils.ts` | Event notes + template, date helpers |
+| `views/TasksView.ts`, `views/tasks/` | Tasks page (`omni-calendar-tasks`): list nav (bar when narrow), groups, quick add; `tasks/taskRow.ts` (one task + its menu), `tasks/helpers.ts` |
+| `modals/TaskModal.ts`, `ListModal.ts`, `NotePickerModal.ts` | Task dialog (priority, date, time range, subtasks, linked notes); list name + colour; vault note search with "create note" |
+| `pickers/` | Own `DateField` (month calendar) and `TimeField` (15-minute list, typing); `popup.ts` has the shared pop-up helpers and `keepFocusOnTap` |
+| `modals/EventModal.ts`, `eventForm.ts` | Create/edit dialog (local + remote, multi-calendar "Save to"); `eventForm.ts` fills its fields |
+| `modals/SignInModal.ts` | Account connection (quick sign-in or own app registration) |
+| `modals/EventDetailsModal.ts`, `ConfirmModal.ts`, `confirmations.ts` | Read-only details; yes/no dialog; the shared "delete Google/Outlook event" and "delete list" questions |
+| `settings/` | Settings window: `SettingTab.ts` (tab bar), one file per tab (`calendarsTab`, `accountsTab`, `displayTab`, `tasksTab`, `notesTab`), `controls.ts` (`periodSetting`, `numberSetting`, calendar row) |
+| `notes.ts`, `dateUtils.ts`, `periods.ts`, `util.ts` | Event notes + template; date helpers; period choices and wording; error text, plural, clamp |
 
 CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS variables only, so it supports light/dark mode and themes.
 
@@ -91,7 +121,58 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
   duplicate buttons for users.
 - View types `omni-calendar-view`, `omni-calendar-mini`, the code block language `omni-calendar`, and secret IDs
   `omni-calendar-<accountId>-rt|cs`.
-- `data.json` shape. When changing settings, add a migration in `loadPluginData` (see `sidebarOnStartup` → `sidebarView`).
+- `data.json` shape. When changing settings, add a migration in `normalizePluginData` (`settingsData.ts`; see `sidebarOnStartup` → `sidebarView`).
+- Command ids (`commands.ts`). Users' hotkeys are stored by them; a test checks the list.
+
+## Dialog and picker rules (learned from tablet bugs – don't regress)
+
+- **Dates and times** in any dialog use the plugin's own `DateField` and `TimeField` (`src/pickers/`), never
+  `<input type="date|time">`. Native pickers differ per device, and Android's clock dialog was cut off on a tablet.
+  New date or time fields must use them too.
+  - The `TimeField` list uses 15-minute steps. End fields get `after:` (times after the start, with durations).
+  - On mobile the list opens without a keyboard; "Type a time" is offered on request.
+  - Both follow `use24h` and `firstDayOfWeek`.
+- **Focus:** Obsidian pulls the focus back to a dialog's first field (the title) when it leaves the dialog, which opens
+  the keyboard on tablets. So:
+  - pop-ups are created **inside** the `.modal-container` (`createPopup`) and never take the focus;
+  - dialogs call `keepFocusOnTap(modalEl)`: buttons don't take the focus, and an active text field is released to the
+    dialog itself, so the keyboard closes.
+  - The UI tests simulate this focus trap. Keep those tests passing.
+- Pop-ups use `z-index: calc(var(--layer-menu) + 1)` (Obsidian: modal layer 50, menu layer 65). The test page uses the same values.
+- Task checkboxes have a fixed square size, because Obsidian's mobile button styles (padding, min-width) made them oval.
+
+## Undocumented Obsidian internals in use (check first if something breaks after an Obsidian update)
+
+| What | Where | Fallback |
+| --- | --- | --- |
+| `leaf.parent.selectTab(leaf)` to show a sidebar tab without opening the sidebar | `sidebar.ts` `selectTab` | `revealLeaf` on desktop |
+| `leaf.updateHeader()` to refresh the tab title ("Calendar" ↔ "Day planner") | `CalendarView.updateLocationButton` | – |
+| `app.setting.open()` / `openTabById()` for the menu's "Settings" entry | `main.ts` `openSettings` | – |
+
+## Sidebar behaviour (settings in Display)
+
+- **Day planner ⤢** (`sidebarOnExpand`):
+  - default: the planner's own tab turns into the mini calendar, in place (so Obsidian doesn't show another tab);
+  - "close": optionally shows the sidebar tab chosen in `sidebarAfterClose`;
+  - "keep".
+- Settings changes never reveal or focus sidebar views, which would close the settings window. They select the tab
+  quietly instead. Settings re-render keeps the scroll position.
+- **Tasks in the sidebar** is a separate tab next to the mini calendar or day planner (`tasksSidebar`), not a toggle.
+  This was the maintainer's choice.
+
+## Keeping the built-in app registrations free (maintainer)
+
+- **Azure (Microsoft sign-in):**
+  - keep the spending limit on;
+  - never upgrade to pay-as-you-go;
+  - optionally set a budget alert;
+  - **never delete the directory**, because the built-in client ID lives there.
+
+  App registrations themselves cost nothing.
+- **Google Cloud project:**
+  - don't link a billing account and don't start the paid trial;
+  - the Calendar API is free for this use;
+  - the app is "unverified" (warning screen, 100-user cap) until the verification is done.
 
 ## Mobile notes (Obsidian Android/iOS)
 
@@ -99,9 +180,11 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 - Ribbon buttons on mobile only receive **taps**: no long-press and no right-click. A tap opens the calendar menu.
 - Touch on the time grid: swipe scrolls, tap creates an event, long-press + drag selects a range. Handle `pointercancel` and
   never open more than one dialog (`EventModal.openCount`).
+- iOS may not fire `contextmenu` on a long-press. Every action in a right-click menu (e.g. on tasks) must also be
+  reachable by tapping, for example through the dialog.
 - **UI names (use them everywhere, incl. tab titles via `getDisplayText`):** **Calendar** = full page in the main area, **Mini calendar** = `omni-calendar-mini`, **Day planner** = `omni-calendar-view` in a sidebar (setting value `full`; opens in `sidebarCalendarMode`, default Day). Avoid "full calendar".
 - Narrow layouts:
-  - month → compact 7-column grid (bars, or dots when very narrow) + the selected day's list (`renderMonthCompact`);
+  - month → compact 7-column grid (bars, or dots when very narrow) + the selected day's list (`renderMonthCompact` in `views/calendar/month.ts`);
   - week → the whole week, swiped day by day (`.ch-tg-hscroll`, header cells shifted via `--ch-sx`) with a week bar;
   - the settings tab bar scrolls sideways.
 
@@ -138,12 +221,40 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - Events: migrate the existing single `notePath` into the list. Remote events store their links locally, keyed by remote ID.
   - **1.7 (done):** Tasks page (full + sidebar), lists, task editing, subtasks, quick add, **linked notes on tasks**, Tasks settings tab, menu entry and commands.
   - **1.8:** calendar integration, tasks on events (dialog section, "2/5" hint), **linked notes on events** (local + remote), "Tasks today" in the mini calendar.
+  - **Details view (with 1.8 or right after; see README roadmap):** clicking an event or task opens a large
+    read-only view by default, with an **Edit** button for the edit dialog. It also needs a small **"Edit notes"**
+    button: inline editing of only the event description or task notes (Save/Cancel), never triggered by just clicking
+    the text. For remote events, save to Google/Outlook. Also confirmed by the maintainer:
+    - quick actions in the view (tick off the task or a subtask, open linked notes);
+    - a setting "Clicking opens: Details view (default) / Edit dialog directly";
+    - right-click / long-press still offers Edit.
+  - **Progress log for tasks (with the details view):**
+    - a task gets timestamped log entries (text + date/time), added via an input + send;
+    - entries are shown oldest first, newest at the bottom, like sticky notes;
+    - it's separate from subtasks;
+    - also confirmed: adding entries in the details view (no Edit needed), a "📝 n" hint in lists, edit/delete of entries
+      (the original time stays). Tasks first; the same log for events maybe later.
+    - Store them in the task (e.g. `log: { at: number; text: string }[]`) and validate in `normalizeTaskData`.
+  - **"Create note" for tasks (with the details view):** the same as for events (`notes.ts` `createEventNote`).
+    - It lives in the right-click menu, the task dialog and the details view.
+    - Name: "YYYY-MM-DD Title" (or the title only if the task has no date), in `notesFolder`.
+    - The note is added to `links` and opened; an existing note just opens ("Open note").
+    - Own task note template in Settings → Notes.
+    - **Subtasks too:** "Create note" (name "YYYY-MM-DD Task – Subtask") and linked notes per subtask.
+      This needs `links: string[]` on `Subtask`, validated in `normalizeTaskData`, and included in link rename/delete.
+      The progress log stays on the task only, unless the maintainer asks otherwise.
+    - **Short optional description per subtask** (`description?: string` on `Subtask`). It **must stay uncluttered**:
+      - task list: a small ≡ icon only;
+      - details view: small grey text under the subtask;
+      - dialog: an "add description" link that opens a small field on demand.
+
+      Longer content belongs in a note.
   - **1.9:** repeating tasks, and per-occurrence tasks on repeating events. A repeating task stays ONE item; completed occurrences are small "done on date" entries, not copies (agreed, to keep Done uncluttered).
   - **Completed tasks (1.7.5):**
     - Done shows the last `tasksDoneVisibleDays` (default 30, -1 = everything), with "Show older";
     - "Clear completed";
     - optional automatic delete after `tasksDeleteDoneAfterDays` (0 = never, the default).
-    - Period settings use `periodSetting()` in settings.ts. Use it for any new "how long / how far" setting.
+    - Period settings use `periodSetting()` in `settings/controls.ts`. Use it for any new "how long / how far" setting.
       Every such setting must offer the **same** `STANDARD_PERIODS` (7d, 2w, 30d, 60d, 90d, 6mo, 1y), plus setting-specific extras and "Custom…". The maintainer asked for this uniformity, and a test checks it.
   - **Later:** Microsoft To Do sync (`Tasks.ReadWrite`, re-consent needed), Google Tasks, task reminders.
 - **After Tasks: reminders and notifications.** See the README roadmap for the agreed design:

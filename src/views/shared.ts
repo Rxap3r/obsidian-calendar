@@ -1,8 +1,8 @@
-import { Menu, Notice } from "obsidian";
-import { confirmAction } from "../modals/ConfirmModal";
+import { Menu } from "obsidian";
+import { deleteRemoteEvent } from "../modals/confirmations";
 import type OmniCalendarPlugin from "../main";
 import { CalendarOccurrence } from "../types";
-import { formatTime } from "../dateUtils";
+import { formatTime, formatTimeRange, isSameDay } from "../dateUtils";
 import { EventModal } from "../modals/EventModal";
 import { EventDetailsModal } from "../modals/EventDetailsModal";
 
@@ -59,22 +59,19 @@ export function occurrenceMenu(plugin: OmniCalendarPlugin, occ: CalendarOccurren
 		);
 	}
 	if (!occ.readOnly && occ.remote) {
-		const where = plugin.store.getSource(occ.sourceId)?.type === "google" ? "Google Calendar" : "Outlook";
-		const del = async (series: boolean) => {
-			const what = series ? "all occurrences of this event" : occ.recurring ? "this occurrence" : "this event";
-			if (!(await confirmAction(plugin.app, "Delete event?", `"${occ.title}" – ${what} will be permanently deleted from ${where}.`))) return;
-			try {
-				await plugin.store.deleteRemote(occ, series);
-				new Notice(`Deleted "${occ.title}" from ${where}`);
-			} catch (e) {
-				new Notice(`Could not delete: ${e instanceof Error ? e.message : String(e)}`, 8000);
-			}
-		};
+		const del = (series: boolean) => void deleteRemoteEvent(plugin, occ, series);
 		menu.addSeparator();
-		if (occ.recurring) menu.addItem((i) => i.setTitle("Delete this occurrence").setIcon("calendar-x").onClick(() => void del(false)));
-		menu.addItem((i) => i.setTitle(occ.recurring ? "Delete series" : "Delete").setIcon("trash").setWarning(true).onClick(() => void del(occ.recurring)));
+		if (occ.recurring) menu.addItem((i) => i.setTitle("Delete this occurrence").setIcon("calendar-x").onClick(() => del(false)));
+		menu.addItem((i) => i.setTitle(occ.recurring ? "Delete series" : "Delete").setIcon("trash").setWarning(true).onClick(() => del(occ.recurring)));
 	}
 	menu.showAtMouseEvent(evt);
+}
+
+/** Mark a day cell of a month grid: today, weekend, and days that belong to the neighbouring month. */
+export function markDayCell(cell: HTMLElement, day: Date, month: Date) {
+	if (day.getMonth() !== month.getMonth()) cell.addClass("ch-other-month");
+	if (isSameDay(day, new Date())) cell.addClass("ch-today");
+	if (day.getDay() === 0 || day.getDay() === 6) cell.addClass("ch-weekend");
 }
 
 /** Build a compact event "chip" used in month cells, all-day rows, sidebar lists. */
@@ -82,7 +79,8 @@ export function createChip(
 	plugin: OmniCalendarPlugin,
 	parent: HTMLElement,
 	occ: CalendarOccurrence,
-	opts: { showTime?: boolean; draggable?: boolean } = {}
+	/** showTime: start time; with `day` it shows the range ("10:00–11:30") for that day. */
+	opts: { showTime?: boolean; draggable?: boolean; day?: Date } = {}
 ): HTMLElement {
 	const chip = parent.createDiv({ cls: "ch-chip" });
 	chip.style.setProperty("--ch-event-color", occ.color);
@@ -91,7 +89,7 @@ export function createChip(
 	if (occ.end < new Date()) chip.addClass("ch-past");
 	if (!occ.allDay) chip.createSpan({ cls: "ch-chip-dot" });
 	if (opts.showTime && !occ.allDay) {
-		chip.createSpan({ cls: "ch-chip-time", text: formatTime(occ.start, plugin.settings.use24h) });
+		chip.createSpan({ cls: "ch-chip-time", text: opts.day ? timeRangeForDay(occ, opts.day, plugin.settings.use24h) : formatTime(occ.start, plugin.settings.use24h) });
 	}
 	chip.createSpan({ cls: "ch-chip-title", text: occ.title });
 	chip.setAttr("title", tooltip(plugin, occ));
@@ -119,13 +117,29 @@ export function createChip(
 
 export function tooltip(plugin: OmniCalendarPlugin, occ: CalendarOccurrence): string {
 	const src = plugin.store.getSource(occ.sourceId);
-	const time = occ.allDay
-		? "All day"
-		: `${formatTime(occ.start, plugin.settings.use24h)} – ${formatTime(occ.end, plugin.settings.use24h)}`;
+	const time = occ.allDay ? "All day" : formatTimeRange(occ.start, occ.end, plugin.settings.use24h);
 	return [occ.title, time, occ.location, src?.name].filter(Boolean).join("\n");
 }
 
 /** Local or writable remote events that are not part of a recurring series can be dragged. */
 export function canDrag(occ: CalendarOccurrence): boolean {
 	return !occ.readOnly && !occ.recurring && (!!occ.eventId || !!occ.remote);
+}
+
+/**
+ * Time label of a timed event on one day of the month view:
+ * "10:00–11:30" (same day), "22:00 →" (first day of a multi-day event), "→ 02:00" (last day),
+ * "→" (a day in between).
+ */
+export function timeRangeForDay(occ: CalendarOccurrence, day: Date, use24h: boolean): string {
+	const startsToday = isSameDay(occ.start, day);
+	// An end at exactly midnight belongs to the day before.
+	const lastDay = new Date(occ.end.getTime() - 1);
+	const endsToday = isSameDay(lastDay, day);
+	const s = formatTime(occ.start, use24h);
+	const e = formatTime(occ.end, use24h);
+	if (startsToday && endsToday) return occ.end.getTime() === occ.start.getTime() ? s : `${s}–${e}`;
+	if (startsToday) return `${s} →`;
+	if (endsToday) return `→ ${e}`;
+	return "→";
 }

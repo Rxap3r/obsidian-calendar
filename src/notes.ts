@@ -1,6 +1,7 @@
 import { App, normalizePath, Notice, TFile } from "obsidian";
 import { CalendarOccurrence } from "./types";
 import { formatTime, toDateKey, toTimeKey } from "./dateUtils";
+import { errorMessage } from "./util";
 
 export const DEFAULT_NOTE_TEMPLATE = `---
 title: "{{title}}"
@@ -78,7 +79,7 @@ export async function createEventNote(
 	try {
 		return await app.vault.create(path, body);
 	} catch (e) {
-		new Notice(`Omni Calendar: could not create note (${e instanceof Error ? e.message : e})`);
+		new Notice(`Omni Calendar: could not create note (${errorMessage(e)})`);
 		return null;
 	}
 }

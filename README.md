@@ -32,7 +32,7 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 - [Google & Outlook (two-way)](#two-way-sync-with-google-calendar-and-outlook--microsoft-365): sign-in, editing, security
 - [Read-only ICS subscriptions](#read-only-subscriptions-via-ics-link-proton-icloud-google-outlook-) (Proton, iCloud, …)
 - [Settings](#settings-reference) · [Commands](#commands) · [Where data is stored](#where-data-is-stored)
-- [Development & releases](#development) · [Roadmap](#roadmap-ideas)
+- [Development & releases](#development) · [Changelog](CHANGELOG.md) · [Roadmap](#roadmap-ideas)
 
 ---
 
@@ -84,10 +84,10 @@ follows, so it never pops back unexpectedly. Commands can be given hotkeys in *S
 ### Calendar (full page)
 
 - **Toolbar:** `‹ Today ›` navigates. *Month / Week / Day / Agenda* switches the view. The filter icon shows or hides individual calendars. ⟳ re-downloads external calendars. **+ New** creates an event.
-- **Month view:** click a **day number** to open that day. **Double-click** a cell, or click the **+** that appears on hover, to create an event. When a day is full, click "+N more".
+- **Month view:** events show their **start and end time** (e.g. *10:00–11:30*). Events over midnight show *22:00 →* on the first day and *→ 02:00* on the last. Click a **day number** to open that day. **Double-click** a cell, or click the **+** that appears on hover, to create an event. When a day is full, click "+N more".
 - **Week / Day view:** **click** an empty slot to create an event there. **Click and drag** to create an event covering the selected range (it snaps to 15 minutes). While you drag, a filled preview in the colour of your default calendar shows the exact start and end time. Overlapping events are shown side by side, and a red line marks the current time. Double-click the *all-day* row to create an all-day event.
 - **On touch screens:** swipe scrolls as usual, **tap** an empty slot to create an event there, and **press and hold** (about half a second), then drag, to select a time range.
-- **Drag and drop:** drag a local, non-recurring event to another day (month view) or another time (week/day view) to move it.
+- **Drag and drop:** drag a local, non-recurring event to another day (month view) or another time (week/day view) to move it. In week/day view a preview block shows exactly where the event will land, with its new time; it snaps to 15 minutes.
 - **Click an event** to edit it. For an external event this shows its details instead. **Right-click an event** for a menu with *Edit*, *Create/Open note*, *Duplicate*, *Delete this occurrence* and *Delete*.
 
 **Adapts to its width** (handy in a sidebar):
@@ -443,7 +443,7 @@ ICS links can only be read. For Google and Outlook, use the two-way account conn
 
 ## Settings reference
 
-The settings are split into four tabs. Longer explanations sit in collapsible **ℹ** sections.
+The settings are split into five tabs. Longer explanations sit in collapsible **ℹ** sections.
 
 | Tab | Setting | Description |
 | --- | --- | --- |
@@ -522,17 +522,26 @@ Project layout:
 
 ```
 src/
-  main.ts                 plugin entry: views, commands, code block, export
-  store.ts                local events, recurrence expansion, ICS fetching and caching
-  ics.ts                  ICS parsing (ical.js), time zones, recurrence, .ics export
-  settings.ts             settings tab
+  main.ts                 plugin entry: start-up, ribbon and menu, opening pages, notes
+  commands.ts             commands for the command palette
+  sidebar.ts              mini calendar, day planner and Tasks in the sidebar
+  settingsData.ts         loading and checking data.json, migrations
+  defaults.ts             default settings, colour palette
+  store.ts                events: local (with repeats), ICS subscriptions, Google / Outlook
+  tasks.ts                tasks and task lists
+  ics.ts, icsExport.ts    ICS parsing (ical.js, time zones, repeats) and .ics export
   notes.ts                event → note creation and template
-  dateUtils.ts            date helpers
-  views/CalendarView.ts   full-page month/week/day/agenda view
-  views/MiniCalendarView.ts sidebar calendar
+  dateUtils.ts, periods.ts, util.ts   small helpers
+  sync/                   Google / Outlook sign-in and connectors
+  settings/               settings window: one file per tab, shared controls
+  pickers/                own date and time fields
+  views/CalendarView.ts   calendar page / day planner (frame: toolbar, navigation)
+  views/calendar/         month, week/day, agenda, drag & drop
+  views/MiniCalendarView.ts  mini calendar
+  views/TasksView.ts, views/tasks/   Tasks page
+  views/AgendaBlock.ts    the omni-calendar code block
   views/shared.ts         event chips, context menu
-  modals/EventModal.ts    create/edit dialog
-  modals/EventDetailsModal.ts details for external events
+  modals/                 dialogs: event, task, list, sign-in, details, confirmations
 ```
 
 ### Releasing a new version (needed for BRAT)
@@ -598,6 +607,46 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 - The mini calendar gets a small **"Tasks today"** section.
 - **Linked notes on events:** the same as on tasks, for local and Google/Outlook events. For Google/Outlook events the links are stored only in Obsidian. The existing single "Create note" becomes one of the linked notes, and older events with a note keep it.
 
+**Planned with 1.8 (or right after it): details view for events and tasks**
+- **Clicking** an event or task opens a **large read-only view** by default, instead of the edit dialog. Nothing can be changed by accident.
+  - **Event:** title, date/time, calendar, location, description, linked notes, and its tasks (with "2/5").
+  - **Task:** title, date/time range, list, priority, notes, subtasks, linked notes, and its event.
+- An **Edit** button in the view opens the editing dialog.
+- **Editing only the notes in the view (maintainer's wish):** a small **"Edit notes"** button or link next to the description of an event (and the notes of a task).
+  - It turns that text into an editable field right in the view, with *Save* / *Cancel*. The rest stays read-only.
+  - Not by simply clicking the text, so nothing is changed by accident.
+  - For Google/Outlook events the description is saved there.
+- Google, Outlook and ICS events already have a read-only view; everything gets the same look.
+- **Also agreed:**
+  - quick actions stay possible in the view (tick off the task or a subtask, open a linked note);
+  - a setting *"Clicking opens: Details view (default) / Edit dialog directly"*;
+  - right-click / long-press still offers *Edit* directly.
+
+**Planned with the details view: progress log for tasks (maintainer's idea)**
+- Each task gets a **log** section: type what you've already done or what happened, then **send** it.
+- Each entry stays in the task like a **sticky note** with **date and time**. New entries go **below** the older ones, so the history reads top to bottom.
+- It's different from subtasks: those are things *to do*, the log records what was *done*.
+- **Also agreed:**
+  - adding entries also works in the details view without "Edit";
+  - a small "📝 3" hint in the task list;
+  - entries can be corrected or deleted (the original time stays);
+  - maybe the same log for events later; tasks first.
+
+**Planned with the details view: "Create note" for tasks (maintainer's idea)**
+- Like for events: **right-click a task → Create note**, plus a button in the task dialog and the details view.
+- It creates a note named after the date and the task (e.g. *2026-11-24 Prepare workshop*, or just the title without a date) in the notes folder.
+- The note is automatically added to the task's **linked notes** and opened. If it already exists, it just opens ("Open note").
+- A separate **task note template** in *Settings → Notes*, next to the event template (title, date, time, list, priority, subtasks, …).
+- **Also for subtasks:**
+  - "Create note" on a subtask (e.g. *2026-11-24 Prepare workshop – Book room*);
+  - linked notes on a single subtask, shown as small chips next to it;
+  - in the details view, each subtask shows its notes.
+- **Short descriptions for subtasks** (agreed, must stay uncluttered):
+  - an optional line or two per subtask (e.g. *"Room 4, key at reception"*); longer content belongs in a note;
+  - **Task list:** only a small ≡ icon on subtasks that have a description, never the text;
+  - **Details view:** the description in small grey text under the subtask;
+  - **Task dialog:** a small "add description" link per subtask opens a field only when needed (no big text boxes by default).
+
 **Step 3 – version 1.9: repeating**
 - **Repeating tasks**, each occurrence ticked off separately. A repeating task stays **one** task: each completed occurrence is only a small "done on …" entry, not a copy, so Done doesn't fill up with duplicates.
 - **Tasks on repeating events:** the event's task list works as a template, and each occurrence has its own ticks. Ticking one off on 14 Nov doesn't tick it off on 21 Nov.
@@ -617,6 +666,8 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 - Each reminder fires only once, and timing stays reliable across sleep mode and restarts.
 
 ### Other ideas
+
+- **Tasks below the mini calendar:** show the Tasks list under the mini calendar in the same sidebar (split top/bottom), so both are visible without switching tabs. Possible in Obsidian, but harder to make reliable, especially on phones.
 
 - CalDAV write support (iCloud, Fastmail, Nextcloud, …)
 - Editing the repeat rule of Google / Outlook series

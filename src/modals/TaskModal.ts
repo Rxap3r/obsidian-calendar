@@ -5,12 +5,11 @@ import { PRIORITY_NAMES, newSubtask } from "../tasks";
 import { addDays, toDateKey } from "../dateUtils";
 import { confirmAction } from "./ConfirmModal";
 import { NotePickerModal } from "./NotePickerModal";
-import { openLinkedNote } from "../views/TasksView";
-import { DateField, TimeField, keepFocusOnTap } from "../timePicker";
+import { noteName, openLinkedNote } from "../views/tasks/helpers";
+import { DateField, TimeField, keepFocusOnTap } from "../pickers";
 
 /** Create / edit a task: title, list, priority, date, time (range), subtasks, linked notes, notes. */
 export class TaskModal extends Modal {
-	static openCount = 0;
 	private task: Task;
 	private readonly isNew: boolean;
 	private timeRow!: HTMLElement;
@@ -26,7 +25,6 @@ export class TaskModal extends Modal {
 	}
 
 	onOpen() {
-		TaskModal.openCount++;
 		const { contentEl } = this;
 		const t = this.task;
 		this.modalEl.addClass("ch-event-modal", "ch-task-modal");
@@ -155,7 +153,6 @@ export class TaskModal extends Modal {
 	}
 
 	onClose() {
-		TaskModal.openCount = Math.max(0, TaskModal.openCount - 1);
 		this.contentEl.empty();
 	}
 
@@ -199,7 +196,7 @@ export class TaskModal extends Modal {
 		for (const path of t.links) {
 			const row = el.createDiv({ cls: "ch-task-link-row" });
 			setIcon(row.createSpan({ cls: "ch-task-link-icon" }), "file-text");
-			const name = row.createEl("a", { cls: "ch-task-link-name", text: path.replace(/\.md$/, "").split("/").pop() ?? path, attr: { title: path } });
+			const name = row.createEl("a", { cls: "ch-task-link-name", text: noteName(path), attr: { title: path } });
 			name.onclick = (e) => {
 				e.preventDefault();
 				void openLinkedNote(this.plugin, path);

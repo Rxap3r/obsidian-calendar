@@ -1,6 +1,6 @@
 import { requestUrl } from "obsidian";
 import { Account, EventInput, Recurrence, RemoteEvent } from "../types";
-import { addDays, parseLocal, toDateKey, toTimeKey } from "../dateUtils";
+import { addDays, pad, parseLocal, toDateKey, toTimeKey } from "../dateUtils";
 import { OAuthProviderConfig } from "./oauth";
 import { apiRequest, TokenGetter } from "./http";
 
@@ -39,10 +39,6 @@ function localTimeZone(): string {
 /** Wall-clock local time without offset, e.g. 2026-11-13T09:30:00 */
 function localIso(d: Date): string {
 	return `${toDateKey(d)}T${toTimeKey(d)}:00`;
-}
-
-function pad(n: number) {
-	return String(n).padStart(2, "0");
 }
 
 function rrule(r: Recurrence, allDay: boolean): string {

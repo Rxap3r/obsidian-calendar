@@ -1,6 +1,7 @@
 import type OmniCalendarPlugin from "../main";
 import { Account, AccountProvider, CalendarSource } from "../types";
 import { uid } from "../dateUtils";
+import { nextColor } from "../defaults";
 import { AuthSession, OAuthError, refreshAccessToken } from "./oauth";
 import { providerFor, RemoteCalendarInfo } from "./providers";
 import { TokenGetter } from "./http";
@@ -36,8 +37,8 @@ export class AccountManager {
 
 	/** SecretStorage exists in Obsidian 1.11.4 and newer. */
 	get secureStorageAvailable(): boolean {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const ss = (this.plugin.app as any).secretStorage;
+		// Missing in older Obsidian versions, whatever the type definitions say.
+		const ss = this.plugin.app.secretStorage as typeof this.plugin.app.secretStorage | undefined;
 		return !!ss && typeof ss.getSecret === "function" && typeof ss.setSecret === "function";
 	}
 
@@ -180,7 +181,7 @@ export class AccountManager {
 	}
 
 	/** Add / update calendar sources for the calendars of an account. */
-	syncCalendarList(account: Account, calendars: RemoteCalendarInfo[], palette: string[]) {
+	syncCalendarList(account: Account, calendars: RemoteCalendarInfo[]) {
 		const s = this.plugin.settings;
 		for (const cal of calendars) {
 			const existing = s.sources.find((x) => x.accountId === account.id && x.remoteId === cal.id);
@@ -188,8 +189,7 @@ export class AccountManager {
 				existing.readOnly = cal.readOnly;
 				continue;
 			}
-			const used = new Set(s.sources.map((x) => x.color));
-			const color = cal.color && /^#[0-9a-f]{6}$/i.test(cal.color) ? cal.color : palette.find((c) => !used.has(c)) ?? palette[0];
+			const color = cal.color && /^#[0-9a-f]{6}$/i.test(cal.color) ? cal.color : nextColor(s.sources.map((x) => x.color), s.sources.length);
 			const src: CalendarSource = {
 				id: uid(),
 				name: cal.name,

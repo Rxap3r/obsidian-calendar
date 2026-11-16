@@ -1,13 +1,15 @@
 import { Events, normalizePath, requestUrl, TFile } from "obsidian";
 import type OmniCalendarPlugin from "./main";
-import { CalendarOccurrence, CalendarSource, EventInput, LocalEvent, RemoteEvent, SourceStatus } from "./types";
+import { CalendarOccurrence, CalendarSource, EventInput, LocalEvent, RecurrenceFreq, RemoteEvent, SourceStatus } from "./types";
 import { providerFor } from "./sync/providers";
 import { ApiError } from "./sync/http";
 import { IcsCalendar, isRemoteUrl, normalizeIcsUrl } from "./ics";
 import {
-	addDays, addMonths, addMinutes, dayDiff, isValidDate, parseLocal, startOfDay, toDateKey, uid,
+	addDays, addMonths, addMinutes, dayDiff, isValidDate, parseLocal, startOfDay, toDateKey, toDateTimeKey, uid,
 } from "./dateUtils";
+import { errorMessage } from "./util";
 
+/** Safety limit for the repeats of one local event looked at per query. */
 const MAX_LOCAL_OCCURRENCES = 5000;
 
 /**
@@ -62,6 +64,11 @@ export class CalendarStore extends Events {
 		if (source.type === "ics") return "ICS";
 		const acc = this.plugin.accounts.getAccount(source.accountId);
 		return `${source.type === "google" ? "Google" : "Outlook"}${acc?.label ? ` · ${acc.label}` : ""}`;
+	}
+
+	/** The service a connected calendar belongs to, as shown in messages: "Google Calendar" or "Outlook". */
+	serviceName(sourceId: string): string {
+		return this.getSource(sourceId)?.type === "google" ? "Google Calendar" : "Outlook";
 	}
 
 	defaultLocalSource(): CalendarSource {
@@ -159,16 +166,21 @@ export class CalendarStore extends Events {
 		const interval = Math.max(1, rec.interval || 1);
 		const until = rec.until ? addDays(parseLocal(rec.until), 1) : null;
 		const exdates = new Set(ev.exdates ?? []);
-		for (let i = 0; i < MAX_LOCAL_OCCURRENCES; i++) {
-			if (rec.count && i >= rec.count) break;
-			let s: Date;
+		const nth = (i: number): Date => {
 			switch (rec.freq) {
-				case "daily": s = addDays(start, i * interval); break;
-				case "weekly": s = addDays(start, i * 7 * interval); break;
-				case "monthly": s = addMonths(start, i * interval); break;
-				case "yearly": s = addMonths(start, i * 12 * interval); break;
-				default: s = start;
+				case "daily": return addDays(start, i * interval);
+				case "weekly": return addDays(start, i * 7 * interval);
+				case "monthly": return addMonths(start, i * interval);
+				case "yearly": return addMonths(start, i * 12 * interval);
+				default: return start;
 			}
+		};
+		// Start shortly before the range instead of at the first occurrence: a series that began years
+		// ago is neither walked through on every redraw nor cut off after MAX_LOCAL_OCCURRENCES repeats.
+		const first = firstRepeatNear(rec.freq, interval, start, spanDays, rangeStart);
+		for (let i = first; i < first + MAX_LOCAL_OCCURRENCES; i++) {
+			if (rec.count && i >= rec.count) break;
+			const s = nth(i);
 			if (until && s >= until) break;
 			if (s >= rangeEnd) break;
 			if (exdates.has(toDateKey(s))) continue;
@@ -398,43 +410,37 @@ export class CalendarStore extends Events {
 		if (occ.allDay) {
 			await this.updateEvent(occ.eventId, { start: toDateKey(start), end: toDateKey(addDays(end, -1)) });
 		} else {
-			const k = (d: Date) => `${toDateKey(d)}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-			await this.updateEvent(occ.eventId, { start: k(start), end: k(end) });
+			await this.updateEvent(occ.eventId, { start: toDateTimeKey(start), end: toDateTimeKey(end) });
 		}
 	}
 
 	async refreshSource(source: CalendarSource): Promise<void> {
-		if (this.isRemoteSource(source)) {
-			this.status.set(source.id, { ...this.status.get(source.id), loading: true, error: undefined });
-			this.notify();
-			try {
-				await this.refreshRemote(source);
-			} catch (e) {
-				const msg = e instanceof Error ? e.message : String(e);
-				console.error(`Omni Calendar: failed to refresh "${source.name}": ${msg}`);
-				this.status.set(source.id, { ...this.status.get(source.id), loading: false, error: msg });
-			}
-			this.notify();
-			return;
-		}
-		if (source.type !== "ics") return;
+		const remote = this.isRemoteSource(source);
+		if (!remote && source.type !== "ics") return;
 		this.status.set(source.id, { ...this.status.get(source.id), loading: true, error: undefined });
 		this.notify();
 		try {
-			const raw = await this.fetchRaw(source);
-			if (!/BEGIN:VCALENDAR/i.test(raw)) {
-				throw new Error("Response is not an iCalendar (.ics) file. Check that you used the ICS / iCal link.");
-			}
-			const cal = new IcsCalendar(source, raw);
-			this.ics.set(source.id, cal);
-			this.status.set(source.id, { lastFetched: Date.now(), eventCount: cal.eventCount, loading: false });
-			if (isRemoteUrl(source.url ?? "")) await this.saveCache(source.id, raw);
+			if (remote) await this.refreshRemote(source);
+			else await this.refreshIcs(source);
 		} catch (e) {
-			const msg = e instanceof Error ? e.message : String(e);
-			console.error(`Omni Calendar: failed to refresh "${source.name}"`, e);
+			const msg = errorMessage(e);
+			// Account calendars: only the message is logged, never the error object itself.
+			if (remote) console.error(`Omni Calendar: failed to refresh "${source.name}": ${msg}`);
+			else console.error(`Omni Calendar: failed to refresh "${source.name}"`, e);
 			this.status.set(source.id, { ...this.status.get(source.id), loading: false, error: msg });
 		}
 		this.notify();
+	}
+
+	private async refreshIcs(source: CalendarSource): Promise<void> {
+		const raw = await this.fetchRaw(source);
+		if (!/BEGIN:VCALENDAR/i.test(raw)) {
+			throw new Error("Response is not an iCalendar (.ics) file. Check that you used the ICS / iCal link.");
+		}
+		const cal = new IcsCalendar(source, raw);
+		this.ics.set(source.id, cal);
+		this.status.set(source.id, { lastFetched: Date.now(), eventCount: cal.eventCount, loading: false });
+		if (isRemoteUrl(source.url ?? "")) await this.saveCache(source.id, raw);
 	}
 
 	async refreshAll(): Promise<void> {
@@ -451,6 +457,25 @@ export class CalendarStore extends Events {
 		if (dayDiff(start, end) !== 0) end = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59);
 		return { start, end };
 	}
+}
+
+/**
+ * Number of a repeat that is safely before `rangeStart` (0 = the first occurrence), so that expanding a
+ * series can begin there. It may be a little too early, never too late: the caller skips what is out of range.
+ */
+export function firstRepeatNear(freq: RecurrenceFreq, interval: number, start: Date, spanDays: number, rangeStart: Date): number {
+	let steps: number;
+	if (freq === "daily" || freq === "weekly") {
+		const stepDays = freq === "daily" ? interval : 7 * interval;
+		// An occurrence can reach into the range for as many days as the event lasts.
+		steps = (dayDiff(start, rangeStart) - spanDays - 1) / stepDays;
+	} else {
+		const stepMonths = freq === "monthly" ? interval : 12 * interval;
+		const months = (rangeStart.getFullYear() - start.getFullYear()) * 12 + rangeStart.getMonth() - start.getMonth();
+		const spanMonths = Math.ceil((spanDays + 1) / 28) + 1;
+		steps = (months - spanMonths) / stepMonths;
+	}
+	return Math.max(0, Math.floor(steps) - 1);
 }
 
 /** Detect links that point to a calendar web page instead of an ICS feed. */

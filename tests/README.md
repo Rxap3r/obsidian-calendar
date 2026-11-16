@@ -6,11 +6,13 @@ Two automated test suites. Neither needs Obsidian, a real phone, or real Google 
 npm test            # build + both suites
 npm run test:sync   # sign-in (OAuth/PKCE) and Google / Outlook connectors – Node only
 npm run test:ui     # views, dialogs, settings, touch gestures – headless Chromium
+npm run test:ui -- tasks    # one topic file (see below): data, calendar, events, sidebar, settings, pickers, tasks
 npm run test:ui -- mobile   # only UI tests whose name contains "mobile"
 ```
 
 Requirements: `npm install`, plus **Playwright with Chromium**. In Claude Code's cloud environment it is
-pre-installed. Locally you can use `npm i -D playwright && npx playwright install chromium`.
+pre-installed. Locally you can use `npm i --no-save playwright && npx playwright install chromium`.
+On GitHub, every push runs both suites (`.github/workflows/ci.yml`); screenshots of failed tests are attached to the run.
 
 ## `tests/sync/` (Node)
 
@@ -34,7 +36,21 @@ pre-installed. Locally you can use `npm i -D playwright && npx playwright instal
   - a *Work* calendar;
   - `fixtures.ics`, a subscription with time zones, exceptions, EXDATE and a cancelled event;
   - a fake signed-in Google account with a writable and a read-only calendar.
-- `run.cjs` is the test runner. Each test gets a fresh page.
+- `run.cjs` is the test runner (shared setup, helpers, runner). Each test gets a fresh page.
+- **The tests themselves are in `specs/`, one file per topic:**
+
+  | File | Covers |
+  | --- | --- |
+  | `data.cjs` | ICS parsing, local recurrence, loading and checking settings and task data |
+  | `calendar.cjs` | month/week/day/agenda, drag & drop, touch, narrow layouts, month times |
+  | `events.cjs` | event dialog, Google/Outlook edits, several target calendars, all-day edge cases |
+  | `sidebar.cjs` | mini calendar, day planner, sidebar settings, ribbon menu |
+  | `settings.cjs` | settings tabs and tab bar, scroll position, period settings, deleting calendars, commands |
+  | `pickers.cjs` | own date/time pickers, dialog focus rules (tablet keyboard bugs) |
+  | `tasks.cjs` | Tasks page, task dialog, lists, completed tasks, tasks sidebar |
+
+  Add new tests to the matching file. Make a new file only for a genuinely new topic; it's picked up automatically.
+  To save tokens, only open the file you need.
   - **Time is frozen at 2026-11-14 10:00 Europe/Zurich**, so results are reproducible.
   - Desktop tests run at 1400×900. Mobile tests use a 390×800 touch device (`{ mobile: true }`), which also sets
     Obsidian's `Platform.isMobile`.
@@ -44,6 +60,8 @@ pre-installed. Locally you can use `npm i -D playwright && npx playwright instal
 
 ### Writing a new UI test
 
+Each spec file exports `({ test, expect, eq, shot, path, SHOTS }) => { … }` and registers its tests inside:
+
 ```js
 test("mobile: my feature", { mobile: true }, async ({ page, ctx }) => {
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "week"));
@@ -52,8 +70,18 @@ test("mobile: my feature", { mobile: true }, async ({ page, ctx }) => {
 });
 ```
 
-Globals in the page: `plugin`, `view` (full calendar), `mini` (sidebar calendar), `tab` (settings tab),
-`ws` (fake workspace with `leaves`, `fireLayoutChange()`), `lastModal`, `lastMenu`, `notices`, `__Platform`.
+Globals in the page:
+- `plugin`, `view` (calendar), `mini` (mini calendar), `tab` (settings tab);
+- `ws` (fake workspace with `leaves`, `fireLayoutChange()`, `tabGroups`, `reveals`);
+- `lastModal`, `lastMenu`, `notices`, `__Platform`;
+- **tasks:** `mountTasks({ side? })` creates a Tasks page in `#main` or `#side` and sets `tasksView`; `TaskModal`;
+  `vaultNotes` (fake notes for linking); `openedFile` (the last note opened);
+- **modules:** `__timeMod` (date/time pickers, `parseTimeInput`), `__eventMod` (`EventModal`), `__dateMod` (date helpers);
+- **plugin parts:** `plugin.sidebar` (sidebar placement), `plugin.commands` (the registered commands, to run or check them).
+
+The test page uses Obsidian's real layer values: modal 50, menu 65.
+Some tests imitate Obsidian's dialog focus trap: focus that leaves the dialog is pulled back to the title. Use them
+for any change to dialogs or pop-ups.
 If the plugin starts using a new Obsidian API, add it to `obsidian-mock.ts`.
 
 ### Limits

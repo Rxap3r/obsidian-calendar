@@ -1,4 +1,5 @@
 import { App, normalizePath, Notice, SuggestModal, TFile } from "obsidian";
+import { errorMessage } from "../util";
 
 type Pick = TFile | { create: string };
 
@@ -66,7 +67,7 @@ export class NotePickerModal extends SuggestModal<Pick> {
 			const file = existing instanceof TFile ? existing : await this.app.vault.create(path, "");
 			this.onPick(file.path);
 		} catch (e) {
-			new Notice(`Could not create the note: ${e instanceof Error ? e.message : String(e)}`);
+			new Notice(`Could not create the note: ${errorMessage(e)}`);
 		}
 	}
 }

@@ -422,6 +422,8 @@
 
 /* ---------------------------------------------------------------- settings tabs */
 .ch-settings-tabs-wrap {
+	/* Arrows (only when needed) sit beside the tab bar, not on top of it. */
+	display: flex; align-items: center; gap: 4px;
 	position: sticky; top: 0; z-index: 2; background: var(--ch-settings-bg, var(--background-primary));
 	border-bottom: 1px solid var(--background-modifier-border);
 	margin-bottom: 12px; padding-top: 4px;
@@ -433,6 +435,7 @@
 	background: var(--ch-settings-bg, var(--background-primary));
 }
 .ch-settings-tabs {
+	flex: 1; min-width: 0;
 	/* One line; swipe / scroll sideways when the tabs do not fit (mobile). */
 	display: flex; flex-wrap: nowrap; gap: 4px;
 	overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch;
@@ -441,17 +444,15 @@
 }
 /* Arrow buttons shown at the edge that has more tabs. */
 .ch-tabs-arrow {
-	position: absolute; top: 2px; z-index: 3;
-	width: 28px; height: 28px; padding: 0; border-radius: 50%;
+	flex: none; margin-bottom: 6px;
+	width: 28px; height: 28px; min-width: 28px; padding: 0; border-radius: 50%;
 	display: flex; align-items: center; justify-content: center;
 	background: var(--background-primary); border: 1px solid var(--background-modifier-border);
 	box-shadow: var(--shadow-s); color: var(--text-normal); cursor: pointer;
 	transition: opacity 0.15s;
 }
 .ch-tabs-arrow svg { width: 16px; height: 16px; }
-.ch-tabs-prev { left: 0; }
-.ch-tabs-next { right: 0; }
-.ch-tabs-arrow.is-hidden { opacity: 0; pointer-events: none; }
+.ch-tabs-arrow.is-hidden { display: none; }
 .ch-settings-tabs::-webkit-scrollbar { display: none; }
 .ch-settings-tabs.ch-more-right { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
 .ch-settings-tabs.ch-more-left { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }

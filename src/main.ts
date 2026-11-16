@@ -1,45 +1,77 @@
-import { MarkdownRenderChild, Menu, Notice, Platform, Plugin, TFile, WorkspaceLeaf, WorkspaceSidedock, normalizePath } from "obsidian";
-import { OmniCalendarSettings, CalendarOccurrence, LocalEvent, PluginData, SidebarView, ViewMode } from "./types";
-import { OmniCalendarSettingTab, DEFAULT_SETTINGS } from "./settings";
+import { Menu, Notice, Platform, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { OmniCalendarSettings, CalendarOccurrence, LocalEvent, PluginData, ViewMode } from "./types";
+import { OmniCalendarSettingTab } from "./settings/SettingTab";
+import { normalizePluginData } from "./settingsData";
 import { CalendarStore } from "./store";
-import { TaskStore, normalizeTaskData } from "./tasks";
+import { TaskStore } from "./tasks";
 import { AccountManager } from "./sync/accounts";
-import { CalendarView, VIEW_TYPE_CALENDAR } from "./views/CalendarView";
-import { MiniCalendarView, VIEW_TYPE_MINI } from "./views/MiniCalendarView";
-import { TasksView, VIEW_TYPE_TASKS } from "./views/TasksView";
+import { SidebarManager } from "./sidebar";
+import { registerCommands } from "./commands";
+import { CalendarView } from "./views/CalendarView";
+import { MiniCalendarView } from "./views/MiniCalendarView";
+import { TasksView } from "./views/TasksView";
+import { AgendaBlock } from "./views/AgendaBlock";
+import { VIEW_TYPE_CALENDAR, VIEW_TYPE_MINI, VIEW_TYPE_TASKS } from "./views/viewTypes";
 import { TaskModal } from "./modals/TaskModal";
 import { EventModal } from "./modals/EventModal";
 import { createEventNote } from "./notes";
-import { buildIcs } from "./ics";
-import { addDays, formatDate, formatTime, isSameDay, overlapsDay, parseLocal, startOfDay, toDateKey } from "./dateUtils";
-import { openOccurrence } from "./views/shared";
+import { MS_DAY, MS_HOUR, MS_MIN, parseLocal, startOfDay, toDateKey } from "./dateUtils";
 
 export default class OmniCalendarPlugin extends Plugin {
 	data!: PluginData;
+	/** Same object as `data.settings`. */
+	settings!: OmniCalendarSettings;
 	store!: CalendarStore;
 	tasks!: TaskStore;
 	accounts!: AccountManager;
+	sidebar!: SidebarManager;
 	private refreshTimer: number | null = null;
 	private firstRun = false;
-	private ribbonMenuShownAt = 0;
 	private sidebarViewUnset = false;
-	/** True while the plugin itself changes the sidebar (ignore those layout changes). */
-	private applyingSidebar = false;
-
-	/** Same object as `data.settings`. */
-	settings!: OmniCalendarSettings;
+	private ribbonMenuShownAt = 0;
 
 	async onload() {
 		await this.loadPluginData();
 		this.accounts = new AccountManager(this);
 		this.store = new CalendarStore(this);
 		this.tasks = new TaskStore(this);
+		this.sidebar = new SidebarManager(this);
 
 		this.registerView(VIEW_TYPE_CALENDAR, (leaf) => new CalendarView(leaf, this));
 		this.registerView(VIEW_TYPE_MINI, (leaf) => new MiniCalendarView(leaf, this));
 		this.registerView(VIEW_TYPE_TASKS, (leaf) => new TasksView(leaf, this));
 		this.addSettingTab(new OmniCalendarSettingTab(this.app, this));
+		this.addRibbon();
+		registerCommands(this);
+		this.registerMarkdownCodeBlockProcessor("omni-calendar", (source, el, ctx) => ctx.addChild(new AgendaBlock(this, el, source)));
+		this.followNoteChanges();
 
+		this.app.workspace.onLayoutReady(async () => {
+			await this.store.loadCached();
+			if (this.firstRun) {
+				this.settings.sidebarView = "mini";
+			} else if (this.sidebarViewUnset) {
+				// Upgrading from an older version: adopt whatever is in the sidebar now.
+				this.settings.sidebarView = this.sidebar.actualView();
+			}
+			await this.persist();
+			await this.sidebar.apply(false);
+			await this.sidebar.applyTasks(false);
+			// From now on keep the settings in sync when the user closes or drags our sidebar views.
+			this.registerEvent(this.app.workspace.on("layout-change", () => this.sidebar.syncSetting()));
+			void this.store.refreshAll();
+			this.scheduleRefresh();
+			// Automatic clean-up of completed tasks (if turned on): now and every few hours.
+			void this.cleanUpDoneTasks();
+			this.registerInterval(window.setInterval(() => void this.cleanUpDoneTasks(), 6 * MS_HOUR));
+		});
+	}
+
+	onunload() {
+		if (this.refreshTimer !== null) window.clearInterval(this.refreshTimer);
+	}
+
+	private addRibbon() {
 		// One fixed label on every device: Obsidian identifies ribbon buttons by their label,
 		// so a changing label leaves a duplicate button behind (e.g. on mobile).
 		const ribbon = this.addRibbonIcon("calendar-days", "Omni Calendar", (evt: MouseEvent) => {
@@ -59,51 +91,10 @@ export default class OmniCalendarPlugin extends Plugin {
 			e.preventDefault();
 			this.showCalendarMenu({ x: e.clientX, y: e.clientY });
 		});
+	}
 
-		this.addCommand({ id: "open-calendar", name: "Open calendar", callback: () => void this.openCalendar() });
-		this.addCommand({
-			id: "calendar-menu",
-			name: "Calendar menu (open, sidebar, new event, settings)",
-			callback: () => this.showCalendarMenu({ x: window.innerWidth / 2, y: window.innerHeight / 3 }),
-		});
-		this.addCommand({ id: "open-sidebar", name: "Show mini calendar in sidebar", callback: () => void this.openSidebar(true) });
-		this.addCommand({ id: "toggle-sidebar-mini", name: "Toggle mini calendar in sidebar", callback: () => void this.toggleSidebar("mini") });
-		this.addCommand({ id: "toggle-sidebar-full", name: "Toggle day planner in sidebar", callback: () => void this.toggleSidebar("full") });
-		this.addCommand({ id: "new-event", name: "Create new event", callback: () => new EventModal(this, { start: new Date(new Date().setHours(0, 0, 0, 0)) }).open() });
-		this.addCommand({ id: "refresh", name: "Refresh external calendars", callback: async () => {
-			await this.store.refreshAll();
-			new Notice("Calendars refreshed");
-		} });
-		for (const mode of ["month", "week", "day", "agenda"] as ViewMode[]) {
-			this.addCommand({ id: `open-${mode}`, name: `Open ${mode} view`, callback: () => void this.openCalendar(new Date(), mode) });
-		}
-		// Tasks (hidden while tasks are turned off).
-		const whenTasks = (fn: () => void) => (checking: boolean) => {
-			if (!this.settings.tasksEnabled) return false;
-			if (!checking) fn();
-			return true;
-		};
-		this.addCommand({ id: "open-tasks", name: "Open tasks", checkCallback: whenTasks(() => void this.openTasks()) });
-		this.addCommand({ id: "toggle-tasks-sidebar", name: "Toggle tasks in sidebar", checkCallback: whenTasks(() => void this.toggleTasksSidebar()) });
-		this.addCommand({ id: "new-task", name: "Create new task", checkCallback: whenTasks(() => new TaskModal(this).open()) });
-		this.addCommand({ id: "export-ics", name: "Export local events to .ics file", callback: () => void this.exportIcs() });
-		this.addCommand({
-			id: "new-event-from-note",
-			name: "Create event linked to current note",
-			checkCallback: (checking) => {
-				const file = this.app.workspace.getActiveFile();
-				if (!file) return false;
-				if (!checking) this.newEventFromNote(file);
-				return true;
-			},
-		});
-
-		this.registerMarkdownCodeBlockProcessor("omni-calendar", (source, el, ctx) => {
-			const child = new AgendaBlock(this, el, source);
-			ctx.addChild(child);
-		});
-
-		// Keep linked note paths in sync when notes are renamed / deleted.
+	/** Keep linked note paths in sync when notes are renamed / deleted. */
+	private followNoteChanges() {
 		this.registerEvent(this.app.vault.on("rename", async (file, oldPath) => {
 			let changed = false;
 			for (const ev of this.data.events) if (ev.notePath === oldPath) { ev.notePath = file.path; changed = true; }
@@ -116,73 +107,17 @@ export default class OmniCalendarPlugin extends Plugin {
 			if (this.tasks.removeLink(file.path)) changed = true;
 			if (changed) await this.persist();
 		}));
-
-		this.app.workspace.onLayoutReady(async () => {
-			await this.store.loadCached();
-			if (this.firstRun) {
-				this.settings.sidebarView = "mini";
-			} else if (this.sidebarViewUnset) {
-				// Upgrading from an older version: adopt whatever is in the sidebar now.
-				this.settings.sidebarView = this.actualSidebarView();
-			}
-			await this.persist();
-			await this.applySidebar(false);
-			await this.applyTasksSidebar(false);
-			// From now on keep the setting in sync when the user closes or drags the sidebar calendar.
-			this.registerEvent(this.app.workspace.on("layout-change", () => this.syncSidebarSetting()));
-			void this.store.refreshAll();
-			this.scheduleRefresh();
-			// Automatic clean-up of completed tasks (if turned on): now and every few hours.
-			void this.cleanUpDoneTasks();
-			this.registerInterval(window.setInterval(() => void this.cleanUpDoneTasks(), 6 * 60 * 60 * 1000));
-		});
-	}
-
-	onunload() {
-		if (this.refreshTimer !== null) window.clearInterval(this.refreshTimer);
 	}
 
 	// ------------------------------------------------------------------ data
 
+	/** Read data.json; checks and migrations are in settingsData.ts. */
 	private async loadPluginData() {
-		const loaded = (await this.loadData()) as Partial<PluginData> | null;
-		this.firstRun = !loaded;
-		const raw = loaded ?? {};
-		const settings: OmniCalendarSettings = Object.assign({}, DEFAULT_SETTINGS, raw.settings ?? {});
-		settings.sources = (raw.settings?.sources ?? DEFAULT_SETTINGS.sources).map((s) => ({ ...s }));
-		settings.accounts = (raw.settings?.accounts ?? []).map((a) => ({ ...a }));
-		// Drop calendars whose account no longer exists.
-		settings.sources = settings.sources.filter((s) => !s.accountId || settings.accounts.some((a) => a.id === s.accountId));
-		if (!settings.sources.some((s) => s.type === "local")) settings.sources.unshift({ ...DEFAULT_SETTINGS.sources[0] });
-		if (!settings.sources.some((s) => s.id === settings.defaultCalendarId && s.type === "local")) {
-			settings.defaultCalendarId = settings.sources.find((s) => s.type === "local")?.id ?? "personal";
-		}
-		const targets = Array.isArray(raw.settings?.defaultTargets) ? raw.settings.defaultTargets : [settings.defaultCalendarId];
-		settings.defaultTargets = targets.filter((id) => settings.sources.some((s) => s.id === id));
-		if (!settings.defaultTargets.length) settings.defaultTargets = [settings.defaultCalendarId];
-		// sidebarOnStartup (≤ 1.5.1) → sidebarView
-		this.sidebarViewUnset = !raw.settings?.sidebarView;
-		if (this.sidebarViewUnset && raw.settings?.sidebarOnStartup && raw.settings.sidebarOnStartup !== "none") {
-			settings.sidebarView = raw.settings.sidebarOnStartup;
-			this.sidebarViewUnset = false;
-		}
-		delete settings.sidebarOnStartup;
-		if (!["month", "week", "day", "agenda"].includes(settings.sidebarCalendarMode)) settings.sidebarCalendarMode = "day";
-		if (!["mini", "close", "keep"].includes(settings.sidebarOnExpand)) settings.sidebarOnExpand = "mini";
-		if (typeof settings.sidebarAfterClose !== "string") settings.sidebarAfterClose = "";
-		const up = Number(settings.sidebarUpcomingDays);
-		settings.sidebarUpcomingDays = Number.isFinite(up) ? Math.max(-1, Math.min(365, Math.round(up))) : DEFAULT_SETTINGS.sidebarUpcomingDays;
-		if (![0, 1, 2, 3].includes(Number(settings.tasksDefaultPriority))) settings.tasksDefaultPriority = 0;
-		const upT = Number(settings.tasksUpcomingDays);
-		settings.tasksUpcomingDays = Number.isFinite(upT) ? Math.max(1, Math.min(3650, Math.round(upT))) : DEFAULT_SETTINGS.tasksUpcomingDays;
-		const dv = Number(settings.tasksDoneVisibleDays);
-		settings.tasksDoneVisibleDays = dv === -1 ? -1 : Number.isFinite(dv) && dv >= 1 ? Math.min(3650, Math.round(dv)) : DEFAULT_SETTINGS.tasksDoneVisibleDays;
-		const da = Number(settings.tasksDeleteDoneAfterDays);
-		settings.tasksDeleteDoneAfterDays = Number.isFinite(da) && da >= 1 ? Math.min(3650, Math.round(da)) : 0;
-		const tasks = normalizeTaskData(raw.tasks);
-		if (!tasks.lists.some((l) => l.id === settings.tasksDefaultListId)) settings.tasksDefaultListId = tasks.lists[0].id;
-		this.data = { settings, events: Array.isArray(raw.events) ? raw.events : [], tasks };
-		this.settings = settings;
+		const loaded = normalizePluginData((await this.loadData()) as Partial<PluginData> | null);
+		this.data = loaded.data;
+		this.settings = loaded.data.settings;
+		this.firstRun = loaded.firstRun;
+		this.sidebarViewUnset = loaded.sidebarViewUnset;
 	}
 
 	/** Called by Obsidian when data.json was changed externally (e.g. by Sync). */
@@ -201,90 +136,52 @@ export default class OmniCalendarPlugin extends Plugin {
 		this.refreshTimer = null;
 		const mins = this.settings.refreshIntervalMinutes;
 		if (mins > 0) {
-			this.refreshTimer = window.setInterval(() => void this.store.refreshAll(), mins * 60 * 1000);
+			this.refreshTimer = window.setInterval(() => void this.store.refreshAll(), mins * MS_MIN);
 			this.registerInterval(this.refreshTimer);
 		}
 	}
 
-	// ------------------------------------------------------------------ views
-
-	/** The calendar quick menu (ribbon right-click / long press, or the "Calendar menu" command). */
-	showCalendarMenu(pos: { x: number; y: number }) {
-		// Right-click and long press can both fire on some phones – show the menu only once.
-		if (Date.now() - this.ribbonMenuShownAt < 800) return;
-		this.ribbonMenuShownAt = Date.now();
-		const menu = new Menu();
-		menu.addItem((i) => i.setTitle("Open calendar").setIcon("calendar-days").onClick(() => void this.openCalendar()));
-		menu.addItem((i) =>
-			i.setTitle(this.settings.sidebarView === "mini" ? "Hide mini calendar in sidebar" : "Show mini calendar in sidebar")
-				.setIcon("panel-right").onClick(() => void this.toggleSidebar("mini"))
-		);
-		menu.addItem((i) =>
-			i.setTitle(this.settings.sidebarView === "full" ? "Hide day planner in sidebar" : "Show day planner in sidebar")
-				.setIcon("panel-right-open").onClick(() => void this.toggleSidebar("full"))
-		);
-		if (this.settings.tasksEnabled) {
-			menu.addSeparator();
-			menu.addItem((i) => i.setTitle("Open tasks").setIcon("check-square").onClick(() => void this.openTasks()));
-			menu.addItem((i) =>
-				i.setTitle(this.settings.tasksSidebar ? "Hide tasks in sidebar" : "Show tasks in sidebar")
-					.setIcon("list-checks").onClick(() => void this.toggleTasksSidebar())
-			);
-		}
-		menu.addSeparator();
-		menu.addItem((i) => i.setTitle("New event").setIcon("plus").onClick(() => new EventModal(this, { start: new Date(new Date().setHours(0, 0, 0, 0)) }).open()));
-		if (this.settings.tasksEnabled) menu.addItem((i) => i.setTitle("New task").setIcon("check-square").onClick(() => new TaskModal(this).open()));
-		menu.addSeparator();
-		menu.addItem((i) => i.setTitle("Settings").setIcon("settings").onClick(() => this.openSettings()));
-		menu.showAtPosition(pos);
-	}
-
-	/** True when the leaf lives in the left or right sidebar (not the main editor area). */
-	isInSidebar(leaf: WorkspaceLeaf): boolean {
-		const { workspace } = this.app;
-		const root = leaf.getRoot();
-		return root === workspace.leftSplit || root === workspace.rightSplit;
-	}
-
-	sidebarLeaves(type: string): WorkspaceLeaf[] {
-		return this.app.workspace.getLeavesOfType(type).filter((l) => this.isInSidebar(l));
-	}
-
-	/** The sidebar chosen in settings. */
-	private configuredSidebar() {
-		const { workspace } = this.app;
-		return this.settings.sidebarSide === "left" ? workspace.leftSplit : workspace.rightSplit;
-	}
-
-	/**
-	 * Move calendar views that sit in the other sidebar into the configured one.
-	 * Runs on startup and whenever the "Sidebar" setting changes.
-	 */
-	async enforceSidebarSide() {
-		const target = this.configuredSidebar();
-		for (const type of [VIEW_TYPE_MINI, VIEW_TYPE_CALENDAR]) {
-			const leaves = this.sidebarLeaves(type);
-			const alreadyThere = leaves.some((l) => l.getRoot() === target);
-			for (const leaf of leaves) {
-				if (leaf.getRoot() === target) continue;
-				const state = leaf.getViewState();
-				const sourceOpen = !(leaf.getRoot() as WorkspaceSidedock).collapsed;
-				leaf.detach();
-				if (alreadyThere) continue; // never create a duplicate
-				const moved = this.newSidebarLeaf();
-				if (!moved) continue;
-				await moved.setViewState({ ...state, active: false });
-				if (sourceOpen) this.selectSidebarTab(moved);
-			}
-		}
+	/** Re-download subscriptions and connected calendars, then say how it went. */
+	async refreshCalendars() {
+		await this.store.refreshAll();
+		const errors = [...this.store.status.values()].filter((s) => s.error).length;
+		new Notice(errors ? `Calendars refreshed – ${errors} failed (see settings)` : "Calendars refreshed");
 	}
 
 	/** Delete completed tasks older than the "Delete completed tasks after" setting (0 = never). */
 	async cleanUpDoneTasks(): Promise<number> {
 		const days = this.settings.tasksDeleteDoneAfterDays;
 		if (!days || days < 1) return 0;
-		return this.tasks.removeDoneBefore(Date.now() - days * 86400000);
+		return this.tasks.removeDoneBefore(Date.now() - days * MS_DAY);
 	}
+
+	// ------------------------------------------------------------------ menu
+
+	/** The calendar quick menu (ribbon right-click / tap on mobile, or the "Calendar menu" command). */
+	showCalendarMenu(pos: { x: number; y: number }) {
+		// Right-click and long press can both fire on some phones – show the menu only once.
+		if (Date.now() - this.ribbonMenuShownAt < 800) return;
+		this.ribbonMenuShownAt = Date.now();
+		const s = this.settings;
+		const menu = new Menu();
+		const item = (title: string, icon: string, run: () => void) => menu.addItem((i) => i.setTitle(title).setIcon(icon).onClick(run));
+		item("Open calendar", "calendar-days", () => void this.openCalendar());
+		item(`${s.sidebarView === "mini" ? "Hide" : "Show"} mini calendar in sidebar`, "panel-right", () => void this.sidebar.toggle("mini"));
+		item(`${s.sidebarView === "full" ? "Hide" : "Show"} day planner in sidebar`, "panel-right-open", () => void this.sidebar.toggle("full"));
+		if (s.tasksEnabled) {
+			menu.addSeparator();
+			item("Open tasks", "check-square", () => void this.openTasks());
+			item(`${s.tasksSidebar ? "Hide" : "Show"} tasks in sidebar`, "list-checks", () => void this.sidebar.toggleTasks());
+		}
+		menu.addSeparator();
+		item("New event", "plus", () => new EventModal(this, { start: startOfDay(new Date()) }).open());
+		if (s.tasksEnabled) item("New task", "check-square", () => new TaskModal(this).open());
+		menu.addSeparator();
+		item("Settings", "settings", () => this.openSettings());
+		menu.showAtPosition(pos);
+	}
+
+	// ------------------------------------------------------------------ opening pages
 
 	/** A new tab in the main area, even if a sidebar view has focus. */
 	mainAreaLeaf(): WorkspaceLeaf {
@@ -294,62 +191,14 @@ export default class OmniCalendarPlugin extends Plugin {
 		return workspace.getLeaf("tab");
 	}
 
-	// ------------------------------------------------------------------ tasks page / sidebar
-
-	/** Open the Tasks page in the main area (reuses an open one). */
-	async openTasks(list?: string) {
-		const { workspace } = this.app;
-		let leaf = workspace.getLeavesOfType(VIEW_TYPE_TASKS).find((l) => !this.isInSidebar(l)) ?? null;
-		if (!leaf) {
-			leaf = this.mainAreaLeaf();
-			await leaf.setViewState({ type: VIEW_TYPE_TASKS, active: true, state: list ? { list } : {} });
-		}
-		await workspace.revealLeaf(leaf);
-		if (list && leaf.view instanceof TasksView) leaf.view.select(list);
+	/** The open page of this view type in the main area (never one that sits in a sidebar). */
+	private mainAreaPage(type: string): WorkspaceLeaf | null {
+		return this.app.workspace.getLeavesOfType(type).find((l) => !this.sidebar.contains(l)) ?? null;
 	}
 
-	/** Show / hide the Tasks page in the sidebar (independent of the mini calendar / day planner). */
-	async toggleTasksSidebar() {
-		this.settings.tasksSidebar = !this.settings.tasksSidebar;
-		await this.persist();
-		await this.applyTasksSidebar(this.settings.tasksSidebar);
-	}
-
-	/** Make the sidebar match the tasks settings (on/off, main switch, side). */
-	async applyTasksSidebar(reveal: boolean) {
-		this.applyingSidebar = true;
-		try {
-			const s = this.settings;
-			if (!s.tasksEnabled) {
-				// Main switch off: close every tasks page (nothing is deleted).
-				for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_TASKS)) leaf.detach();
-				return;
-			}
-			const target = this.configuredSidebar();
-			const leaves = this.sidebarLeaves(VIEW_TYPE_TASKS);
-			if (!s.tasksSidebar) {
-				for (const leaf of leaves) leaf.detach();
-				return;
-			}
-			for (const leaf of leaves) if (leaf.getRoot() !== target) leaf.detach();
-			let leaf = this.sidebarLeaves(VIEW_TYPE_TASKS)[0];
-			if (!leaf) {
-				const created = this.newSidebarLeaf();
-				if (!created) return;
-				leaf = created;
-				await leaf.setViewState({ type: VIEW_TYPE_TASKS, active: reveal, state: { list: "today" } });
-			}
-			if (reveal) await this.app.workspace.revealLeaf(leaf);
-			else this.selectSidebarTab(leaf);
-		} finally {
-			window.setTimeout(() => (this.applyingSidebar = false), 300);
-		}
-	}
-
-	/** Open the full calendar in the main area (never takes over a calendar that sits in a sidebar). */
+	/** Open the calendar in the main area (reuses an open one; never takes over the day planner). */
 	async openCalendar(date?: Date, mode?: ViewMode) {
-		const { workspace } = this.app;
-		let leaf: WorkspaceLeaf | null = workspace.getLeavesOfType(VIEW_TYPE_CALENDAR).find((l) => !this.isInSidebar(l)) ?? null;
+		let leaf = this.mainAreaPage(VIEW_TYPE_CALENDAR);
 		if (!leaf) {
 			leaf = this.mainAreaLeaf();
 			const state: Record<string, unknown> = {};
@@ -357,172 +206,23 @@ export default class OmniCalendarPlugin extends Plugin {
 			if (date) state.date = toDateKey(date);
 			await leaf.setViewState({ type: VIEW_TYPE_CALENDAR, active: true, state });
 		}
-		await workspace.revealLeaf(leaf);
+		await this.app.workspace.revealLeaf(leaf);
 		const view = leaf.view;
 		if (view instanceof CalendarView && (date || mode)) view.goTo(date ?? view.cursor, mode);
 	}
 
-	private newSidebarLeaf(): WorkspaceLeaf | null {
-		const { workspace } = this.app;
-		return this.settings.sidebarSide === "left" ? workspace.getLeftLeaf(false) : workspace.getRightLeaf(false);
-	}
-
-	/** Put the mini or full calendar into the sidebar (or reveal it if it is already there). */
-	async showInSidebar(kind: "mini" | "full", reveal: boolean, state?: Record<string, unknown>) {
-		const type = kind === "mini" ? VIEW_TYPE_MINI : VIEW_TYPE_CALENDAR;
-		const target = this.configuredSidebar();
-		let leaf = this.sidebarLeaves(type).find((l) => l.getRoot() === target);
+	/** Open the Tasks page in the main area (reuses an open one). */
+	async openTasks(list?: string) {
+		let leaf = this.mainAreaPage(VIEW_TYPE_TASKS);
 		if (!leaf) {
-			const created = this.newSidebarLeaf();
-			if (!created) return;
-			leaf = created;
-			await leaf.setViewState({ type, active: reveal, state: state ?? (kind === "full" ? { mode: this.settings.sidebarCalendarMode } : {}) });
+			leaf = this.mainAreaLeaf();
+			await leaf.setViewState({ type: VIEW_TYPE_TASKS, active: true, state: list ? { list } : {} });
 		}
-		if (reveal) await this.app.workspace.revealLeaf(leaf);
-		else this.selectSidebarTab(leaf);
+		await this.app.workspace.revealLeaf(leaf);
+		if (list && leaf.view instanceof TasksView) leaf.view.select(list);
 	}
 
-	/** What is actually in the sidebar right now. */
-	actualSidebarView(): SidebarView {
-		if (this.sidebarLeaves(VIEW_TYPE_MINI).length) return "mini";
-		if (this.sidebarLeaves(VIEW_TYPE_CALENDAR).length) return "full";
-		return "none";
-	}
-
-	/**
-	 * Make the sidebar match the settings: right kind of calendar, on the right side, nothing else.
-	 * Called on startup and whenever the sidebar settings change.
-	 */
-	async applySidebar(reveal: boolean) {
-		this.applyingSidebar = true;
-		try {
-			await this.enforceSidebarSide();
-			const want = this.settings.sidebarView;
-			for (const type of [VIEW_TYPE_MINI, VIEW_TYPE_CALENDAR]) {
-				const wanted = (want === "mini" && type === VIEW_TYPE_MINI) || (want === "full" && type === VIEW_TYPE_CALENDAR);
-				if (!wanted) for (const leaf of this.sidebarLeaves(type)) leaf.detach();
-			}
-			if (want !== "none") await this.showInSidebar(want, reveal);
-		} finally {
-			// layout-change fires asynchronously; ignore it until things settled.
-			window.setTimeout(() => (this.applyingSidebar = false), 300);
-		}
-	}
-
-	/** The user closed or dragged the sidebar calendar: update the setting to match. */
-	private syncSidebarSetting() {
-		if (this.applyingSidebar) return;
-		// The user closed (or opened) the sidebar tasks page themselves.
-		const tasksThere = this.sidebarLeaves(VIEW_TYPE_TASKS).length > 0;
-		if (this.settings.tasksEnabled && tasksThere !== this.settings.tasksSidebar) {
-			this.settings.tasksSidebar = tasksThere;
-			void this.persist();
-		}
-		const actual = this.actualSidebarView();
-		let changed = false;
-		if (actual !== this.settings.sidebarView) {
-			this.settings.sidebarView = actual;
-			changed = true;
-		}
-		if (actual !== "none") {
-			const leaf = this.sidebarLeaves(actual === "mini" ? VIEW_TYPE_MINI : VIEW_TYPE_CALENDAR)[0];
-			const side = leaf && leaf.getRoot() === this.app.workspace.leftSplit ? "left" : "right";
-			if (leaf && side !== this.settings.sidebarSide) {
-				this.settings.sidebarSide = side;
-				changed = true;
-			}
-		}
-		if (changed) void this.persist();
-	}
-
-	/** "Move to sidebar" button of the full calendar: the sidebar now holds the full calendar. */
-	async moveToSidebar(state: Record<string, unknown>) {
-		this.settings.sidebarView = "full";
-		await this.persist();
-		this.applyingSidebar = true;
-		for (const leaf of this.sidebarLeaves(VIEW_TYPE_MINI)) leaf.detach();
-		for (const leaf of this.sidebarLeaves(VIEW_TYPE_CALENDAR)) leaf.detach();
-		await this.showInSidebar("full", true, state);
-		window.setTimeout(() => (this.applyingSidebar = false), 300);
-	}
-
-	/**
-	 * ⤢ button of the Day planner: open the full page, then (per setting) switch the sidebar
-	 * to the mini calendar, close it, or keep the Day planner.
-	 */
-	async expandFromSidebar(planner: WorkspaceLeaf, date: Date, mode: ViewMode) {
-		const after = this.settings.sidebarOnExpand;
-		if (after !== "keep") {
-			// Change the sidebar first, in place: the Day planner's own tab becomes the mini
-			// calendar, so it stays the visible tab (instead of Obsidian showing e.g. Bookmarks).
-			this.applyingSidebar = true;
-			try {
-				this.settings.sidebarView = after === "mini" ? "mini" : "none";
-				await this.persist();
-				for (const leaf of this.sidebarLeaves(VIEW_TYPE_CALENDAR)) if (leaf !== planner) leaf.detach();
-				if (after === "mini") {
-					for (const leaf of this.sidebarLeaves(VIEW_TYPE_MINI)) leaf.detach();
-					await planner.setViewState({ type: VIEW_TYPE_MINI, active: false, state: {} });
-				} else {
-					const root = planner.getRoot();
-					planner.detach();
-					this.showSidebarTab(root, this.settings.sidebarAfterClose);
-				}
-			} finally {
-				window.setTimeout(() => (this.applyingSidebar = false), 300);
-			}
-		}
-		await this.openCalendar(date, mode);
-	}
-
-	/** The tabs (views) currently in the configured sidebar, except our own – for the settings dropdown. */
-	sidebarTabs(): { type: string; name: string }[] {
-		const target = this.configuredSidebar();
-		const out: { type: string; name: string }[] = [];
-		this.app.workspace.iterateAllLeaves((leaf) => {
-			const type = leaf.getViewState().type;
-			if (leaf.getRoot() !== target || !type || type === "empty" || type === VIEW_TYPE_MINI || type === VIEW_TYPE_CALENDAR) return;
-			if (out.some((o) => o.type === type)) return;
-			out.push({ type, name: leaf.getDisplayText() || type });
-		});
-		return out;
-	}
-
-	/** Make the sidebar tab of this view type the visible one, without opening a collapsed sidebar (or the mobile drawer). */
-	private showSidebarTab(root: unknown, type: string) {
-		if (!type) return;
-		let found: WorkspaceLeaf | null = null;
-		this.app.workspace.iterateAllLeaves((leaf) => {
-			if (!found && leaf.getRoot() === root && leaf.getViewState().type === type) found = leaf;
-		});
-		if (found) this.selectSidebarTab(found);
-	}
-
-	/**
-	 * Make a sidebar leaf the visible tab of its tab group without focusing it, opening a
-	 * collapsed sidebar or the mobile drawer, or closing the settings window.
-	 */
-	private selectSidebarTab(leaf: WorkspaceLeaf) {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const tabs = (leaf as any).parent;
-		if (tabs && typeof tabs.selectTab === "function") tabs.selectTab(leaf);
-		else if (!Platform.isMobile && !(leaf.getRoot() as WorkspaceSidedock).collapsed) void this.app.workspace.revealLeaf(leaf);
-	}
-
-	/** Show the mini / full calendar in the sidebar, or hide it if it is already shown. */
-	async toggleSidebar(kind: "mini" | "full") {
-		this.settings.sidebarView = this.settings.sidebarView === kind ? "none" : kind;
-		await this.persist();
-		await this.applySidebar(true);
-	}
-
-	/** Show the mini calendar in the sidebar (command "Show mini calendar in sidebar"). */
-	async openSidebar(reveal: boolean) {
-		this.settings.sidebarView = "mini";
-		await this.persist();
-		await this.applySidebar(reveal);
-	}
-
+	/** Uses undocumented Obsidian internals (`app.setting`); does nothing if they are gone. */
 	openSettings() {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const setting = (this.app as any).setting;
@@ -556,102 +256,5 @@ export default class OmniCalendarPlugin extends Plugin {
 		if (!occ) return;
 		const file = await this.openNoteForOccurrence(occ);
 		if (file && !ev.recurrence) await this.store.updateEvent(ev.id, { notePath: file.path });
-	}
-
-	private newEventFromNote(file: TFile) {
-		const m = /(\d{4}-\d{2}-\d{2})/.exec(file.basename);
-		const day = m ? parseLocal(m[1]) : startOfDay(new Date());
-		const title = file.basename.replace(/^\d{4}-\d{2}-\d{2}\s*/, "") || file.basename;
-		new EventModal(this, { start: day, title, notePath: file.path }).open();
-	}
-
-	// ------------------------------------------------------------------ export
-
-	private async exportIcs() {
-		const events = this.data.events.map((ev) => {
-			const { start, end } = CalendarStore.bounds(ev);
-			let rrule: string | undefined;
-			if (ev.recurrence) {
-				const r = ev.recurrence;
-				rrule = `FREQ=${r.freq.toUpperCase()};INTERVAL=${r.interval || 1}`;
-				if (r.count) rrule += `;COUNT=${r.count}`;
-				if (r.until) rrule += `;UNTIL=${r.until.replace(/-/g, "")}${ev.allDay ? "" : "T235959Z"}`;
-			}
-			const exdates = (ev.exdates ?? []).map((d) => {
-				const x = parseLocal(d);
-				return ev.allDay ? x : new Date(x.getFullYear(), x.getMonth(), x.getDate(), start.getHours(), start.getMinutes());
-			});
-			return { uid: ev.id, title: ev.title, start, end, allDay: ev.allDay, location: ev.location, description: ev.description, rrule, exdates };
-		});
-		const ics = buildIcs(events, "Obsidian Omni Calendar");
-		const folder = this.settings.notesFolder || "";
-		const path = normalizePath(`${folder ? folder + "/" : ""}omni-calendar-export-${toDateKey(new Date())}.ics`);
-		try {
-			if (folder && !this.app.vault.getAbstractFileByPath(normalizePath(folder))) await this.app.vault.createFolder(normalizePath(folder));
-			const existing = this.app.vault.getAbstractFileByPath(path);
-			if (existing instanceof TFile) await this.app.vault.modify(existing, ics);
-			else await this.app.vault.create(path, ics);
-			new Notice(`Exported ${events.length} events to ${path}`);
-		} catch (e) {
-			new Notice(`Export failed: ${e instanceof Error ? e.message : e}`);
-		}
-	}
-}
-
-/**
- * ```omni-calendar
- * days: 7
- * calendars: Personal, Work
- * ```
- * Renders an agenda of upcoming events inside a note.
- */
-class AgendaBlock extends MarkdownRenderChild {
-	constructor(private plugin: OmniCalendarPlugin, containerEl: HTMLElement, private source: string) {
-		super(containerEl);
-	}
-
-	onload() {
-		this.render();
-		this.registerEvent(this.plugin.store.on("changed", () => this.render()));
-	}
-
-	private render() {
-		const opts: Record<string, string> = {};
-		for (const line of this.source.split("\n")) {
-			const m = /^\s*(\w+)\s*:\s*(.+)$/.exec(line);
-			if (m) opts[m[1].toLowerCase()] = m[2].trim();
-		}
-		const days = Math.max(1, Math.min(365, parseInt(opts.days ?? "7") || 7));
-		const start = opts.date ? parseLocal(opts.date) : startOfDay(new Date());
-		const from = isNaN(start.getTime()) ? startOfDay(new Date()) : start;
-		const names = opts.calendars ? opts.calendars.split(",").map((x) => x.trim().toLowerCase()) : null;
-		const hidden = new Set<string>();
-		if (names) for (const s of this.plugin.settings.sources) if (!names.includes(s.name.toLowerCase())) hidden.add(s.id);
-
-		const el = this.containerEl;
-		el.empty();
-		el.addClass("ch-embed");
-		const occs = this.plugin.store.getOccurrences(from, addDays(from, days), hidden);
-		if (!occs.length) {
-			el.createDiv({ cls: "ch-empty", text: `No events in the next ${days} day${days > 1 ? "s" : ""}.` });
-			return;
-		}
-		const use24h = this.plugin.settings.use24h;
-		for (let i = 0; i < days; i++) {
-			const day = addDays(from, i);
-			const list = occs.filter((o) => overlapsDay(o.start, o.end, day));
-			if (!list.length) continue;
-			const h = el.createDiv({ cls: "ch-embed-date", text: formatDate(day, { weekday: "long", day: "numeric", month: "long" }) });
-			if (isSameDay(day, new Date())) h.addClass("ch-today");
-			for (const o of list) {
-				const row = el.createDiv({ cls: "ch-mini-item" });
-				row.style.setProperty("--ch-event-color", o.color);
-				row.createSpan({ cls: "ch-mini-item-bar" });
-				row.createSpan({ cls: "ch-mini-item-time", text: o.allDay ? "All day" : `${formatTime(o.start, use24h)}–${formatTime(o.end, use24h)}` });
-				row.createSpan({ cls: "ch-mini-item-title", text: o.title });
-				if (o.location) row.createSpan({ cls: "ch-mini-item-loc", text: o.location });
-				row.onclick = () => openOccurrence(this.plugin, o);
-			}
-		}
 	}
 }
