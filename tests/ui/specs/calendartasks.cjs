@@ -152,7 +152,15 @@ test("desktop: dragging a task in the week view – new time and day, all-day ro
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "week"));
 	await page.waitForTimeout(250);
 	const H = 48;
-	const box = await page.locator(".ch-tg-task", { hasText: "Call bank" }).boundingBox();
+	// Wait until the grid has finished scrolling to its start hour (the block stops moving).
+	const block = page.locator(".ch-tg-task", { hasText: "Call bank" });
+	let box = await block.boundingBox();
+	for (let i = 0; i < 20; i++) {
+		await page.waitForTimeout(50);
+		const next = await block.boundingBox();
+		if (next.y === box.y) break;
+		box = next;
+	}
 	const colW = (await page.locator(".ch-tg-col").first().boundingBox()).width;
 	const x0 = box.x + box.width / 2, y0 = box.y + 10;
 	await page.mouse.move(x0, y0);
@@ -219,5 +227,43 @@ test("mobile: tasks in the compact month and in the day view", { mobile: true },
 	eq(await page.inputValue(".ch-title-input"), "Call bank", "tap opens the task, not a new event");
 	eq(await page.evaluate(() => __eventMod.EventModal.openCount), 0, "no event dialog");
 });
+
+
+/** A task with two subtasks on "Design review" (Sat 14 Nov). */
+const seedEventTaskWithSubtasks = (page) => page.evaluate(async () => {
+	const occ = plugin.store.getOccurrencesForDay(new Date(2026, 10, 14)).find((o) => o.title === "Design review");
+	await plugin.tasks.upsert(plugin.tasks.draft({
+		title: "Prepare slides", date: "2026-11-14", event: { key: "local:" + occ.eventId, title: occ.title, date: "2026-11-14" },
+		subtasks: [{ id: "s1", title: "Collect numbers", done: false }, { id: "s2", title: "Draft outline", done: true }],
+	}));
+});
+
+for (const mobile of [false, true]) {
+	test(`${mobile ? "mobile" : "desktop"}: subtasks of an event's task are shown and tickable in the event dialog`, { mobile }, async ({ page }) => {
+		await seedEventTaskWithSubtasks(page);
+		await dayView(page);
+		const ev = page.locator(".ch-tg-event", { hasText: "Design review" });
+		if (mobile) await ev.tap(); else await ev.click();
+		await page.waitForTimeout(150);
+		eq(await page.locator(".ch-event-task-subcount").textContent(), "1/2", "subtask progress next to the task");
+		eq(await page.locator(".ch-event-subtask-title").allTextContents(), ["Collect numbers", "Draft outline"], "subtasks listed");
+		const box = page.locator(".ch-event-subtask", { hasText: "Collect numbers" }).locator(".ch-task-checkbox");
+		if (mobile) await box.tap(); else await box.click();
+		await page.waitForTimeout(150);
+		eq(await page.evaluate(() => plugin.tasks.items[0].subtasks.map((x) => x.done)), [true, true], "ticked off from the event dialog");
+		eq(await page.locator(".ch-event-task-subcount").textContent(), "2/2", "progress updated");
+		eq(await page.evaluate(() => window.lastModal.constructor.name.includes("Task")), false, "ticking didn't open the task dialog");
+		await page.locator(".ch-event-tasks").scrollIntoViewIfNeeded();
+		await shot(page, `${mobile ? "mobile-" : ""}event-dialog-subtasks`);
+		const count = page.locator(".ch-event-task-subcount");
+		if (mobile) await count.tap(); else await count.click();
+		await page.waitForTimeout(100);
+		eq(await page.locator(".ch-event-subtask").count(), 0, "folded away with a click on the count");
+		if (mobile) {
+			const w = await page.evaluate(() => document.documentElement.scrollWidth);
+			expect(w <= 390, `no sideways scrolling: ${w}`);
+		}
+	});
+}
 
 };

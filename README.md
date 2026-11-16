@@ -232,6 +232,7 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
 **Tasks on events** (new in **1.8**):
 - The event dialog has a **Tasks** section: type a task and press **Enter**, tick it off right there, click it to edit it.
   Right-click an event → **Add task…** does the same.
+- A task's **subtasks** are listed under it in the event dialog and can be ticked off there; click the count (*1/3*) to fold them away.
 - The event then shows the progress, e.g. **☐ 2/5**, in the month, week, day and agenda views and in the mini calendar.
 - A new event task gets the event's day as its date, so it also shows up in *Today*, *Upcoming* and so on.
   In the task lists it shows the event's name; **click the name** to open the event. In the task dialog, the unlink button

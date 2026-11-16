@@ -4,9 +4,11 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet
+## Not released yet (1.8.1)
 
-- *(nothing yet)*
+- **Subtasks of an event's tasks are visible in the event dialog.** Before, subtasks added in the task dialog were only
+  shown on the Tasks page. Now each task in the event's *Tasks* section shows its subtask progress (e.g. *1/3*) with the
+  subtasks underneath; tick them off right there, or click the count to fold them away.
 
 ## Known bugs
 

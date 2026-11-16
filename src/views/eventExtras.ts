@@ -30,6 +30,8 @@ export function eventExtras(
 		head.createSpan({ text: "Tasks" });
 		const progress = head.createSpan({ cls: "ch-event-tasks-progress" });
 		const list = wrap.createDiv({ cls: "ch-event-task-list" });
+		// Subtasks are shown under their task (folded away with a click on "1/3"), like on the Tasks page.
+		const folded = new Set<string>();
 		const add = wrap.createEl("input", { type: "text", cls: "ch-input ch-event-task-add", attr: { placeholder: "+ Add a task (Enter)" } });
 		add.addEventListener("keydown", (e) => {
 			if (e.key !== "Enter") return;
@@ -44,7 +46,15 @@ export function eventExtras(
 			const tasks = plugin.tasks.forEvent(key);
 			const done = tasks.filter((t) => t.done).length;
 			progress.setText(tasks.length ? `${done}/${tasks.length}` : "");
-			for (const t of tasks) eventTaskRow(plugin, list, t, day);
+			for (const t of tasks) {
+				eventTaskRow(plugin, list, t, day, {
+					folded: folded.has(t.id),
+					toggle: () => {
+						if (!folded.delete(t.id)) folded.add(t.id);
+						render();
+					},
+				});
+			}
 		};
 		render();
 		const ref = plugin.tasks.on("changed", render);
@@ -71,7 +81,10 @@ export function eventExtras(
 }
 
 /** One task in the event's task list: checkbox, title, time (and date when it's not the event's day). */
-function eventTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t: Task, eventDay: string) {
+function eventTaskRow(
+	plugin: OmniCalendarPlugin, parent: HTMLElement, t: Task, eventDay: string,
+	subs: { folded: boolean; toggle: () => void }
+) {
 	const row = parent.createDiv({ cls: "ch-event-task", attr: { "data-task": t.id } });
 	row.toggleClass("is-done", t.done);
 	const check = row.createEl("button", { cls: "ch-task-checkbox ch-small", attr: { role: "checkbox", "aria-checked": String(t.done), "aria-label": t.done ? "Mark as not done" : "Mark as done" } });
@@ -83,10 +96,34 @@ function eventTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t: Task, 
 	row.createSpan({ cls: "ch-event-task-title", text: t.title });
 	const when = [t.date && t.date !== eventDay ? formatDate(parseLocal(t.date), { day: "numeric", month: "short" }) : "", taskTimeLabel(t)].filter(Boolean).join(" ");
 	if (when) row.createSpan({ cls: "ch-event-task-when", text: when });
+	if (t.subtasks.length) {
+		const doneN = t.subtasks.filter((x) => x.done).length;
+		const count = row.createSpan({ cls: "ch-event-task-subcount", attr: { "aria-label": "Show or hide subtasks" } });
+		setIcon(count.createSpan({ cls: "ch-task-meta-icon" }), subs.folded ? "chevron-right" : "chevron-down");
+		count.appendText(`${doneN}/${t.subtasks.length}`);
+		count.onclick = (e) => {
+			e.stopPropagation();
+			subs.toggle();
+		};
+	}
 	if (t.priority > 0) row.createSpan({ cls: `ch-task-prio ch-prio-${t.priority}`, text: "!".repeat(t.priority) });
 	row.onclick = () => new TaskModal(plugin, t).open();
 	row.addEventListener("contextmenu", (e) => {
 		e.preventDefault();
 		taskMenu(plugin, t, e);
 	});
+	if (!t.subtasks.length || subs.folded) return;
+	// The subtasks, tickable right here.
+	const list = parent.createDiv({ cls: "ch-event-subtasks" });
+	for (const st of t.subtasks) {
+		const sr = list.createDiv({ cls: "ch-event-subtask" });
+		sr.toggleClass("is-done", st.done);
+		const cb = sr.createEl("button", { cls: "ch-task-checkbox ch-small", attr: { role: "checkbox", "aria-checked": String(st.done), "aria-label": st.done ? "Mark as not done" : "Mark as done" } });
+		if (st.done) setIcon(cb, "check");
+		cb.onclick = (e) => {
+			e.stopPropagation();
+			void plugin.tasks.setSubtaskDone(t.id, st.id, !st.done);
+		};
+		sr.createSpan({ cls: "ch-event-subtask-title", text: st.title });
+	}
 }
