@@ -4,9 +4,12 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet
+## Not released yet (1.8.2)
 
-- *(nothing yet)*
+- **An event's tasks move with the event.** Before, they kept the day they were created on, so after moving an event
+  they stayed in *Tasks today* (or *Tomorrow*, …) for the old day. Now, when an event moves to another day – in the
+  dialog, by dragging, or in Google/Outlook itself – its tasks move by the same number of days. A task on the event's day
+  stays on it; one you set two days earlier stays two days earlier. Times are kept.
 
 ## Known bugs
 

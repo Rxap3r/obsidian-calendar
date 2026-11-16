@@ -447,4 +447,42 @@ test("mobile: tasks in the new-event dialog", { mobile: true }, async ({ page })
 	eq((await attached(page, "Phone event")).tasks.length, 2, "saved with the event");
 });
 
+
+test("desktop: tasks move with their event – dialog, drag, Google; 'Tasks today' follows", {}, async ({ page }) => {
+	// "Design review" is today (14 Nov): one task on its day, one with a time two days before.
+	await addEventTask(page, "Design review", "Slides");
+	await page.evaluate(async () => {
+		const t = plugin.tasks.items[0];
+		await plugin.tasks.upsert(plugin.tasks.draft({ title: "Book room", date: "2026-11-12", start: "09:00", event: { ...t.event } }));
+	});
+	await page.waitForTimeout(150);
+	expect((await page.locator(".ch-mini-task-title").allTextContents()).includes("Slides"), "today's event task in 'Tasks today'");
+	const dates = () => page.evaluate(() => plugin.tasks.items.map((t) => [t.title, t.date, t.start ?? null, t.event.date]));
+	// Saved in the dialog with a new date (the dialog stores it like this).
+	await page.evaluate(async () => {
+		const ev = plugin.data.events.find((e) => e.title === "Design review");
+		await plugin.store.updateEvent(ev.id, { start: "2026-11-17T10:00", end: "2026-11-17T11:30" });
+	});
+	await page.waitForTimeout(150);
+	eq(await dates(page), [["Slides", "2026-11-17", null, "2026-11-17"], ["Book room", "2026-11-15", "09:00", "2026-11-17"]], "moved by 3 days, time kept");
+	expect(!(await page.locator(".ch-mini-task-title").allTextContents()).includes("Slides"), "gone from 'Tasks today'");
+	// Dragged in the month view to the 19th.
+	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "month"));
+	await page.waitForTimeout(150);
+	const cells = page.locator(".ch-month-cell");
+	const idx = await cells.evaluateAll((els) => els.findIndex((c) => c.querySelector(".ch-day-num")?.textContent === "19" && !c.classList.contains("ch-other-month")));
+	await page.locator(".ch-month .ch-chip", { hasText: "Design review" }).dragTo(cells.nth(idx));
+	await page.waitForTimeout(200);
+	eq((await dates(page)).map((d) => d[1]), ["2026-11-19", "2026-11-17"], "dragged: tasks follow");
+	// A Google event moved in Google Calendar itself: after the refresh its task follows.
+	await addEventTask(page, "Dentist (Google)", "Insurance card", 15);
+	await page.evaluate(() => {
+		const g = plugin.store.remote.get("gcal").find((e) => e.id === "g1");
+		g.start = new Date(2026, 10, 18, 14); g.end = new Date(2026, 10, 18, 15); g.title = "Dentist (moved)";
+		plugin.store.notify();
+	});
+	await page.waitForTimeout(150);
+	eq(await page.evaluate(() => { const t = plugin.tasks.items.find((x) => x.title === "Insurance card"); return [t.date, t.event.title]; }), ["2026-11-18", "Dentist (moved)"], "Google change followed");
+});
+
 };

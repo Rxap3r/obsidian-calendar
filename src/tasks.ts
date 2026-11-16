@@ -1,7 +1,7 @@
 import { Events } from "obsidian";
 import type OmniCalendarPlugin from "./main";
 import { SmartListId, Subtask, Task, TaskData, TaskEventLink, TaskList, TaskPriority } from "./types";
-import { addDays, MS_DAY, parseLocal, startOfDay, timeKeyToMinutes, toDateKey, uid } from "./dateUtils";
+import { addDays, dayDiff, MS_DAY, parseLocal, startOfDay, timeKeyToMinutes, toDateKey, uid } from "./dateUtils";
 
 export const DEFAULT_TASK_LIST: TaskList = { id: "tasks", name: "Tasks", color: "#7c5cff" };
 
@@ -166,8 +166,32 @@ export class TaskStore extends Events {
 		return !ev || (!!local[2] && (!ev.recurrence || !!ev.exdates?.includes(local[2])));
 	}
 
+	/**
+	 * An event moved to another day (edited, dragged, changed in Google / Outlook or on another device):
+	 * its tasks move by the same number of days, so a task on the event's day stays on it, and one
+	 * "two days before" stays two days before. Times are kept. Runs after every calendar change.
+	 */
+	async followEvents(): Promise<number> {
+		let moved = 0;
+		for (const t of this.items) {
+			if (!t.event) continue;
+			const now = this.plugin.store.eventNow(t.event.key);
+			if (!now || (now.day === t.event.date && now.title === t.event.title)) continue;
+			if (now.day !== t.event.date && t.date) {
+				const shift = dayDiff(parseLocal(t.event.date), parseLocal(now.day));
+				t.date = toDateKey(addDays(parseLocal(t.date), shift));
+			}
+			t.event = { ...t.event, title: now.title, date: now.day };
+			moved++;
+		}
+		if (moved) await this.save();
+		return moved;
+	}
+
 	/** Keep the event's title and day in its tasks up to date (shown in task lists). */
 	async refreshEventInfo(key: string, title: string, date: string) {
+		// Events that can move are kept up to date by `followEvents` (which also moves the tasks).
+		if (this.plugin.store.eventNow(key)) return this.followEvents();
 		const stale = this.items.filter((t) => t.event?.key === key && (t.event.title !== title || t.event.date !== date));
 		if (!stale.length) return;
 		for (const t of stale) t.event = { key, title, date };
