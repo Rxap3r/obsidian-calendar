@@ -623,6 +623,12 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
   - entries can be corrected or deleted (the original time stays);
   - maybe the same log for events later; tasks first.
 
+**Planned with the details view: "Create note" for tasks (maintainer's idea)**
+- Like for events: **right-click a task → Create note**, plus a button in the task dialog and the details view.
+- It creates a note named after the date and the task (e.g. *2026-11-24 Prepare workshop*, or just the title without a date) in the notes folder.
+- The note is automatically added to the task's **linked notes** and opened. If it already exists, it just opens ("Open note").
+- A separate **task note template** in *Settings → Notes*, next to the event template (title, date, time, list, priority, subtasks, …).
+
 **Step 3 – version 1.9: repeating**
 - **Repeating tasks**, each occurrence ticked off separately. A repeating task stays **one** task: each completed occurrence is only a small "done on …" entry, not a copy, so Done doesn't fill up with duplicates.
 - **Tasks on repeating events:** the event's task list works as a template, and each occurrence has its own ticks. Ticking one off on 14 Nov doesn't tick it off on 21 Nov.

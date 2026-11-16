@@ -218,6 +218,11 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - also confirmed: adding entries in the details view (no Edit needed), a "📝 n" hint in lists, edit/delete of entries
       (the original time stays). Tasks first; the same log for events maybe later.
     - Store them in the task (e.g. `log: { at: number; text: string }[]`) and validate in `normalizeTaskData`.
+  - **"Create note" for tasks (with the details view):** the same as for events (`notes.ts` `createEventNote`).
+    - It lives in the right-click menu, the task dialog and the details view.
+    - Name: "YYYY-MM-DD Title" (or the title only if the task has no date), in `notesFolder`.
+    - The note is added to `links` and opened; an existing note just opens ("Open note").
+    - Own task note template in Settings → Notes.
   - **1.9:** repeating tasks, and per-occurrence tasks on repeating events. A repeating task stays ONE item; completed occurrences are small "done on date" entries, not copies (agreed, to keep Done uncluttered).
   - **Completed tasks (1.7.5):**
     - Done shows the last `tasksDoneVisibleDays` (default 30, -1 = everything), with "Show older";
