@@ -52,10 +52,16 @@ export class TaskModal extends Modal {
 		if (t.event) {
 			const ev = new Setting(contentEl).setName("Event").setClass("ch-task-event-setting");
 			const name = ev.controlEl.createEl("a", { cls: "ch-task-event-name", text: t.event.title || "Event" });
+			if (this.plugin.tasks.eventGone(t)) {
+				name.addClass("is-gone");
+				ev.setDesc("This event was deleted.");
+			}
 			setIcon(name.createSpan({ cls: "ch-btn-icon" }), "calendar");
 			name.onclick = (e) => {
 				e.preventDefault();
-				openTaskEvent(this.plugin, t, (occ) => openOccurrence(this.plugin, occ));
+				// An event that is gone: the choice (keep / delete) is about the saved task, so close the dialog first.
+				if (!this.plugin.store.findOccurrence(t.event?.key ?? "", t.event?.date)) this.close();
+				void openTaskEvent(this.plugin, t, (occ) => openOccurrence(this.plugin, occ));
 			};
 			ev.addExtraButton((b) =>
 				b.setIcon("unlink").setTooltip("Remove from event (keep the task)").onClick(() => {

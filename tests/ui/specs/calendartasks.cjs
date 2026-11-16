@@ -9,6 +9,7 @@ const dayView = async (page, d = 14) => {
 test("desktop: event dialog – add tasks, tick off, '2/5' hint on the event, task shows its event", {}, async ({ page }) => {
 	await dayView(page);
 	await page.locator(".ch-tg-event", { hasText: "Design review" }).click();
+	await page.waitForTimeout(100); // the dialog puts the cursor in the title first
 	expect(await page.locator(".ch-event-tasks").isVisible(), "Tasks section in the event dialog");
 	for (const t of ["Prepare slides", "Send summary"]) {
 		await page.fill(".ch-event-task-add", t);
@@ -44,6 +45,7 @@ test("desktop: tasks and notes on a Google event are kept in Obsidian only", {},
 	await page.evaluate(() => { window.updates = []; plugin.store.updateRemote = async (o, i) => window.updates.push(i); });
 	await dayView(page, 15);
 	await page.locator(".ch-tg-event", { hasText: "Dentist" }).click();
+	await page.waitForTimeout(100); // the dialog puts the cursor in the title first
 	await page.fill(".ch-event-task-add", "Bring insurance card");
 	await page.press(".ch-event-task-add", "Enter");
 	await page.locator(".ch-link-note-btn").click();
@@ -265,5 +267,107 @@ for (const mobile of [false, true]) {
 		}
 	});
 }
+
+
+/** Adds a task to the first occurrence titled `title` on Nov `day`; returns nothing. */
+const addEventTask = (page, title, task, day = 14) => page.evaluate(async ([title, task, day]) => {
+	const occ = plugin.store.getOccurrencesForDay(new Date(2026, 10, day)).find((o) => o.title === title);
+	const date = `2026-11-${day}`;
+	const key = occ.eventId ? (occ.recurring ? `local:${occ.eventId}@${date}` : `local:${occ.eventId}`) : occ.key;
+	await plugin.tasks.upsert(plugin.tasks.draft({ title: task, date, event: { key, title: occ.title, date } }));
+}, [title, task, day]);
+const taskTitles = (page) => page.evaluate(() => plugin.tasks.items.map((t) => t.title));
+
+test("desktop: deleting an event deletes its tasks (after asking), other tasks stay", {}, async ({ page }) => {
+	await addEventTask(page, "Design review", "Slides");
+	await addEventTask(page, "Design review", "Summary");
+	await addEventTask(page, "Overlapping call", "Agenda");
+	await page.evaluate(async () => plugin.tasks.upsert(plugin.tasks.draft({ title: "Standalone", date: "2026-11-14" })));
+	await dayView(page);
+	// From the dialog: asks, Cancel keeps everything.
+	await page.locator(".ch-tg-event", { hasText: "Design review" }).click();
+	await page.locator(".ch-modal-buttons button", { hasText: /^Delete$/ }).click();
+	await page.waitForTimeout(100);
+	expect((await page.locator(".modal p").last().textContent()).includes("Its 2 tasks will be deleted too."), "asks and says how many tasks");
+	await page.locator(".modal button", { hasText: "Cancel" }).last().click();
+	await page.waitForTimeout(100);
+	eq(await taskTitles(page), ["Slides", "Summary", "Agenda", "Standalone"], "cancel keeps the tasks");
+	await page.locator(".ch-modal-buttons button", { hasText: /^Delete$/ }).first().click();
+	await page.locator(".modal .mod-warning", { hasText: "Delete" }).last().click();
+	await page.waitForTimeout(150);
+	eq(await taskTitles(page), ["Agenda", "Standalone"], "event and its tasks deleted");
+	eq(await page.evaluate(() => plugin.data.events.some((e) => e.title === "Design review")), false, "event deleted");
+	// From the right-click menu.
+	await page.locator(".ch-tg-event", { hasText: "Overlapping call" }).click({ button: "right" });
+	await page.evaluate(() => window.lastMenu.items.find((i) => i.t === "Delete").fn());
+	await page.locator(".modal .mod-warning", { hasText: "Delete" }).last().click();
+	await page.waitForTimeout(150);
+	eq(await taskTitles(page), ["Standalone"], "menu delete takes the tasks too");
+});
+
+test("desktop: deleting one repeat deletes only that repeat's tasks; Google series too", {}, async ({ page }) => {
+	await addEventTask(page, "Standup", "Today's standup task", 14);
+	await addEventTask(page, "Standup", "Tomorrow's standup task", 15);
+	await addEventTask(page, "Team lunch (Google series)", "Book table", 14);
+	await page.evaluate(() => { window.dels = []; plugin.store.deleteRemote = async (o, series) => window.dels.push(series); });
+	await dayView(page);
+	await page.locator(".ch-tg-event", { hasText: "Standup" }).click({ button: "right" });
+	await page.evaluate(() => window.lastMenu.items.find((i) => i.t === "Delete this occurrence").fn());
+	await page.locator(".modal .mod-warning", { hasText: "Delete" }).last().click();
+	await page.waitForTimeout(150);
+	eq(await taskTitles(page), ["Tomorrow's standup task", "Book table"], "only the 14th's task deleted");
+	await page.locator(".ch-tg-event", { hasText: "Team lunch" }).click({ button: "right" });
+	await page.evaluate(() => window.lastMenu.items.find((i) => i.t === "Delete series").fn());
+	expect((await page.locator(".modal p").last().textContent()).includes("Its task will be deleted too."), "Google delete mentions the task");
+	await page.locator(".modal .mod-warning", { hasText: "Delete" }).last().click();
+	await page.waitForTimeout(150);
+	eq([await page.evaluate(() => window.dels), await taskTitles(page)], [[true], ["Tomorrow's standup task"]], "series deleted with its task");
+});
+
+test("desktop: moving an event to another calendar keeps its tasks and notes", {}, async ({ page }) => {
+	await addEventTask(page, "Dentist (Google)", "Insurance card", 15);
+	await page.evaluate(async () => {
+		const occ = plugin.store.getOccurrencesForDay(new Date(2026, 10, 15)).find((o) => o.title.startsWith("Dentist"));
+		await plugin.store.setLinks(occ, ["Inbox.md"]);
+		// Deleting at Google removes it from what is loaded, like the real refresh after a delete.
+		plugin.store.deleteRemote = async (o) => plugin.store.remote.set("gcal", plugin.store.remote.get("gcal").filter((e) => e.id !== o.remote.id));
+	});
+	await dayView(page, 15);
+	await page.locator(".ch-tg-event", { hasText: "Dentist" }).click();
+	await page.selectOption(".modal select", "personal");
+	await page.click(".ch-modal-buttons button.mod-cta");
+	await page.waitForTimeout(200);
+	const r = await page.evaluate(() => {
+		const ev = plugin.data.events.find((e) => e.title === "Dentist (Google)");
+		return { key: plugin.tasks.items[0].event.key === `local:${ev.id}`, links: ev.links, map: plugin.data.eventLinks };
+	});
+	eq(r, { key: true, links: ["Inbox.md"], map: {} }, "Google → local: task and note moved to the new event");
+	// Local → Google: the new event's id comes back from Google.
+	await page.evaluate(() => { plugin.store.createRemote = async (src) => `${src.id}:new1`; });
+	await page.locator(".ch-tg-event", { hasText: "Dentist" }).click();
+	await page.selectOption(".modal select", "gcal");
+	await page.click(".ch-modal-buttons button.mod-cta");
+	await page.waitForTimeout(200);
+	eq(await page.evaluate(() => [plugin.tasks.items[0].event.key, plugin.data.eventLinks]), ["gcal:new1", { "gcal:new1": ["Inbox.md"] }], "local → Google");
+});
+
+test("desktop: a task whose event is gone is marked; clicking offers keep or delete", {}, async ({ page }) => {
+	await page.evaluate(async () => {
+		for (const title of ["Orphan A", "Orphan B"]) await plugin.tasks.upsert(plugin.tasks.draft({ title, date: "2026-11-14", event: { key: "local:gone", title: "Old meeting", date: "2026-11-14" } }));
+		await mountTasks();
+	});
+	await page.locator('.ch-tasks-nav-item[data-list="today"]').click();
+	await page.waitForTimeout(100);
+	eq(await page.locator(".ch-task-meta-event.is-gone").count(), 2, "marked as deleted");
+	await page.locator(".ch-task", { hasText: "Orphan A" }).locator(".ch-task-meta-event").click();
+	await page.waitForTimeout(100);
+	await page.locator(".modal button", { hasText: "Keep task without event" }).click();
+	await page.waitForTimeout(100);
+	await page.locator(".ch-task", { hasText: "Orphan B" }).locator(".ch-task-meta-event").click();
+	await page.waitForTimeout(100);
+	await page.locator(".modal button", { hasText: "Delete task" }).click();
+	await page.waitForTimeout(100);
+	eq(await page.evaluate(() => plugin.tasks.items.map((t) => [t.title, !!t.event])), [["Orphan A", false]], "kept without event / deleted");
+});
 
 };

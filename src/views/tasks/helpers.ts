@@ -1,4 +1,5 @@
 import { Notice, TFile } from "obsidian";
+import { chooseAction } from "../../modals/ConfirmModal";
 import type OmniCalendarPlugin from "../../main";
 import { CalendarOccurrence, Task } from "../../types";
 
@@ -23,10 +24,24 @@ export function noteName(path: string): string {
 	return path.replace(/\.md$/, "").split("/").pop() ?? path;
 }
 
-/** Open the event a task belongs to (edit dialog or details), or say that it can't be found. */
-export function openTaskEvent(plugin: OmniCalendarPlugin, t: Task, open: (occ: CalendarOccurrence) => void) {
+/**
+ * Open the event a task belongs to (edit dialog or details). If the event is gone, offer to delete the task
+ * or keep it without the event.
+ */
+export async function openTaskEvent(plugin: OmniCalendarPlugin, t: Task, open: (occ: CalendarOccurrence) => void) {
 	if (!t.event) return;
 	const occ = plugin.store.findOccurrence(t.event.key, t.event.date);
-	if (occ) open(occ);
-	else new Notice(`The event “${t.event.title}” can't be found any more (deleted, or its calendar is hidden).`);
+	if (occ) {
+		open(occ);
+		return;
+	}
+	const why = plugin.tasks.eventGone(t)
+		? "was deleted"
+		: "can't be found (it was deleted, or its calendar is hidden or not loaded on this device)";
+	const answer = await chooseAction(plugin.app, "Event not found", `The event “${t.event.title}” ${why}. What should happen to the task “${t.title}”?`, [
+		{ label: "Keep task without event", value: "keep" },
+		{ label: "Delete task", value: "delete", warning: true },
+	]);
+	if (answer === "delete") await plugin.tasks.remove(t.id);
+	else if (answer === "keep") await plugin.tasks.update(t.id, { event: undefined });
 }

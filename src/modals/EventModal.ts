@@ -4,7 +4,8 @@ import { CalendarOccurrence, CalendarSource, EventInput, LocalEvent, Recurrence,
 import { DateField, TimeField, keepFocusOnTap } from "../pickers";
 import { addDays, isValidDate, parseLocal, toDateKey, toTimeKey } from "../dateUtils";
 import { errorMessage } from "../util";
-import { deleteRemoteEvent } from "./confirmations";
+import { deleteEvent } from "./confirmations";
+import { eventKey } from "../eventLinks";
 import { eventExtras } from "../views/eventExtras";
 import { EventForm, EventModalInit, formForNew, formFromLocal, formFromRemote, LocalEventData } from "./eventForm";
 
@@ -166,29 +167,22 @@ export class EventModal extends Modal {
 		if (remote) {
 			if (remote.recurring) {
 				buttons.addButton((b) =>
-					b.setButtonText("Delete this occurrence").setWarning().onClick(() => void this.deleteRemote(false))
+					b.setButtonText("Delete this occurrence").setWarning().onClick(() => void this.delete(false))
 				);
 			}
 			buttons.addButton((b) =>
-				b.setButtonText(remote.recurring ? "Delete series" : "Delete").setWarning().onClick(() => void this.deleteRemote(remote.recurring))
+				b.setButtonText(remote.recurring ? "Delete series" : "Delete").setWarning().onClick(() => void this.delete(remote.recurring))
 			);
 		}
 		if (this.init.event) {
 			const ev = this.init.event;
 			if (ev.recurrence && this.init.occurrenceDate) {
 				buttons.addButton((b) =>
-					b.setButtonText("Delete this occurrence").setWarning().onClick(async () => {
-						await this.plugin.store.excludeOccurrence(ev.id, this.init.occurrenceDate as string);
-						this.close();
-					})
+					b.setButtonText("Delete this occurrence").setWarning().onClick(() => void this.delete(false))
 				);
 			}
 			buttons.addButton((b) =>
-				b.setButtonText(ev.recurrence ? "Delete all" : "Delete").setWarning().onClick(async () => {
-					await this.plugin.store.deleteEvent(ev.id);
-					new Notice(`Deleted "${ev.title}"`);
-					this.close();
-				})
+				b.setButtonText(ev.recurrence ? "Delete all" : "Delete").setWarning().onClick(() => void this.delete(true))
 			);
 		}
 		buttons.addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()));
@@ -400,10 +394,10 @@ export class EventModal extends Modal {
 			await store.updateRemote(remote, input);
 			return;
 		}
-		// Move to another calendar: create there first, then delete the original.
+		// Move to another calendar: create there first, then delete the original. Tasks and notes move along.
 		const target = this.remoteTarget(data);
-		if (target) await store.createRemote(target, input);
-		else await store.addEvent({ ...data, exdates: [] });
+		const newKey = target ? await store.createRemote(target, input) : `local:${(await store.addEvent({ ...data, exdates: [] })).id}`;
+		await this.moveExtras(remote, newKey, data);
 		await store.deleteRemote(remote, false);
 	}
 
@@ -415,7 +409,9 @@ export class EventModal extends Modal {
 			await store.updateEvent(ev.id, data);
 			return;
 		}
-		await store.createRemote(target, input);
+		const old = ev.recurrence ? undefined : this.occurrence();
+		const newKey = await store.createRemote(target, input);
+		if (old) await this.moveExtras(old, newKey, data);
 		await store.deleteEvent(ev.id);
 		new Notice(`Moved "${data.title}" to ${target.name}`);
 	}
@@ -462,12 +458,20 @@ export class EventModal extends Modal {
 		return true;
 	}
 
-	private async deleteRemote(series: boolean) {
-		const occ = this.init.remote;
+	/** The event moved to another calendar and got a new key: its tasks and linked notes go along. */
+	private async moveExtras(from: CalendarOccurrence, newKey: string | undefined, data: LocalEventData) {
+		if (!newKey) return;
+		await this.plugin.tasks.moveEvent(eventKey(from), newKey, data.title, data.start.slice(0, 10));
+		await this.plugin.store.moveLinks(from, newKey);
+	}
+
+	/** Delete this occurrence, or (`series`) the whole event – with its tasks, after asking when needed. */
+	private async delete(series: boolean) {
+		const occ = this.occurrence();
 		if (!occ || this.busy) return;
 		this.busy = true;
 		try {
-			if (await deleteRemoteEvent(this.plugin, occ, series)) this.close();
+			if (await deleteEvent(this.plugin, occ, series)) this.close();
 		} finally {
 			this.busy = false;
 		}

@@ -665,6 +665,7 @@
 .ch-task-hint.is-complete { opacity: 0.6; }
 .ch-task-meta-event { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ch-task-meta-event:hover { color: var(--text-accent); }
+.ch-task-meta-event.is-gone, .ch-task-event-name.is-gone { text-decoration: line-through; color: var(--text-faint); }
 .ch-task-event-name { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 
 /* ---------------------------------------------------------------- tasks in the calendar (1.8) */

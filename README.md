@@ -241,6 +241,10 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
 - On a **repeating event**, tasks belong to the repeat you clicked (e.g. only the meeting on 14 Nov).
   Tasks that repeat with the event are planned for 1.9.
 - Tasks are added once the event is saved; a new event's dialog says so.
+- **Deleting an event deletes its tasks**, after asking (deleting one repeat deletes only that repeat's tasks).
+  Moving an event to another calendar keeps its tasks and linked notes.
+- If an event disappears some other way (e.g. deleted in Google Calendar), its tasks show the event name crossed out
+  (for local events) or say it can't be found. Clicking the name lets you keep the task without the event, or delete it.
 
 **Tasks in the calendar** (new in **1.8**):
 - **Tasks with a time** appear in *Week* and *Day* as **light, dashed blocks** with a tick circle, next to the events.

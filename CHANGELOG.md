@@ -9,6 +9,12 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 - **Subtasks of an event's tasks are visible in the event dialog.** Before, subtasks added in the task dialog were only
   shown on the Tasks page. Now each task in the event's *Tasks* section shows its subtask progress (e.g. *1/3*) with the
   subtasks underneath; tick them off right there, or click the count to fold them away.
+- **Deleting an event now deletes its tasks.** Before, they stayed behind with a link to an event that no longer
+  existed. If the event has tasks, you're asked first ("Its 2 tasks will be deleted too"). Deleting one repeat
+  deletes only that repeat's tasks. Linked notes are only unlinked; the notes stay.
+- **Moving an event to another calendar keeps its tasks and linked notes** (e.g. from Obsidian to Google).
+- **Tasks whose event is gone** (deleted before this fix, or in Google/Outlook directly) show the event name crossed out.
+  Clicking it asks whether to keep the task without the event or delete it.
 
 ## Known bugs
 

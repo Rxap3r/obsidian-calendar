@@ -150,6 +150,47 @@ export class CalendarStore extends Events {
 		this.notify();
 	}
 
+	/**
+	 * Which event keys a delete removes: one occurrence, or the whole event / series. Tasks and linked notes
+	 * stored under these keys go with the event.
+	 */
+	keysForDelete(occ: CalendarOccurrence, series: boolean): (key: string) => boolean {
+		if (occ.eventId) {
+			const id = occ.eventId;
+			if (series || !occ.recurring) return (k) => k === `local:${id}` || k.startsWith(`local:${id}@`);
+			const own = eventKey(occ);
+			return (k) => k === own;
+		}
+		const own = eventKey(occ);
+		const seriesId = occ.remote?.seriesId;
+		if (!series || !seriesId) return (k) => k === own;
+		// Every repeat of the series that is loaded, plus Google's "<series>_<time>" ids of the others.
+		const keys = new Set((this.remote.get(occ.sourceId) ?? []).filter((e) => e.seriesId === seriesId).map((e) => `${occ.sourceId}:${e.id}`));
+		keys.add(own).add(`${occ.sourceId}:${seriesId}`);
+		return (k) => keys.has(k) || k.startsWith(`${occ.sourceId}:${seriesId}_`);
+	}
+
+	/** Forget the linked notes stored under these keys (the notes themselves stay). */
+	async dropLinks(match: (key: string) => boolean): Promise<void> {
+		const map = this.plugin.data.eventLinks;
+		const gone = Object.keys(map).filter(match);
+		if (!gone.length) return;
+		for (const k of gone) delete map[k];
+		await this.plugin.persist();
+	}
+
+	/** An event was moved to another calendar (it got a new key): its linked notes move along. */
+	async moveLinks(from: CalendarOccurrence, toKey: string): Promise<void> {
+		const links = this.linksFor(from);
+		if (!links.length) return;
+		const local = /^local:([^@]+)$/.exec(toKey);
+		const target = local ? this.getEvent(local[1]) : undefined;
+		if (target) target.links = links;
+		else this.plugin.data.eventLinks[toKey] = links;
+		delete this.plugin.data.eventLinks[eventKey(from)];
+		await this.plugin.persist();
+	}
+
 	async addLink(occ: CalendarOccurrence, path: string): Promise<void> {
 		const links = this.linksFor(occ);
 		if (!links.includes(path)) await this.setLinks(occ, [...links, path]);
@@ -461,15 +502,18 @@ export class CalendarStore extends Events {
 		if (err) throw err;
 	}
 
-	async createRemote(source: CalendarSource, input: EventInput): Promise<void> {
+	/** Create an event in a Google / Outlook calendar. Returns its `eventKey()` when the provider told us the new id. */
+	async createRemote(source: CalendarSource, input: EventInput): Promise<string | undefined> {
 		const c = this.remoteContext(source);
 		let err: unknown;
+		let id: string | undefined;
 		try {
-			await c.provider.createEvent(c.token, c.calId, input);
+			id = await c.provider.createEvent(c.token, c.calId, input);
 		} catch (e) {
 			err = e;
 		}
 		await this.afterWrite(source, err);
+		return id ? `${source.id}:${id}` : undefined;
 	}
 
 	async updateRemote(occ: CalendarOccurrence, input: EventInput): Promise<void> {
