@@ -398,15 +398,15 @@ The steps are also shown in the sign-in dialog. Click a method below to expand i
 **Steps**
 
 1. Open [entra.microsoft.com](https://entra.microsoft.com) (or [portal.azure.com](https://portal.azure.com)) with your work account → *App registrations* → **New registration**.
-2. Name: anything. **Supported account types:** *Accounts in this organizational directory only* (single tenant) or *Accounts in any organizational directory*.
+2. Name: anything. **Supported account types:** *Accounts in this organizational directory only* (single tenant, **recommended**) or *Accounts in any organizational directory*. Since 2025 Microsoft by default doesn't let ordinary users approve new multi-tenant apps, so a multi-tenant app needs an admin's approval.
 3. **Redirect URI:** platform **Public client/native (mobile & desktop)**, value `http://localhost` → **Register**. (If you add it later under *Authentication* → *Add a platform*, choose **Mobile and desktop applications**, not *Web*.)
 4. *API permissions* → *Add a permission* → *Microsoft Graph* → *Delegated permissions* → tick **Calendars.ReadWrite** → *Add permissions*. (`offline_access` is requested automatically at sign-in.)
 5. On the *Overview* page, copy the **Application (client) ID**. For a single-tenant app, also copy the **Directory (tenant) ID**.
 6. In Obsidian: **Connect Outlook / Microsoft 365** → *Use my own app registration (advanced)* → paste the client ID → account type **Work or school only**, or **Other (tenant ID)** for a single-tenant app → **Sign in with Microsoft**.
 
 **Common problems**
-- *"Need admin approval"* → your organisation requires an administrator to consent. Send the app's client ID to IT and ask them to *Grant admin consent* for Calendars.ReadWrite.
 - *AADSTS50194 / "not configured as a multi-tenant application"* → choose **Other (tenant ID)** and enter your Directory (tenant) ID.
+- *"Need admin approval"*, a *"request approval"* button, or *AADSTS65001* → your organisation doesn't let users approve the app. Microsoft's default since 2025 blocks this for new **multi-tenant** apps. First switch the app to *Accounts in this organizational directory only* (*Authentication*) and choose **Other (tenant ID)** in Obsidian. If you're still asked, someone with admin rights (e.g. *Global Administrator* or *Cloud Application Administrator*) opens the app → *API permissions* → **Grant admin consent for …** once, or you ask IT. If IT won't approve it, you can still see the calendar read-only via an [ICS link](#read-only-subscriptions-via-ics-link-proton-icloud-google-outlook-).
 - *AADSTS700016 / "Application … was not found in the directory"* → the client ID is wrong or incomplete, or the account type chosen in Obsidian doesn't match the app's *Supported account types*.
 - *AADSTS50011 / "redirect URI … does not match"* → the redirect URI must be exactly `http://localhost` (not `https`, not `127.0.0.1`, no `/` at the end).
 - *AADSTS7000218 / "must contain client_assertion or client_secret"* → the redirect URI was added under platform **Web**. Remove it there and add it under **Mobile and desktop applications** (*Authentication* → *Add a platform*).

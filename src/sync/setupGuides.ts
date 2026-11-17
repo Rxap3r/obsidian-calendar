@@ -42,13 +42,13 @@ export const MS_WORK_GUIDE: SetupGuide = {
 	],
 	steps: [
 		"Open entra.microsoft.com (or portal.azure.com) with your work account → App registrations → New registration.",
-		"Name: anything. Supported account types: “Accounts in this organizational directory only” or “Accounts in any organizational directory”.",
+		"Name: anything. Supported account types: “Accounts in this organizational directory only” (recommended – Microsoft doesn't let ordinary users approve new multi-tenant apps) or “Accounts in any organizational directory”.",
 		"Redirect URI: platform “Public client/native (mobile & desktop)”, value http://localhost → Register. (Adding it later under Authentication → Add a platform: choose “Mobile and desktop applications”, not “Web”.)",
 		"API permissions → Add a permission → Microsoft Graph → Delegated → Calendars.ReadWrite → Add permissions.",
 		"Overview → copy the Application (client) ID into the field below. For a single-organisation app choose “Single organisation” above and also copy the Directory (tenant) ID.",
 	],
 	problems: [
-		"“Need admin approval” or AADSTS65001 → ask IT to “Grant admin consent” for Calendars.ReadWrite on your app.",
+		"“Need admin approval” / “request approval” or AADSTS65001 → your organisation (or Microsoft's default since 2025 for multi-tenant apps) doesn't let users approve the app. First switch the app to “Accounts in this organizational directory only” (Authentication) and use “Single organisation” with the tenant ID. Still asked? An admin opens the app → API permissions → “Grant admin consent for …” once (or ask IT).",
 		"AADSTS700016 “application … was not found in the directory” → the client ID is wrong or incomplete, or the account type chosen below doesn't match the app's Supported account types.",
 		"AADSTS50011 “redirect URI … does not match” → the redirect URI must be exactly http://localhost (not https, not 127.0.0.1, no slash at the end).",
 		"AADSTS7000218 “must contain client_assertion or client_secret” → the redirect URI was added under platform “Web”; remove it there and add it under “Mobile and desktop applications”.",

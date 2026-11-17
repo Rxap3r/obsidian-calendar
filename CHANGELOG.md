@@ -17,6 +17,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 - **The Microsoft sign-in dialog says which sign-in page will open** (with your own app registration): personal
   accounts (Outlook.com, Hotmail) or company/school accounts, with a pointer to *Which Microsoft account?*. *Personal*
   is preselected there, which was easy to miss with a company account.
+- **Company accounts and "Need admin approval":** the work/school guide now recommends a single-organisation app
+  (Microsoft no longer lets ordinary users approve new multi-tenant apps by default) and explains where an admin grants
+  approval once, or how to see the calendar read-only via ICS if IT says no.
 
 ## Known bugs
 
