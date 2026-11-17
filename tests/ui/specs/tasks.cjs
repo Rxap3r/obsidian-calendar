@@ -180,6 +180,25 @@ test("tasks: completed tasks – recent only, show older, clear, automatic clean
 	eq(k, [0, 1], "done task without completion time not deleted at once");
 });
 
+test("tasks: hidden automatic lists – not in the list bar, the page falls back to a visible list", {}, async ({ page }) => {
+	await seedTasks()(page);
+	await page.evaluate(async () => {
+		plugin.settings.tasksHiddenLists = ["today", "tomorrow", "nodate"];
+		await mountTasks();
+		tasksView.select("today");
+	});
+	await settle(page);
+	eq(await page.locator(".ch-tasks-nav-item[data-list]").evaluateAll((els) => els.map((e) => e.dataset.list).filter((id) => !id.includes("-"))).then((ids) => ids.filter((id) => ["today", "tomorrow", "upcoming", "overdue", "nodate", "all", "done"].includes(id))),
+		["upcoming", "overdue", "all", "done"], "only the visible automatic lists");
+	expect((await page.textContent(".ch-tasks-title")).startsWith("Upcoming"), "a hidden list falls back to the first visible one");
+	await page.evaluate(() => { tab.constructor.tab = "tasks"; tab.display(); });
+	const toggles = await page.evaluate(() => [...tab.containerEl.querySelectorAll(".ch-smart-list-setting")].map((e) => [e.querySelector(".setting-item-name").textContent, e.querySelector(".checkbox-container, input")?.classList.contains("is-enabled") ?? null]));
+	eq(toggles.map((t) => t[0]), ["Today", "Tomorrow", "Upcoming", "Overdue", "No date", "All", "Done"], "one switch per automatic list");
+	// All hidden: the default list "Tasks" is shown.
+	await page.evaluate(() => { plugin.settings.tasksHiddenLists = ["today", "tomorrow", "upcoming", "overdue", "nodate", "all", "done"]; tasksView.render(); });
+	eq(await page.textContent(".ch-tasks-title"), "Tasks", "all hidden → the default list");
+});
+
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {
 	await page.evaluate(() => mountTasks());
 	await settle(page);

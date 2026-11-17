@@ -203,6 +203,7 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   - **All:** every open task, grouped by when it's due.
   - **Done.**
   - **My lists:** your own lists, e.g. *Work* or *Home*, each with a colour. "Tasks" is the default list. Click **+** next to *My lists* to add one; right-click a list (or use ⋯) to rename, recolour or delete it. Deleting a list moves its tasks to "Tasks".
+  - Don't use some of them? Hide them in *Settings → Omni Calendar → Tasks → Automatic lists* (new in **1.9.4**). No tasks change, and your own lists always show.
 - **Sorting:** inside each group, **priority** first (high → low), then **time** (tasks with a time before tasks without).
 - **Quick add:** type into the field at the top and press **Enter**.
   - In *Today*, *Upcoming* and *Overdue* the task gets today's date; in *Tomorrow*, tomorrow's.
@@ -269,6 +270,9 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
 - **A new event** can get its tasks (and linked notes) right away in its dialog. They are attached when you click
   *Save*; *Cancel* forgets them. Saved to several calendars, they go with **one** copy, the first calendar in *Save to*
   (the dialog says which). A new repeating event gets them on its first repeat. *Create note* is offered once the event is saved.
+- Don't want tasks on events? *Settings → Omni Calendar → Tasks → Tasks on events* (new in **1.9.4**) hides the Tasks
+  section, *Add task…* and the "2/5" progress. The tasks stay in your lists (and without a time they count in the day's ☐ counter
+  again). *Track as task* isn't affected.
 - **Tasks move with their event:** when the event moves to another day (dialog, drag, or in Google/Outlook), its tasks
   move by the same number of days, so they stay on (or the same distance before) the event. Times are kept.
 - **Deleting an event deletes its tasks**, after asking (deleting one repeat deletes only that repeat's tasks).
@@ -608,6 +612,8 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 | **Tasks** | Use tasks | Main switch for everything task-related. Off hides it but deletes nothing |
 | | Tasks in sidebar | Shows the Tasks page in the sidebar (same side as the calendar), independent of mini calendar / day planner |
 | | Done section in lists | Collapsed "Done" section in your lists and *All* |
+| | Tasks on events | Events can have their own tasks: Tasks section, *Add task…*, "2/5" (on by default). Off only hides them |
+| | Automatic lists | One switch per automatic list (Today, Tomorrow, Upcoming, Overdue, No date, All, Done) to hide it on the Tasks page |
 | | Progress log | Dated updates on a task in its details view, "📝 3" in the lists (on by default). Off only hides it |
 | | Create note for tasks | *Create note* on tasks (on by default). Off also turns off the subtask part below. Only hides, deletes nothing |
 | | Notes and descriptions on subtasks | Descriptions, linked notes and *Create note* on subtasks (**off** by default; shown while *Create note for tasks* is on) |

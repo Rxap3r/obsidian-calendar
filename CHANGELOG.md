@@ -10,6 +10,10 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
   off notes for tasks and subtasks) and, under it, **Notes and descriptions on subtasks** (turns off only the subtask
   part, so subtasks stay simple while tasks keep *Create note*). The subtask switch is **off by default**: turn it on to
   see subtask descriptions and notes again (anything you already added is kept, nothing is deleted).
+- New switch *Settings → Omni Calendar → Tasks → Tasks on events*: turn it off if you don't want tasks inside events.
+  The event's Tasks section, *Add task…* and the "2/5" progress disappear; the tasks stay in your lists. *Track as task* stays.
+- New *Settings → Omni Calendar → Tasks → Automatic lists*: hide the automatic lists you don't use (e.g. *Tomorrow* or
+  *No date*), so the list bar gets shorter. No tasks change.
 
 ## Known bugs
 

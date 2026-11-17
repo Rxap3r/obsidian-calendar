@@ -1,6 +1,6 @@
 import { Setting } from "obsidian";
 import { nextColor } from "../defaults";
-import { DEFAULT_TASK_LIST, PRIORITY_NAMES } from "../tasks";
+import { DEFAULT_TASK_LIST, PRIORITY_NAMES, SMART_LISTS } from "../tasks";
 import { deleteTaskList } from "../modals/confirmations";
 import { periodSetting, SettingsContext } from "./controls";
 
@@ -76,9 +76,37 @@ export function tasksTab(ctx: SettingsContext, el: HTMLElement) {
 				})
 			);
 	}
+	new Setting(el)
+		.setName("Tasks on events")
+		.setDesc("Events can have their own tasks: a Tasks section in the event, “Add task…” in its menu and the “2/5” progress. Turning it off only hides them; the tasks stay in your lists. “Track as task” isn't affected.")
+		.addToggle((t) =>
+			t.setValue(s.tasksOnEvents).onChange(async (v) => {
+				s.tasksOnEvents = v;
+				await ctx.save();
+				store.trigger("changed");
+				ctx.plugin.store.notify();
+			})
+		);
 	periodSetting(ctx, el, "Upcoming list", "How far ahead the “Upcoming” task list looks (today plus this many days). Later tasks are under “All”.",
 		s.tasksUpcomingDays, {},
 		1, 3650, (v) => { s.tasksUpcomingDays = v; store.trigger("changed"); });
+
+	new Setting(el).setName("Automatic lists").setDesc("Which automatic lists the Tasks page shows. Hiding one changes no tasks; your own lists always show.").setHeading();
+	for (const l of SMART_LISTS) {
+		new Setting(el)
+			.setName(l.name)
+			.setClass("ch-smart-list-setting")
+			.addToggle((t) =>
+				t.setValue(!s.tasksHiddenLists.includes(l.id)).onChange(async (v) => {
+					const hidden = new Set(s.tasksHiddenLists);
+					if (v) hidden.delete(l.id);
+					else hidden.add(l.id);
+					s.tasksHiddenLists = SMART_LISTS.map((x) => x.id).filter((id) => hidden.has(id));
+					await ctx.save();
+					store.trigger("changed");
+				})
+			);
+	}
 
 	new Setting(el).setName("In the calendar").setHeading();
 	new Setting(el)

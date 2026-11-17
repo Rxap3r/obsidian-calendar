@@ -1,5 +1,6 @@
 import { Menu, setIcon } from "obsidian";
 import { deleteEvent } from "../modals/confirmations";
+import { eventTasksOn } from "../tasks";
 import type OmniCalendarPlugin from "../main";
 import { CalendarOccurrence } from "../types";
 import { dateLang, formatTime, formatTimeRange, isSameDay, toDateKey } from "../dateUtils";
@@ -72,7 +73,7 @@ export function occurrenceMenu(plugin: OmniCalendarPlugin, occ: CalendarOccurren
 			)
 		);
 	}
-	if (plugin.settings.tasksEnabled) {
+	if (eventTasksOn(plugin.settings)) {
 		menu.addItem((i) =>
 			i.setTitle("Add task…").setIcon("check-square").onClick(() => {
 				const date = toDateKey(occ.start);
@@ -168,7 +169,7 @@ export function createChip(
 export function tooltip(plugin: OmniCalendarPlugin, occ: CalendarOccurrence): string {
 	const src = plugin.store.getSource(occ.sourceId);
 	const time = occ.allDay ? "All day" : formatTimeRange(occ.start, occ.end, plugin.settings.use24h);
-	const tasks = plugin.settings.tasksEnabled ? plugin.tasks.forEvent(eventKey(occ)) : [];
+	const tasks = eventTasksOn(plugin.settings) ? plugin.tasks.forEvent(eventKey(occ)) : [];
 	const progress = tasks.length ? `Tasks: ${tasks.filter((t) => t.done).length}/${tasks.length} done` : "";
 	return [occ.title, time, occ.location, src?.name, progress].filter(Boolean).join("\n");
 }
@@ -197,7 +198,7 @@ export function trackedMark(plugin: OmniCalendarPlugin, el: HTMLElement, occ: Ca
 
 /** The small "☑ 2/5" progress of an event's tasks (nothing when it has none, or tasks are off). */
 export function taskHint(plugin: OmniCalendarPlugin, parent: HTMLElement, occ: CalendarOccurrence): HTMLElement | null {
-	if (!plugin.settings.tasksEnabled) return null;
+	if (!eventTasksOn(plugin.settings)) return null;
 	const tasks = plugin.tasks.forEvent(eventKey(occ));
 	if (!tasks.length) return null;
 	const done = tasks.filter((t) => t.done).length;

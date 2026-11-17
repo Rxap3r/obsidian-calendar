@@ -67,7 +67,7 @@ export function renderTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t
 		};
 	}
 	// A tracked event: the progress of the event's own tasks, as on the event in the calendar.
-	if (t.event?.self) {
+	if (t.event?.self && plugin.settings.tasksOnEvents) {
 		const evTasks = store.forEvent(t.event.key);
 		if (evTasks.length) {
 			const d = evTasks.filter((x) => x.done).length;

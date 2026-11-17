@@ -301,9 +301,18 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 **State:** everything up to **1.9.3** is merged and released (tags 1.8.0 … 1.9.3, PRs #28–#37). **1.9.3** (details view
 step c – "Create note" for tasks and subtasks, subtask notes and descriptions, `taskNoteTemplate`, switch `tasksNoteExtras`)
 is merged and released (PR #37, tag 1.9.3). `dev-branch` carries **1.9.4** (not released yet): the step c switch split
-in two (`tasksNoteExtras` = main "Create note for tasks", `tasksSubtaskExtras` = "Notes and descriptions on subtasks").
+in two (`tasksNoteExtras` = main "Create note for tasks", `tasksSubtaskExtras` = "Notes and descriptions on subtasks");
+switch `tasksOnEvents` ("Tasks on events": event Tasks section, *Add task…*, "2/5", tracked-event progress and the
+"mark open tasks done?" question; off → untimed event tasks count in the day counter; check with `eventTasksOn(s)`);
+`tasksHiddenLists` (hidden automatic lists, stored as the hidden ones; `visibleSmartLists(s)`; TasksView falls back to the
+first visible one, or the default list). *Track as task* stays always on (maintainer: "it's just one button").
 
 **Next on the roadmap (agreed order):**
+0. **Lock the calendar ("view mode")** – agreed design, build next as its own step: blocks only accidental changes
+   (dragging, resizing, tap/drag to create on the grid); clicking still opens details, *Edit* still works. **Not** a toolbar
+   button (the toolbar is already full; the maintainer wants to clean it up later). Instead: an entry *Lock calendar /
+   Unlock calendar* in the ribbon's Omni Calendar menu, a command (hotkey), and a small state icon next to the view's
+   title (lock, or eye / pencil-book – ask which). Stored per device (not in the synced `data.json`).
 1. **1.10** – repeating tasks, tasks on repeating events per repeat, *Track as task* for repeats.
 2. Later: reminders and notifications (README roadmap), then the "Other ideas".
 3. Undecided: a progress log on events (see the roadmap note above; only if the maintainer asks).

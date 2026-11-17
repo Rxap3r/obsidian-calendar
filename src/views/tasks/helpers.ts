@@ -69,7 +69,7 @@ export async function openTaskEvent(plugin: OmniCalendarPlugin, t: Task, open: (
  */
 export async function toggleDone(plugin: OmniCalendarPlugin, t: Task) {
 	const store = plugin.tasks;
-	if (!t.done && t.event?.self) {
+	if (!t.done && t.event?.self && plugin.settings.tasksOnEvents) {
 		const open = store.forEvent(t.event.key).filter((x) => !x.done);
 		if (open.length) {
 			const answer = await chooseAction(

@@ -203,6 +203,10 @@ export interface OmniCalendarSettings {
 	tasksNoteExtras: boolean;
 	/** Subtask descriptions, subtask notes and "Create note" on subtasks (1.9.4). Only counts while tasksNoteExtras is on. Off by default (maintainer's choice). */
 	tasksSubtaskExtras: boolean;
+	/** Tasks that belong to an event: the event's Tasks section, "Add task…", the "2/5" hint (1.9.4). Off hides; nothing is deleted. */
+	tasksOnEvents: boolean;
+	/** Automatic task lists the user hid (Today, Tomorrow, …) (1.9.4). Stored as the hidden ones, so new lists show up. */
+	tasksHiddenLists: SmartListId[];
 	/** @deprecated replaced by sidebarView (migrated on load). */
 	sidebarOnStartup?: SidebarView;
 	notesFolder: string;
