@@ -3,7 +3,7 @@ import { CalendarOccurrence, Task } from "../types";
 import { compareTasks } from "../tasks";
 import { TaskModal } from "../modals/TaskModal";
 import { taskMenu } from "./tasks/taskRow";
-import { taskTimeLabel } from "./tasks/helpers";
+import { taskTimeLabel, toggleDone } from "./tasks/helpers";
 import {
 	addDays, addMonths, formatDate, formatTime, isoWeek, isSameDay, MS_MIN, onDay, startOfDay, startOfMonth,
 	startOfWeek, toDateKey, weekdayNames,
@@ -188,7 +188,7 @@ export class MiniCalendarView extends OmniView {
 		if (t.done) setIcon(check, "check");
 		check.onclick = (e) => {
 			e.stopPropagation();
-			void this.plugin.tasks.setDone(t.id, !t.done);
+			void toggleDone(this.plugin, t);
 		};
 		row.createSpan({ cls: "ch-mini-task-title", text: t.title });
 		const when = t.date && t.date < today ? "overdue" : taskTimeLabel(t);

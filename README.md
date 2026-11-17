@@ -193,7 +193,7 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   - The **⤢ button** at the top of the sidebar version opens the full Tasks page with the same list. The sidebar version stays where it is.
 
 **The Tasks page:**
-- **Lists on the left.** On the phone and in the sidebar, they become a bar at the top that you swipe sideways.
+- **Lists on the left.** On the phone and in the sidebar, they become a bar at the top that you swipe sideways. On desktop, use the thin scrollbar under it or the mouse wheel.
   - **Today:** due today, plus anything overdue.
   - **Tomorrow.**
   - **Upcoming:** today and the next days, one heading per day. It covers 7 days by default; change it in *Settings → Omni Calendar → Tasks → Upcoming list*. Later tasks are under *All*.
@@ -257,6 +257,9 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
 - The event then shows up in your task lists (*Today*, *Upcoming*, …) with its time and the mark *Event*. Tick it off there.
   Clicking it opens the event, because its name, day and time belong to the event and follow it when it changes.
 - In the calendar it isn't shown twice: the event gets a small **tick circle**; ticked off, it's **struck through**.
+- If the event has tasks of its own, its row in the task lists shows their progress (*☐ 2/5*). They stay separate tasks,
+  because they often have their own day. When you tick off the event while some are still open, you're asked whether to
+  mark them as done too (*Only the event* / *Mark all as done*).
 - Works for local, Google, Outlook and ICS events; the "done" mark is kept only in Obsidian. Deleting the event removes it.
 - Not yet for repeating events (each repeat ticked off separately comes with 1.9). Switch it off again in the dialog or with
   right-click → *Stop tracking as task*.

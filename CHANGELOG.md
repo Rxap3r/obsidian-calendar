@@ -16,6 +16,8 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.8.5** – Tracked events show their tasks' progress and ask about open tasks when ticked off; the Tasks list bar
+  in the sidebar and the settings tab bar scroll with a thin scrollbar and the mouse wheel on desktop.
 - **1.8.4** – Change how long an event lasts by dragging its top or bottom edge in the week and day views (also into
   another day, and with the finger). New *Track as task* switch for events: the event shows up in your task lists to
   tick it off, gets a tick circle in the calendar and is struck through when done (off by default; not yet for repeats).

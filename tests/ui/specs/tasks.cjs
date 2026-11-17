@@ -286,4 +286,42 @@ test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mo
 	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile.png") });
 });
 
+
+test("desktop: Tasks in the sidebar – the list bar has a visible scrollbar and scrolls with the mouse wheel", {}, async ({ page }) => {
+	await page.evaluate(async () => {
+		// A fixed sidebar width, like Obsidian's (the test page's sidebar would otherwise grow with its content).
+		Object.assign(document.getElementById("side").style, { flex: "none", minWidth: "0", width: "280px" });
+		for (const n of ["Work", "Home", "Project X"]) await plugin.tasks.addList(n, "#1c7ed6");
+		await mountTasks({ side: true });
+	});
+	await page.waitForTimeout(200);
+	const state = () => page.evaluate(() => {
+		const bar = document.querySelector("#side .ch-tasks-bar");
+		return { left: Math.round(bar.scrollLeft), more: bar.scrollWidth > bar.clientWidth,
+			// The test browser hides all scrollbars, so this checks that ours isn't switched off (Obsidian shows it).
+			scrollbar: getComputedStyle(bar).scrollbarWidth !== "none", fadeRight: bar.classList.contains("ch-more-right"), fadeLeft: bar.classList.contains("ch-more-left") };
+	});
+	let s = await state();
+	eq([s.more, s.scrollbar, s.fadeRight, s.fadeLeft], [true, true, true, false], "doesn't fit: scrollbar on, right edge faded");
+	await page.locator("#side").screenshot({ path: path.join(SHOTS, "tasks-sidebar-bar-scrollbar.png") });
+	// Mouse wheel over the bar scrolls it sideways.
+	const box = await page.locator("#side .ch-tasks-bar").boundingBox();
+	await page.mouse.move(box.x + box.width / 2, box.y + 12);
+	await page.mouse.wheel(0, 200);
+	await page.waitForTimeout(200);
+	s = await state();
+	expect(s.left > 0 && s.fadeLeft, `wheel scrolls sideways: ${JSON.stringify(s)}`);
+	// Scrolled to the end: the right edge is no longer faded.
+	await page.evaluate(() => { const b = document.querySelector("#side .ch-tasks-bar"); b.scrollLeft = b.scrollWidth; });
+	await page.waitForTimeout(200);
+	s = await state();
+	expect(!s.fadeRight && s.fadeLeft, `at the end: ${JSON.stringify(s)}`);
+});
+
+test("mobile: the Tasks list bar has no scrollbar (swipe)", { mobile: true }, async ({ page }) => {
+	await page.evaluate(() => mountTasks());
+	await page.waitForTimeout(200);
+	const r = await page.evaluate(() => { const bar = document.querySelector(".ch-tasks-bar"); return { more: bar.scrollWidth > bar.clientWidth, scrollbar: getComputedStyle(bar).scrollbarWidth }; });
+	eq([r.more, r.scrollbar], [true, "none"], "scrolls, but without a scrollbar");
+});
 };

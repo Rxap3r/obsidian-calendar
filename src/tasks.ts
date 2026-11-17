@@ -286,6 +286,17 @@ export class TaskStore extends Events {
 		await this.save();
 	}
 
+	/** Tick several tasks off (or on) at once, saved once. */
+	async setDoneMany(ids: string[], done: boolean) {
+		const now = Date.now();
+		for (const t of this.items) {
+			if (!ids.includes(t.id) || t.done === done) continue;
+			t.done = done;
+			t.completedAt = done ? now : undefined;
+		}
+		await this.save();
+	}
+
 	async setSubtaskDone(taskId: string, subId: string, done: boolean) {
 		const s = this.get(taskId)?.subtasks.find((x) => x.id === subId);
 		if (!s) return;
