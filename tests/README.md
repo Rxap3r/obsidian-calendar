@@ -49,7 +49,7 @@ The downloaded test browser is kept in GitHub's Actions cache between runs (not 
   | `settings.cjs` | settings tabs and tab bar, scroll position, period settings, deleting calendars, commands |
   | `pickers.cjs` | own date/time pickers, dialog focus rules (tablet keyboard bugs) |
   | `tasks.cjs` | Tasks page, task dialog, lists, completed tasks, tasks sidebar |
-  | `details.cjs` | 1.9: details view of events and tasks, *Edit notes*, the *Clicking opens* setting, right-click entries |
+  | `details.cjs` | 1.9: details view of events and tasks, *Edit notes*, the *Clicking opens* setting, right-click entries, the progress log of tasks (1.9.2) |
   | `calendartasks.cjs` | 1.8: tasks on events ("2/5"), linked notes on events, tasks in the calendar (blocks, day counter, drag), *Tasks today* |
 
   Add new tests to the matching file. Make a new file only for a genuinely new topic; it's picked up automatically.

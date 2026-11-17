@@ -257,7 +257,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - quick actions in the view (tick off the task or a subtask, open linked notes);
     - a setting "Clicking opens: Details view (default) / Edit dialog directly";
     - right-click / long-press still offers Edit.
-  - **Progress log for tasks (with the details view):**
+  - **Progress log for tasks (with the details view) – ✅ on `dev-branch` for 1.9.2:**
     - a task gets timestamped log entries (text + date/time), added via an input + send;
     - entries are shown oldest first, newest at the bottom, like sticky notes;
     - it's separate from subtasks;
@@ -295,16 +295,13 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Where we stopped (keep this section up to date at the end of a session)
 
-**State (end of the 1.8–1.9 sessions):** everything up to **1.9.1** is merged and released (tags 1.8.0 … 1.9.1,
-PRs #28–#35). `dev-branch` = `main`, *Not released yet* is empty. The **next change needs version 1.9.2** (or 1.10.0 /
-another minor for a bigger feature – ask if unsure).
+**State:** everything up to **1.9.1** is merged and released (tags 1.8.0 … 1.9.1, PRs #28–#35). `dev-branch` carries
+**1.9.2** (not released yet): the **progress log for tasks** (details view step b) + setting `tasksProgressLog`.
 
 **Next on the roadmap (agreed order):**
-1. **Details view step b – progress log for tasks** (design under *Roadmap* above: timestamped entries, add in the details
-   view, edit/delete keeps the original time, "📝 n" hint in lists, `log` on the task, validated in `normalizeTaskData`).
-2. **Step c** – "Create note" for tasks and subtasks, linked notes per subtask, short subtask descriptions.
-3. **1.10** – repeating tasks, tasks on repeating events per repeat, *Track as task* for repeats.
-4. Later: reminders and notifications (README roadmap), then the "Other ideas".
+1. **Step c** – "Create note" for tasks and subtasks, linked notes per subtask, short subtask descriptions.
+2. **1.10** – repeating tasks, tasks on repeating events per repeat, *Track as task* for repeats.
+3. Later: reminders and notifications (README roadmap), then the "Other ideas".
 
 **Still to be tested by the maintainer on real devices** (only covered by the automated tests so far): creating a
 Google/Outlook event with tasks in the new-event dialog (needs the real service to return the new id); moving events
@@ -322,6 +319,10 @@ events that continue from the previous day; *Language of dates* with Obsidian in
 - 1.8.5: tracked events show their tasks' progress and ask about open tasks (`toggleDone`); sideways bars with a thin
   scrollbar instead of arrows (`views/sideScroll.ts`).
 - 1.9.0: details view (`EventDetailsModal`, `TaskDetailsModal`, `views/notesBlock.ts`), setting `clickOpens`.
+- 1.9.2: progress log of tasks (`views/tasks/progressLog.ts`; `Task.log` = `{ id, at, text, editedAt? }[]`, oldest first,
+  checked in `normalizeTaskData`; `TaskStore.addLog/editLog/removeLog`); shown in `TaskDetailsModal` only (not the edit
+  dialog), "📝 n" in `taskRow.ts`. Setting `tasksProgressLog` (Tasks tab, on by default; the maintainer asked for a switch
+  so it isn't overwhelming) hides both, deletes nothing. Enter sends on desktop, the button on phones.
 - 1.9.1: setting `dateLanguage` (all date formatting via `formatDate` / `dateLang()` in `dateUtils.ts`, never
   `toLocaleDateString(undefined, …)`); Microsoft sign-in hint for which page opens; README *Troubleshooting sign-in*.
 

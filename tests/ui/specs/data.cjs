@@ -29,7 +29,8 @@ test("data: task data is normalised on load", {}, async ({ page }) => {
 	const r = await page.evaluate(async () => {
 		const { normalizeTaskData } = window.__tasksMod ?? {};
 		plugin._data = { settings: plugin.settings, events: [], tasks: { lists: [{ id: "w", name: "Work", color: "#123456" }], items: [
-			{ id: "a", title: "ok", listId: "w", priority: 9, date: "2026-11-14", start: "10:00", end: "09:00", subtasks: [{ id: "x", title: "s" }, null], links: ["a.md", 3] },
+			{ id: "a", title: "ok", listId: "w", priority: 9, date: "2026-11-14", start: "10:00", end: "09:00", subtasks: [{ id: "x", title: "s" }, null], links: ["a.md", 3],
+				log: [{ id: "l2", at: 2000, text: "second" }, { at: 1000, text: "first" }, { at: "x", text: "bad" }, { at: 3000, text: "  " }, null] },
 			{ id: "b", title: "orphan", listId: "gone", start: "10:00" }, null ] } };
 		await plugin.loadPluginData();
 		return { lists: plugin.data.tasks.lists.map((l) => l.id), a: plugin.data.tasks.items[0], b: plugin.data.tasks.items[1] };
@@ -37,6 +38,7 @@ test("data: task data is normalised on load", {}, async ({ page }) => {
 	eq(r.lists, ["tasks", "w"], "default list added");
 	eq([r.a.priority, r.a.subtasks.length, r.a.links], [0, 1, ["a.md"]], "bad fields fixed");
 	eq([r.b.listId, r.b.start ?? null], ["tasks", null], "orphan → default list, time without date dropped");
+	eq([r.a.log.map((e) => e.text), typeof r.a.log[0].id, r.b.log ?? null], [["first", "second"], "string", null], "progress log: bad entries dropped, oldest first, ids added");
 });
 
 test("local recurrence: a series that started many years ago still shows up, on the right days", {}, async ({ page }) => {
@@ -113,12 +115,12 @@ test("data: event notes are migrated, event links and task events checked on loa
 		await plugin.loadPluginData();
 		const d = plugin.data;
 		return { events: d.events.map((e) => [e.links, "notePath" in e]), links: d.eventLinks, tasks: d.tasks.items.map((t) => t.event ?? null),
-			fresh: (plugin._data = null, await plugin.loadPluginData(), [plugin.data.eventLinks, plugin.settings.tasksInCalendar, plugin.settings.tasksCalendarShowDone, plugin.settings.tasksInMiniCalendar]) };
+			fresh: (plugin._data = null, await plugin.loadPluginData(), [plugin.data.eventLinks, plugin.settings.tasksInCalendar, plugin.settings.tasksCalendarShowDone, plugin.settings.tasksInMiniCalendar, plugin.settings.tasksProgressLog]) };
 	});
 	eq(r.events, [[["Inbox.md"], false], [["A.md", "B.md"], false]], "notePath → links (≤ 1.7)");
 	eq(r.links, { "gcal:g1": ["Inbox.md"] }, "event links: duplicates, empty and broken entries dropped");
 	eq(r.tasks, [{ key: "local:e1", title: "Old", date: "2026-11-14" }, null], "task event links checked");
-	eq(r.fresh, [{}, true, true, true], "defaults");
+	eq(r.fresh, [{}, true, true, true, true], "defaults");
 });
 
 };

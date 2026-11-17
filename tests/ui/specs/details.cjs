@@ -125,6 +125,70 @@ test("desktop: task details – tick off, subtasks, Edit notes, its event, Edit"
 	eq(await page.inputValue(".ch-title-input"), "Prepare slides", "task dialog");
 });
 
+test("desktop: progress log – add (Enter and button), oldest first, edit keeps the time, delete, 📝 hint, setting hides it", {}, async ({ page }) => {
+	await detailsMode(page);
+	await page.evaluate(async () => {
+		await plugin.tasks.upsert(plugin.tasks.draft({ title: "Fix the bike", date: "2026-11-14",
+			log: [{ id: "old", at: new Date(2026, 10, 12, 8, 30).getTime(), text: "Ordered a new chain" }] }));
+		await mountTasks();
+	});
+	await page.locator('.ch-tasks-nav-item[data-list="today"]').click();
+	const row = page.locator(".ch-task", { hasText: "Fix the bike" });
+	eq(await row.locator(".ch-task-has-log").textContent(), "📝 1", "hint in the list");
+	await row.locator(".ch-task-title").click();
+	await settle(page);
+	expect((await page.locator(".ch-log-time").first().textContent()).includes("08:30"), "time of the entry shown");
+	// Enter sends; the button sends too.
+	await page.fill(".ch-log-input", "Chain arrived");
+	await page.press(".ch-log-input", "Enter");
+	await settle(page);
+	await page.fill(".ch-log-input", "Fitted it,\nneeds oiling");
+	await page.locator(".ch-log-send").click();
+	await settle(page);
+	const log = () => page.evaluate(() => plugin.tasks.items.find((x) => x.title === "Fix the bike").log ?? []);
+	eq((await log()).map((e) => e.text), ["Ordered a new chain", "Chain arrived", "Fitted it,\nneeds oiling"], "added at the bottom, oldest first");
+	eq(await page.locator(".ch-log-entry .ch-log-text").allTextContents(), ["Ordered a new chain", "Chain arrived", "Fitted it,\nneeds oiling"], "shown oldest first");
+	eq(await page.inputValue(".ch-log-input"), "", "field cleared");
+	expect((await page.locator(".ch-log-time").last().textContent()).startsWith("Today"), "new entry says Today");
+	// Text typed in the field survives a redraw.
+	await page.fill(".ch-log-input", "half-typed");
+	await page.evaluate(() => plugin.tasks.trigger("changed"));
+	await settle(page);
+	eq(await page.inputValue(".ch-log-input"), "half-typed", "draft kept");
+	await page.fill(".ch-log-input", "");
+	await shot(page, "details-task-log");
+	// Edit: new text, same time, marked as edited; a redraw meanwhile doesn't throw the text away.
+	const first = page.locator(".ch-log-entry").first();
+	await first.locator(".ch-log-edit").click();
+	await page.fill(".ch-log-edit-field", "Ordered a new chain (KMC)");
+	await page.evaluate(() => plugin.tasks.trigger("changed"));
+	await settle(page);
+	eq(await page.inputValue(".ch-log-edit-field"), "Ordered a new chain (KMC)", "text kept while editing");
+	await page.locator(".ch-log-entry .mod-cta").click();
+	await settle(page);
+	const e0 = (await log())[0];
+	eq([e0.text, e0.at, typeof e0.editedAt], ["Ordered a new chain (KMC)", await page.evaluate(() => new Date(2026, 10, 12, 8, 30).getTime()), "number"], "edited, original time kept");
+	expect((await page.locator(".ch-log-entry").first().textContent()).includes("edited"), "marked as edited");
+	// Delete asks first.
+	await page.locator(".ch-log-entry").nth(1).locator(".ch-log-delete").click();
+	await page.evaluate(() => [...document.querySelectorAll(".modal .mod-warning")].pop().click());
+	await settle(page);
+	eq((await log()).map((e) => e.text), ["Ordered a new chain (KMC)", "Fitted it,\nneeds oiling"], "entry deleted");
+	await page.locator(".ch-modal-buttons button", { hasText: "Close" }).click();
+	await settle(page);
+	eq(await row.locator(".ch-task-has-log").textContent(), "📝 2", "hint updated");
+	// Setting off: no log in the view, no hint – the entries are kept.
+	await page.evaluate(() => { plugin.settings.tasksProgressLog = false; plugin.tasks.trigger("changed"); });
+	await settle(page);
+	eq(await row.locator(".ch-task-has-log").count(), 0, "no hint when off");
+	await row.locator(".ch-task-title").click();
+	await settle(page);
+	eq(await page.locator(".ch-log").count(), 0, "no log section when off");
+	eq((await log()).length, 2, "entries kept");
+	await page.evaluate(() => { tab.constructor.tab = "tasks"; tab.display(); });
+	expect(await page.evaluate(() => [...tab.containerEl.querySelectorAll(".setting-item-name")].some((e) => e.textContent === "Progress log")), "setting in the Tasks tab");
+});
+
 test("mobile: details view by tapping – event and task, Edit notes", { mobile: true }, async ({ page }) => {
 	await detailsMode(page);
 	await page.evaluate(async () => {
@@ -150,6 +214,13 @@ test("mobile: details view by tapping – event and task, Edit notes", { mobile:
 	await page.locator(".ch-task", { hasText: "Call the plumber" }).locator(".ch-task-title").tap();
 	await settle(page);
 	expect((await modal(page).textContent()).includes("Ask about Thursday"), "task details by tapping");
+	// Progress log by tapping: the field and the send button fit the phone.
+	await page.fill(".ch-log-input", "Left a message");
+	await page.locator(".ch-log-send").tap();
+	await settle(page);
+	eq(await page.evaluate(() => plugin.tasks.items.find((x) => x.title === "Call the plumber").log.map((e) => e.text)), ["Left a message"], "log entry added by tapping");
+	const send = await page.locator(".ch-log-send").boundingBox();
+	expect(send.x + send.width <= 390, `send button fits: ${send.x + send.width}`);
 	await shot(page, "mobile-details-task");
 });
 

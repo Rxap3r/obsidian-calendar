@@ -824,3 +824,23 @@
 .ch-period-setting .setting-item-control { flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 .ch-period-custom { display: flex; gap: 6px; align-items: center; }
 .ch-period-num { width: 70px; }
+
+/* ---------------------------------------------------------------- progress log of tasks (1.9.2) */
+.ch-log { margin-bottom: 12px; }
+.ch-log-count { font-weight: normal; font-size: 0.85em; color: var(--text-muted); }
+.ch-log-entries { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
+.ch-log-empty { text-align: left; font-size: 0.9em; padding: 2px 0; }
+.ch-log-entry { background: var(--background-secondary); border-radius: var(--radius-s); padding: 6px 10px; border-left: 3px solid var(--ch-event-color, var(--interactive-accent)); }
+.ch-log-entry-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ch-log-time { font-size: 0.78em; color: var(--text-muted); }
+.ch-log-actions { display: inline-flex; gap: 2px; }
+.ch-log-action { background: transparent; box-shadow: none; padding: 2px 4px; height: auto; color: var(--text-faint); }
+.ch-log-action:hover { color: var(--text-normal); }
+.ch-log-action svg { width: 13px; height: 13px; }
+.ch-log-text { white-space: pre-wrap; word-break: break-word; font-size: 0.9em; user-select: text; margin-top: 2px; }
+.ch-log-edit-field { display: block; width: 100%; max-width: none; box-sizing: border-box; resize: vertical; font: inherit; margin-top: 4px; }
+.ch-log-add { display: flex; align-items: flex-end; gap: 6px; margin-top: 8px; }
+.ch-log-input { flex: 1; min-width: 0; resize: none; font: inherit; min-height: var(--input-height, 30px); box-sizing: border-box; }
+.ch-log-send { flex: none; padding: 4px 10px; display: inline-flex; align-items: center; }
+.ch-log-send svg { width: 15px; height: 15px; }
+.ch-task-has-log { font-size: 0.9em; }

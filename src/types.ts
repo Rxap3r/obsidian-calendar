@@ -197,6 +197,8 @@ export interface OmniCalendarSettings {
 	tasksCalendarShowDone: boolean;
 	/** "Tasks today" section in the mini calendar. */
 	tasksInMiniCalendar: boolean;
+	/** Progress log of tasks (details view + "📝 n" hint in lists). Off hides it; entries are kept. */
+	tasksProgressLog: boolean;
 	/** @deprecated replaced by sidebarView (migrated on load). */
 	sidebarOnStartup?: SidebarView;
 	notesFolder: string;
@@ -259,6 +261,18 @@ export interface Task {
 	links: string[];
 	/** The event this task belongs to (1.8+). Stored only in Obsidian, also for Google / Outlook events. */
 	event?: TaskEventLink;
+	/** Progress log (1.9.2): timestamped entries, oldest first. Separate from subtasks. */
+	log?: TaskLogEntry[];
+}
+
+/** One entry of a task's progress log. */
+export interface TaskLogEntry {
+	id: string;
+	/** ms timestamp when the entry was written. Editing keeps it. */
+	at: number;
+	text: string;
+	/** ms timestamp of the last edit, if any. */
+	editedAt?: number;
 }
 
 /** A task's link to an event (or one occurrence of a repeating event). */
