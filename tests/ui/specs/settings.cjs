@@ -127,21 +127,21 @@ test("desktop: settings tab bar – a thin scrollbar only when the tabs don't fi
 	await page.waitForTimeout(100);
 	const state = () => page.evaluate(() => {
 		const bar = document.querySelector(".ch-settings-tabs");
-		return { more: bar.scrollWidth > bar.clientWidth, fade: bar.classList.contains("ch-more-right"), arrows: document.querySelectorAll(".ch-tabs-arrow").length };
+		return { more: bar.scrollWidth > bar.clientWidth, fade: bar.classList.contains("ch-more-right") };
 	});
 	await page.evaluate(() => (document.getElementById("settings-host").style.width = "900px"));
 	await page.waitForTimeout(150);
-	eq(await state(), { more: false, fade: false, arrows: 0 }, "wide window: nothing to scroll, no fade");
+	eq(await state(), { more: false, fade: false }, "wide window: nothing to scroll, no fade");
 	await page.locator("#settings-host").screenshot({ path: path.join(SHOTS, "settings-tabs-wide.png") });
 	await page.evaluate(() => (document.getElementById("settings-host").style.width = "300px"));
 	await page.waitForTimeout(150);
-	eq(await state(), { more: true, fade: true, arrows: 0 }, "narrow: scrolls, right edge faded");
+	eq(await state(), { more: true, fade: true }, "narrow: scrolls, right edge faded");
 	// The test browser hides all scrollbars, so this checks that ours isn't switched off (Obsidian shows it).
 	eq(await page.evaluate(() => getComputedStyle(document.querySelector(".ch-settings-tabs")).scrollbarWidth !== "none"), true, "scrollbar on");
 	await page.locator("#settings-host").screenshot({ path: path.join(SHOTS, "settings-tabs-narrow.png") });
 	await page.evaluate(() => (document.getElementById("settings-host").style.width = "900px"));
 	await page.waitForTimeout(150);
-	eq(await state(), { more: false, fade: false, arrows: 0 }, "widened again");
+	eq(await state(), { more: false, fade: false }, "widened again");
 });
 
 test("mobile: settings tabs stay on one line and scroll", { mobile: true, width: 340 }, async ({ page }) => {

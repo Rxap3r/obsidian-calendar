@@ -299,11 +299,10 @@ test("desktop: Tasks in the sidebar – the list bar has a visible scrollbar and
 		const bar = document.querySelector("#side .ch-tasks-bar");
 		return { left: Math.round(bar.scrollLeft), more: bar.scrollWidth > bar.clientWidth,
 			// The test browser hides all scrollbars, so this checks that ours isn't switched off (Obsidian shows it).
-			scrollbar: getComputedStyle(bar).scrollbarWidth !== "none", fadeRight: bar.classList.contains("ch-more-right"), fadeLeft: bar.classList.contains("ch-more-left"),
-			arrows: document.querySelectorAll("#side .ch-tabs-arrow").length };
+			scrollbar: getComputedStyle(bar).scrollbarWidth !== "none", fadeRight: bar.classList.contains("ch-more-right"), fadeLeft: bar.classList.contains("ch-more-left") };
 	});
 	let s = await state();
-	eq([s.more, s.scrollbar, s.fadeRight, s.fadeLeft, s.arrows], [true, true, true, false, 0], "doesn't fit: scrollbar on, right edge faded, no arrows");
+	eq([s.more, s.scrollbar, s.fadeRight, s.fadeLeft], [true, true, true, false], "doesn't fit: scrollbar on, right edge faded");
 	await page.locator("#side").screenshot({ path: path.join(SHOTS, "tasks-sidebar-bar-scrollbar.png") });
 	// Mouse wheel over the bar scrolls it sideways.
 	const box = await page.locator("#side .ch-tasks-bar").boundingBox();

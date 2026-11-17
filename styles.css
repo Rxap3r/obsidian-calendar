@@ -436,8 +436,7 @@
 
 /* ---------------------------------------------------------------- settings tabs */
 .ch-settings-tabs-wrap {
-	/* Arrows (only when needed) sit beside the tab bar, not on top of it. */
-	display: flex; align-items: center; gap: 4px;
+	/* Keeps the tab bar at the top while the settings scroll. */
 	position: sticky; top: 0; z-index: 2; background: var(--ch-settings-bg, var(--background-primary));
 	border-bottom: 1px solid var(--background-modifier-border);
 	margin-bottom: 12px; padding-top: 4px;
@@ -449,7 +448,7 @@
 	background: var(--ch-settings-bg, var(--background-primary));
 }
 .ch-settings-tabs {
-	flex: 1; min-width: 0;
+	min-width: 0;
 	/* One line; swipe / scroll sideways when the tabs do not fit (mobile). */
 	display: flex; flex-wrap: nowrap; gap: 4px;
 	overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
