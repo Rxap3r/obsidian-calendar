@@ -750,7 +750,6 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 
 - CalDAV write support (iCloud, Fastmail, Nextcloud, …)
 - Editing the repeat rule of Google / Outlook series
-- Resize events by dragging their edge
 - Daily-notes integration (open or create the daily note from a day)
 
 ## License
