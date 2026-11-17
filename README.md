@@ -219,6 +219,13 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   - Today / Tomorrow / Next week / No date;
   - priority;
   - delete.
+- **Progress log** (new in **1.9.2**): in a task's details there's a **Progress log** section. Type what you did or what
+  happened and press **Enter** (on a phone: the send button). Each entry is saved with its **date and time**, like a sticky
+  note; new entries go **below** the older ones, so the history reads top to bottom. It's separate from subtasks: subtasks
+  are things *to do*, the log records what was *done*.
+  - Correct an entry with the **pencil** (its original time stays, it's marked *edited*), or delete it with the **bin** (asks first).
+  - Tasks with entries show **📝 3** (the number of entries) in the task lists.
+  - Don't need it? *Settings → Omni Calendar → Tasks → Progress log* hides it everywhere. Turning it off deletes nothing.
 - **Shown under each task:** the time or time range (e.g. *10:30–11:45*), the list (when you have more than one), subtask progress (*1/3*, click to show or hide the subtasks), and **linked notes** as small chips that open the note.
 
 **The task dialog:**
@@ -288,7 +295,7 @@ the heading opens the Tasks page. Turn it off in *Settings → Omni Calendar →
 Tasks are stored with your local events in the plugin's `data.json`, so they sync the same way (see [Where data is stored](#where-data-is-stored)).
 
 Coming next (see the [roadmap](#roadmap-ideas)):
-- the **progress log** for tasks, then *Create note* and short descriptions for tasks and subtasks (the next steps of the details view);
+- *Create note* and short descriptions for tasks and subtasks (the next step of the details view);
 - **1.10:** repeating tasks, and tasks on repeating events that repeat with them.
 
 ## Which connection method should I use?
@@ -586,6 +593,7 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 | **Tasks** | Use tasks | Main switch for everything task-related. Off hides it but deletes nothing |
 | | Tasks in sidebar | Shows the Tasks page in the sidebar (same side as the calendar), independent of mini calendar / day planner |
 | | Done section in lists | Collapsed "Done" section in your lists and *All* |
+| | Progress log | Dated updates on a task in its details view, "📝 3" in the lists (on by default). Off only hides it |
 | | Upcoming list | How far ahead the "Upcoming" list looks: standard periods (default 7 days) or custom |
 | | Tasks in the calendar | Timed tasks as light blocks in Week/Day, one counter per day for the others (on by default) |
 | | Completed tasks in the calendar | *Struck through* (default) or *Hidden* |
@@ -734,7 +742,7 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 - The mini calendar gets a small **"Tasks today"** section.
 - **Linked notes on events:** the same as on tasks, for local and Google/Outlook events. For Google/Outlook events the links are stored only in Obsidian. The existing single "Create note" becomes one of the linked notes, and older events with a note keep it.
 
-**Version 1.9: details view for events and tasks – in steps (step a ✅ in 1.9.0: the view, Edit notes, quick actions, the setting; next: b) progress log, c) notes and descriptions for tasks and subtasks)**
+**Version 1.9: details view for events and tasks – in steps (step a ✅ in 1.9.0: the view, Edit notes, quick actions, the setting; step b ✅ in 1.9.2: progress log; next: c) notes and descriptions for tasks and subtasks)**
 - **Clicking** an event or task opens a **large read-only view** by default, instead of the edit dialog. Nothing can be changed by accident.
   - **Event:** title, date/time, calendar, location, description, linked notes, and its tasks (with "2/5").
   - **Task:** title, date/time range, list, priority, notes, subtasks, linked notes, and its event.
@@ -749,7 +757,7 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
   - a setting *"Clicking opens: Details view (default) / Edit dialog directly"*;
   - right-click / long-press still offers *Edit* directly.
 
-**Planned with the details view: progress log for tasks (maintainer's idea)**
+**Progress log for tasks (maintainer's idea) – ✅ done in 1.9.2**, with a setting to hide it (*Tasks → Progress log*)
 - Each task gets a **log** section: type what you've already done or what happened, then **send** it.
 - Each entry stays in the task like a **sticky note** with **date and time**. New entries go **below** the older ones, so the history reads top to bottom.
 - It's different from subtasks: those are things *to do*, the log records what was *done*.

@@ -1,6 +1,6 @@
 import { Events } from "obsidian";
 import type OmniCalendarPlugin from "./main";
-import { SmartListId, Subtask, Task, TaskData, TaskEventLink, TaskList, TaskPriority } from "./types";
+import { SmartListId, Subtask, Task, TaskData, TaskEventLink, TaskList, TaskLogEntry, TaskPriority } from "./types";
 import type { EventNow } from "./store";
 import { addDays, dateLang, dayDiff, MS_DAY, parseLocal, startOfDay, timeKeyToMinutes, toDateKey, uid } from "./dateUtils";
 
@@ -52,6 +52,7 @@ export function normalizeTaskData(raw: unknown): TaskData {
 			createdAt: typeof t.createdAt === "number" ? t.createdAt : Date.now(),
 			links: (Array.isArray(t.links) ? t.links : []).filter((p) => typeof p === "string"),
 			event: normalizeEventLink(t.event),
+			log: normalizeLog(t.log),
 		}));
 	for (const t of items) {
 		if (!t.date) t.start = undefined;
@@ -61,6 +62,21 @@ export function normalizeTaskData(raw: unknown): TaskData {
 }
 
 /** A task's event link, or undefined when it is incomplete. */
+/** Progress log entries: valid ones only, oldest first; undefined when there are none. */
+function normalizeLog(raw: unknown): TaskLogEntry[] | undefined {
+	if (!Array.isArray(raw)) return undefined;
+	const log: TaskLogEntry[] = raw
+		.filter((e) => e && typeof e.at === "number" && Number.isFinite(e.at) && typeof e.text === "string" && e.text.trim())
+		.map((e) => ({
+			id: typeof e.id === "string" && e.id ? e.id : uid(),
+			at: e.at,
+			text: e.text,
+			...(typeof e.editedAt === "number" && Number.isFinite(e.editedAt) ? { editedAt: e.editedAt } : {}),
+		}))
+		.sort((a, b) => a.at - b.at);
+	return log.length ? log : undefined;
+}
+
 function normalizeEventLink(raw: unknown): TaskEventLink | undefined {
 	const e = raw as Partial<TaskEventLink> | undefined;
 	if (!e || typeof e.key !== "string" || !e.key || !/^\d{4}-\d{2}-\d{2}$/.test(e.date ?? "")) return undefined;
@@ -301,6 +317,31 @@ export class TaskStore extends Events {
 		const s = this.get(taskId)?.subtasks.find((x) => x.id === subId);
 		if (!s) return;
 		s.done = done;
+		await this.save();
+	}
+
+	/** Progress log: add an entry (now) at the bottom. */
+	async addLog(taskId: string, text: string) {
+		const t = this.get(taskId);
+		if (!t || !text.trim()) return;
+		(t.log ??= []).push({ id: uid(), at: Date.now(), text: text.trim() });
+		await this.save();
+	}
+
+	/** Change an entry's text; its original time stays. */
+	async editLog(taskId: string, entryId: string, text: string) {
+		const e = this.get(taskId)?.log?.find((x) => x.id === entryId);
+		if (!e || !text.trim() || text.trim() === e.text) return;
+		e.text = text.trim();
+		e.editedAt = Date.now();
+		await this.save();
+	}
+
+	async removeLog(taskId: string, entryId: string) {
+		const t = this.get(taskId);
+		if (!t?.log) return;
+		t.log = t.log.filter((x) => x.id !== entryId);
+		if (!t.log.length) t.log = undefined;
 		await this.save();
 	}
 

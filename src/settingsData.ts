@@ -64,7 +64,7 @@ export function normalizePluginData(loaded: Partial<PluginData> | null | undefin
 	// 0 = never.
 	const deleteAfter = Number(settings.tasksDeleteDoneAfterDays);
 	settings.tasksDeleteDoneAfterDays = Number.isFinite(deleteAfter) && deleteAfter >= 1 ? Math.min(3650, Math.round(deleteAfter)) : 0;
-	for (const k of ["tasksInCalendar", "tasksCalendarShowDone", "tasksInMiniCalendar"] as const) {
+	for (const k of ["tasksInCalendar", "tasksCalendarShowDone", "tasksInMiniCalendar", "tasksProgressLog"] as const) {
 		if (typeof settings[k] !== "boolean") settings[k] = DEFAULT_SETTINGS[k];
 	}
 	const tasks = normalizeTaskData(raw.tasks);

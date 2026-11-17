@@ -16,6 +16,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.9.2** – Progress log for tasks: dated updates in a task's details view (Enter or the send button), added at the
+  bottom, can be corrected (original time kept) or deleted; "📝 3" in the lists. New setting *Tasks → Progress log* hides it
+  (deletes nothing).
 - **1.9.1** – Setting *Language of dates* (follows Obsidian's language by default); the Microsoft sign-in dialog says
   which sign-in page opens; a cleaner sign-in guide with a troubleshooting section, incl. company accounts that need
   an admin's approval.

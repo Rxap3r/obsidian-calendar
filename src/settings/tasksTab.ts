@@ -42,6 +42,16 @@ export function tasksTab(ctx: SettingsContext, el: HTMLElement) {
 				store.trigger("changed");
 			})
 		);
+	new Setting(el)
+		.setName("Progress log")
+		.setDesc("Lets you add dated updates to a task in its details view, shown as “📝 3” in the lists. Turning it off only hides the log; nothing is deleted.")
+		.addToggle((t) =>
+			t.setValue(s.tasksProgressLog).onChange(async (v) => {
+				s.tasksProgressLog = v;
+				await ctx.save();
+				store.trigger("changed");
+			})
+		);
 	periodSetting(ctx, el, "Upcoming list", "How far ahead the “Upcoming” task list looks (today plus this many days). Later tasks are under “All”.",
 		s.tasksUpcomingDays, {},
 		1, 3650, (v) => { s.tasksUpcomingDays = v; store.trigger("changed"); });

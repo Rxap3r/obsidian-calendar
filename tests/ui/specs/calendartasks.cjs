@@ -1,5 +1,5 @@
 /* Tasks in the calendar, tasks on events, linked notes on events, Tasks today (1.8). Loaded by tests/ui/run.cjs – see tests/README.md. */
-module.exports = ({ test, expect, eq, shot, path, SHOTS }) => {
+module.exports = ({ test, expect, eq, settle, shot, path, SHOTS }) => {
 
 const dayView = async (page, d = 14) => {
 	await page.evaluate((d) => view.goTo(new Date(2026, 10, d), "day"), d);
@@ -9,35 +9,35 @@ const dayView = async (page, d = 14) => {
 test("desktop: event dialog – add tasks, tick off, '2/5' hint on the event, task shows its event", {}, async ({ page }) => {
 	await dayView(page);
 	await page.locator(".ch-tg-event", { hasText: "Design review" }).click();
-	await page.waitForTimeout(100); // the dialog puts the cursor in the title first
+	await settle(page); // the dialog puts the cursor in the title first
 	expect(await page.locator(".ch-event-tasks").isVisible(), "Tasks section in the event dialog");
 	for (const t of ["Prepare slides", "Send summary"]) {
 		await page.fill(".ch-event-task-add", t);
 		await page.press(".ch-event-task-add", "Enter");
 	}
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.locator(".ch-event-task-title").allTextContents(), ["Prepare slides", "Send summary"], "tasks listed in the dialog");
 	eq(await page.textContent(".ch-event-tasks-progress"), "0/2", "progress in the dialog");
 	await page.locator(".ch-event-task", { hasText: "Send summary" }).locator(".ch-task-checkbox").click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.textContent(".ch-event-tasks-progress"), "1/2", "ticked off in the dialog");
 	const stored = await page.evaluate(() => plugin.tasks.items.map((t) => [t.title, t.date, t.event?.key.startsWith("local:"), t.event?.title]));
 	eq(stored, [["Prepare slides", "2026-11-14", true, "Design review"], ["Send summary", "2026-11-14", true, "Design review"]], "stored with the event and its day");
 	await shot(page, "event-dialog-tasks");
 	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.locator(".ch-tg-event", { hasText: "Design review" }).locator(".ch-task-hint").textContent(), "1/2", "hint on the event block");
 	// The same in the month view and the agenda.
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "month"));
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.locator(".ch-chip", { hasText: "Design review" }).locator(".ch-task-hint").textContent(), "1/2", "hint in the month view");
 	// Event tasks appear in the task lists with their event; a click opens the event.
 	await page.evaluate(() => mountTasks());
 	await page.locator('.ch-tasks-nav-item[data-list="today"]').click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.locator(".ch-task", { hasText: "Prepare slides" }).locator(".ch-task-meta-event").textContent(), "Design review", "event shown in the list");
 	await page.locator(".ch-task", { hasText: "Prepare slides" }).locator(".ch-task-meta-event").click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.inputValue(".ch-title-input"), "Design review", "opens the event dialog");
 });
 
@@ -45,17 +45,17 @@ test("desktop: tasks and notes on a Google event are kept in Obsidian only", {},
 	await page.evaluate(() => { window.updates = []; plugin.store.updateRemote = async (o, i) => window.updates.push(i); });
 	await dayView(page, 15);
 	await page.locator(".ch-tg-event", { hasText: "Dentist" }).click();
-	await page.waitForTimeout(100); // the dialog puts the cursor in the title first
+	await settle(page); // the dialog puts the cursor in the title first
 	await page.fill(".ch-event-task-add", "Bring insurance card");
 	await page.press(".ch-event-task-add", "Enter");
 	await page.locator(".ch-link-note-btn").click();
 	await page.evaluate(async () => { const m = window.lastModal; await m.onChooseSuggestion(m.getSuggestions("Weekly")[0]); m.close(); });
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.locator(".ch-event-notes .ch-task-link-name").allTextContents(), ["Weekly"], "note listed in the dialog");
 	const r = await page.evaluate(() => ({ links: plugin.data.eventLinks, task: plugin.tasks.items[0].event.key, updates: window.updates.length }));
 	eq(r, { links: { "gcal:g1": ["Meetings/Weekly.md"] }, task: "gcal:g1", updates: 0 }, "stored locally, nothing sent to Google");
 	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	// Right-click menu: open the linked note, create a note, link more, add a task.
 	await page.locator(".ch-tg-event", { hasText: "Dentist" }).click({ button: "right" });
 	const items = await page.evaluate(() => window.lastMenu.items.map((i) => i.t));
@@ -72,13 +72,13 @@ test("desktop: 'Create note' adds the note to the event's linked notes", {}, asy
 	await page.locator(".ch-tg-event", { hasText: "Overlapping call" }).click();
 	eq(await page.textContent(".ch-create-note-btn"), "Create note", "button label");
 	await page.locator(".ch-create-note-btn").click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	const r = await page.evaluate(() => ({ links: plugin.data.events.find((e) => e.title === "Overlapping call").links, opened: window.openedFile }));
 	eq(r, { links: ["Calendar/2026-11-14 Overlapping call.md"], opened: "Calendar/2026-11-14 Overlapping call.md" }, "linked and opened");
 	// A single repeat of a series keeps its own notes.
 	await page.locator(".ch-tg-event", { hasText: "Standup" }).click();
 	await page.locator(".ch-create-note-btn").click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	const s = await page.evaluate(() => ({ map: Object.keys(plugin.data.eventLinks), series: plugin.data.events.find((e) => e.title === "Standup").links }));
 	eq(s.series, undefined, "not on the whole series");
 	expect(s.map.length === 1 && /^local:.+@2026-11-14$/.test(s.map[0]), `kept for this repeat: ${s.map}`);
@@ -92,7 +92,7 @@ test("mobile: event dialog with tasks and notes fits the phone", { mobile: true 
 		for (const t of ["Book room", "Print handouts", "Invite guests"]) await plugin.tasks.upsert(plugin.tasks.draft({ title: t, date: "2026-11-14", event: { key, title: occ.title, date: "2026-11-14" } }));
 	});
 	await page.locator(".ch-tg-event", { hasText: "Design review" }).tap();
-	await page.waitForTimeout(150);
+	await settle(page);
 	const w = await page.evaluate(() => document.documentElement.scrollWidth);
 	expect(w <= 390, `no sideways scrolling: ${w}`);
 	await page.locator(".ch-event-tasks").scrollIntoViewIfNeeded();
@@ -116,7 +116,7 @@ const seedTasks = (page) => page.evaluate(async () => {
 test("desktop: tasks in the week view – light blocks, one counter per day, tick off, hide done", {}, async ({ page }) => {
 	await seedTasks(page);
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "week"));
-	await page.waitForTimeout(200);
+	await settle(page);
 	eq(await page.locator(".ch-tg-task .ch-tg-task-title").allTextContents(), ["Call bank", "Pay rent"], "timed tasks as blocks");
 	eq(await page.locator(".ch-tg-task", { hasText: "Call bank" }).locator(".ch-tg-task-time").textContent(), "13:00–14:30", "time range");
 	const counter = page.locator('.ch-tg-allday-cell .ch-day-tasks[data-date="2026-11-14"]');
@@ -125,27 +125,27 @@ test("desktop: tasks in the week view – light blocks, one counter per day, tic
 	await page.screenshot({ path: path.join(SHOTS, "week-tasks.png"), clip: { x: 0, y: 0, width: 1120, height: 900 } });
 	// Tick off in the calendar.
 	await page.locator(".ch-tg-task", { hasText: "Pay rent" }).locator(".ch-task-checkbox").click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	expect(await page.locator(".ch-tg-task.is-done", { hasText: "Pay rent" }).count() === 1, "done task struck through");
 	// Counter → day list: add a task, tick one off.
 	await counter.click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.locator(".ch-day-tasks-modal .ch-task-title").allTextContents(), ["Call bank", "Water plants", "Pay rent", "Buy milk"], "day list: open first (timed before untimed), then done");
 	await page.fill(".ch-day-tasks-add", "Post letter");
 	await page.press(".ch-day-tasks-add", "Enter");
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.evaluate(() => plugin.tasks.items.find((t) => t.title === "Post letter").date), "2026-11-14", "added for that day");
 	await shot(page, "day-tasks-modal");
 	await page.evaluate(() => window.lastModal.close());
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.locator('.ch-tg-allday-cell .ch-day-tasks[data-date="2026-11-14"]').textContent(), "2", "counter updated");
 	// Setting: hide completed tasks.
 	await page.evaluate(() => { plugin.settings.tasksCalendarShowDone = false; plugin.tasks.trigger("changed"); });
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.locator(".ch-tg-task .ch-tg-task-title").allTextContents(), ["Call bank"], "done task hidden");
 	// Setting: no tasks in the calendar.
 	await page.evaluate(() => { plugin.settings.tasksInCalendar = false; plugin.tasks.trigger("changed"); });
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.locator(".ch-tg-task, .ch-day-tasks").count(), 0, "tasks off in the calendar");
 });
 
@@ -211,21 +211,21 @@ test("desktop: month view badge, agenda counter, mini calendar 'Tasks today'", {
 test("mobile: tasks in the compact month and in the day view", { mobile: true }, async ({ page }) => {
 	await seedTasks(page);
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "month"));
-	await page.waitForTimeout(200);
+	await settle(page);
 	expect(await page.locator(".ch-mc-taskmark").count() >= 2, "task marks in the compact grid");
 	eq(await page.locator('.ch-mc-day-head .ch-day-tasks').textContent(), "3", "counter for the selected day");
 	await shot(page, "mobile-month-tasks");
 	await page.locator('.ch-mc-day-head .ch-day-tasks').tap();
-	await page.waitForTimeout(150);
+	await settle(page);
 	const w = await page.evaluate(() => document.documentElement.scrollWidth);
 	expect(w <= 390, `day tasks fit the phone: ${w}`);
 	await shot(page, "mobile-day-tasks-modal");
 	await page.evaluate(() => window.lastModal.close());
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "day"));
-	await page.waitForTimeout(200);
+	await settle(page);
 	eq(await page.locator(".ch-tg-task").count(), 2, "task blocks in the day view");
 	await page.locator(".ch-tg-task", { hasText: "Call bank" }).tap();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.inputValue(".ch-title-input"), "Call bank", "tap opens the task, not a new event");
 	eq(await page.evaluate(() => __eventMod.EventModal.openCount), 0, "no event dialog");
 });
@@ -240,18 +240,19 @@ const seedEventTaskWithSubtasks = (page) => page.evaluate(async () => {
 	}));
 });
 
-for (const mobile of [false, true]) {
-	test(`${mobile ? "mobile" : "desktop"}: subtasks of an event's task are shown and tickable in the event dialog`, { mobile }, async ({ page }) => {
+{ // Phone only: tapping is the stricter case (same handlers as clicking), plus it checks that the dialog fits.
+	const mobile = true;
+	test(`mobile: subtasks of an event's task are shown and tickable in the event dialog`, { mobile }, async ({ page }) => {
 		await seedEventTaskWithSubtasks(page);
 		await dayView(page);
 		const ev = page.locator(".ch-tg-event", { hasText: "Design review" });
 		if (mobile) await ev.tap(); else await ev.click();
-		await page.waitForTimeout(150);
+		await settle(page);
 		eq(await page.locator(".ch-event-task-subcount").textContent(), "1/2", "subtask progress next to the task");
 		eq(await page.locator(".ch-event-subtask-title").allTextContents(), ["Collect numbers", "Draft outline"], "subtasks listed");
 		const box = page.locator(".ch-event-subtask", { hasText: "Collect numbers" }).locator(".ch-task-checkbox");
 		if (mobile) await box.tap(); else await box.click();
-		await page.waitForTimeout(150);
+		await settle(page);
 		eq(await page.evaluate(() => plugin.tasks.items[0].subtasks.map((x) => x.done)), [true, true], "ticked off from the event dialog");
 		eq(await page.locator(".ch-event-task-subcount").textContent(), "2/2", "progress updated");
 		eq(await page.evaluate(() => window.lastModal.constructor.name.includes("Task")), false, "ticking didn't open the task dialog");
@@ -259,7 +260,7 @@ for (const mobile of [false, true]) {
 		await shot(page, `${mobile ? "mobile-" : ""}event-dialog-subtasks`);
 		const count = page.locator(".ch-event-task-subcount");
 		if (mobile) await count.tap(); else await count.click();
-		await page.waitForTimeout(100);
+		await settle(page);
 		eq(await page.locator(".ch-event-subtask").count(), 0, "folded away with a click on the count");
 		if (mobile) {
 			const w = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -287,21 +288,21 @@ test("desktop: deleting an event deletes its tasks (after asking), other tasks s
 	// From the dialog: asks, Cancel keeps everything.
 	await page.locator(".ch-tg-event", { hasText: "Design review" }).click();
 	await page.locator(".ch-modal-buttons button", { hasText: /^Delete$/ }).click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	expect((await page.locator(".modal p").last().textContent()).includes("Its 2 tasks will be deleted too."), "asks and says how many tasks");
 	await page.locator(".modal button", { hasText: "Cancel" }).last().click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await taskTitles(page), ["Slides", "Summary", "Agenda", "Standalone"], "cancel keeps the tasks");
 	await page.locator(".ch-modal-buttons button", { hasText: /^Delete$/ }).first().click();
 	await page.locator(".modal .mod-warning", { hasText: "Delete" }).last().click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await taskTitles(page), ["Agenda", "Standalone"], "event and its tasks deleted");
 	eq(await page.evaluate(() => plugin.data.events.some((e) => e.title === "Design review")), false, "event deleted");
 	// From the right-click menu.
 	await page.locator(".ch-tg-event", { hasText: "Overlapping call" }).click({ button: "right" });
 	await page.evaluate(() => window.lastMenu.items.find((i) => i.t === "Delete").fn());
 	await page.locator(".modal .mod-warning", { hasText: "Delete" }).last().click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await taskTitles(page), ["Standalone"], "menu delete takes the tasks too");
 });
 
@@ -314,13 +315,13 @@ test("desktop: deleting one repeat deletes only that repeat's tasks; Google seri
 	await page.locator(".ch-tg-event", { hasText: "Standup" }).click({ button: "right" });
 	await page.evaluate(() => window.lastMenu.items.find((i) => i.t === "Delete this occurrence").fn());
 	await page.locator(".modal .mod-warning", { hasText: "Delete" }).last().click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await taskTitles(page), ["Tomorrow's standup task", "Book table"], "only the 14th's task deleted");
 	await page.locator(".ch-tg-event", { hasText: "Team lunch" }).click({ button: "right" });
 	await page.evaluate(() => window.lastMenu.items.find((i) => i.t === "Delete series").fn());
 	expect((await page.locator(".modal p").last().textContent()).includes("Its task will be deleted too."), "Google delete mentions the task");
 	await page.locator(".modal .mod-warning", { hasText: "Delete" }).last().click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq([await page.evaluate(() => window.dels), await taskTitles(page)], [[true], ["Tomorrow's standup task"]], "series deleted with its task");
 });
 
@@ -336,7 +337,7 @@ test("desktop: moving an event to another calendar keeps its tasks and notes", {
 	await page.locator(".ch-tg-event", { hasText: "Dentist" }).click();
 	await page.selectOption(".modal select", "personal");
 	await page.click(".ch-modal-buttons button.mod-cta");
-	await page.waitForTimeout(200);
+	await settle(page);
 	const r = await page.evaluate(() => {
 		const ev = plugin.data.events.find((e) => e.title === "Dentist (Google)");
 		return { key: plugin.tasks.items[0].event.key === `local:${ev.id}`, links: ev.links, map: plugin.data.eventLinks };
@@ -347,7 +348,7 @@ test("desktop: moving an event to another calendar keeps its tasks and notes", {
 	await page.locator(".ch-tg-event", { hasText: "Dentist" }).click();
 	await page.selectOption(".modal select", "gcal");
 	await page.click(".ch-modal-buttons button.mod-cta");
-	await page.waitForTimeout(200);
+	await settle(page);
 	eq(await page.evaluate(() => [plugin.tasks.items[0].event.key, plugin.data.eventLinks]), ["gcal:new1", { "gcal:new1": ["Inbox.md"] }], "local → Google");
 });
 
@@ -357,16 +358,16 @@ test("desktop: a task whose event is gone is marked; clicking offers keep or del
 		await mountTasks();
 	});
 	await page.locator('.ch-tasks-nav-item[data-list="today"]').click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.locator(".ch-task-meta-event.is-gone").count(), 2, "marked as deleted");
 	await page.locator(".ch-task", { hasText: "Orphan A" }).locator(".ch-task-meta-event").click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.locator(".modal button", { hasText: "Keep task without event" }).click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.locator(".ch-task", { hasText: "Orphan B" }).locator(".ch-task-meta-event").click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.locator(".modal button", { hasText: "Delete task" }).click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.evaluate(() => plugin.tasks.items.map((t) => [t.title, !!t.event])), [["Orphan A", false]], "kept without event / deleted");
 });
 
@@ -410,7 +411,7 @@ test("desktop: tasks and notes typed into a new event are attached when it is sa
 	// Cancel forgets everything.
 	await newEventWithExtras(page, "Never saved");
 	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.evaluate(() => plugin.tasks.items.length), 2, "cancel: no tasks added");
 });
 
@@ -432,7 +433,7 @@ test("desktop: new event in Google + Obsidian – tasks go with the first calend
 	eq(w.tasks.slice(2).map((t) => t[2]), [`local:${w.evId}@2026-11-20`, `local:${w.evId}@2026-11-20`], "first repeat");
 	eq(w.map[`local:${w.evId}@2026-11-20`], ["Inbox.md"], "note on the first repeat");
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 20), "day"));
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.locator(".ch-tg-event", { hasText: "Weekly sync" }).locator(".ch-task-hint").textContent(), "0/2", "the repeat shows its tasks");
 });
 
@@ -443,7 +444,7 @@ test("mobile: tasks in the new-event dialog", { mobile: true }, async ({ page })
 	await page.locator(".ch-event-tasks").scrollIntoViewIfNeeded();
 	await shot(page, "mobile-new-event-draft-tasks");
 	await page.locator(".ch-modal-buttons button.mod-cta").tap();
-	await page.waitForTimeout(200);
+	await settle(page);
 	eq((await attached(page, "Phone event")).tasks.length, 2, "saved with the event");
 });
 
@@ -491,17 +492,17 @@ const tracked = (page) => page.evaluate(() => plugin.tasks.items.filter((t) => t
 test("desktop: 'Track as task' – switch in the dialog, task in the lists, tick circle on the event, follows and goes with it", {}, async ({ page }) => {
 	await dayView(page);
 	await page.locator(".ch-tg-event", { hasText: "Design review" }).click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.locator(".ch-track-setting .checkbox-container").click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await tracked(page), [["Design review", "2026-11-14", "10:00", "11:30", false]], "task with the event's title, day and time");
 	eq(await page.locator(".ch-event-tasks-progress").textContent(), "", "not counted as one of the event's tasks");
 	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	// Calendar: no extra task block, a tick circle on the event instead.
 	eq(await page.locator(".ch-tg-task").count(), 0, "not drawn twice");
 	await page.locator(".ch-tg-event", { hasText: "Design review" }).locator(".ch-track-check").click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq((await tracked(page))[0][4], true, "ticked off in the calendar");
 	expect(await page.locator(".ch-tg-event.ch-event-done", { hasText: "Design review" }).count() === 1, "event struck through");
 	eq(await page.locator(".modal").count(), 0, "ticking didn't open the dialog");
@@ -511,45 +512,45 @@ test("desktop: 'Track as task' – switch in the dialog, task in the lists, tick
 		const ev = plugin.data.events.find((e) => e.title === "Design review");
 		await plugin.store.updateEvent(ev.id, { title: "Design review v2", start: "2026-11-16T14:00", end: "2026-11-16T15:00" });
 	});
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await tracked(page), [["Design review v2", "2026-11-16", "14:00", "15:00", true]], "follows the event");
 	// Task lists: marked "Event"; a click opens the event.
 	await page.evaluate(async () => { await plugin.tasks.setDone(plugin.tasks.items[0].id, false); await mountTasks(); });
 	await page.locator('.ch-tasks-nav-item[data-list="upcoming"]').click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.locator(".ch-task", { hasText: "Design review v2" }).locator(".ch-task-meta-event").textContent(), "Event", "marked as event");
 	await page.locator(".ch-task", { hasText: "Design review v2" }).locator(".ch-task-title").click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.inputValue(".ch-title-input"), "Design review v2", "opens the event dialog");
 	// Deleting the event takes the tracking entry with it, without asking (it has no other tasks).
 	await page.locator(".ch-modal-buttons button", { hasText: /^Delete$/ }).click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq([await tracked(page), await page.locator(".modal").count()], [[], 0], "gone with the event");
 });
 
 test("desktop: 'Track as task' – new events, Google events via the menu, not for repeats", {}, async ({ page }) => {
 	await page.evaluate(() => new __eventMod.EventModal(plugin, { start: new Date(2026, 10, 20, 9) }).open());
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.fill(".ch-title-input", "Workshop");
 	await page.locator(".ch-track-setting .checkbox-container").click();
 	await page.click(".ch-modal-buttons button.mod-cta");
-	await page.waitForTimeout(200);
+	await settle(page);
 	eq(await tracked(page), [["Workshop", "2026-11-20", "09:00", "10:00", false]], "new event tracked on save");
 	// Repeating new event: not tracked (comes with 1.9), says so.
 	await page.evaluate(() => new __eventMod.EventModal(plugin, { start: new Date(2026, 10, 21, 9) }).open());
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.fill(".ch-title-input", "Weekly");
 	await page.selectOption(".ch-repeat-row select", "weekly");
 	await page.locator(".ch-track-setting .checkbox-container").click();
 	await page.click(".ch-modal-buttons button.mod-cta");
-	await page.waitForTimeout(200);
+	await settle(page);
 	eq((await tracked(page)).length, 1, "repeating event not tracked");
 	expect(await page.evaluate(() => window.notices.some((n) => /repeating events/.test(n))), "says why");
 	// Google event via the right-click menu; repeats have no entry.
 	await dayView(page, 15);
 	await page.locator(".ch-tg-event", { hasText: "Dentist" }).click({ button: "right" });
 	await page.evaluate(() => window.lastMenu.items.find((i) => i.t === "Track as task").fn());
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq((await tracked(page))[1], ["Dentist (Google)", "2026-11-15", "14:00", "15:00", false], "Google event tracked (kept in Obsidian)");
 	await page.locator(".ch-tg-event", { hasText: "Dentist" }).click({ button: "right" });
 	const items = await page.evaluate(() => window.lastMenu.items.map((i) => i.t));
@@ -561,14 +562,14 @@ test("desktop: 'Track as task' – new events, Google events via the menu, not f
 test("mobile: 'Track as task' – switch and tick circle by tapping", { mobile: true }, async ({ page }) => {
 	await dayView(page);
 	await page.locator(".ch-tg-event", { hasText: "Design review" }).tap();
-	await page.waitForTimeout(150);
+	await settle(page);
 	await page.locator(".ch-track-setting .checkbox-container").tap();
 	await page.locator(".ch-track-setting").scrollIntoViewIfNeeded();
 	await shot(page, "mobile-track-as-task-dialog");
 	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).tap();
-	await page.waitForTimeout(150);
+	await settle(page);
 	await page.locator(".ch-tg-event", { hasText: "Design review" }).locator(".ch-track-check").tap();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq([(await tracked(page))[0][4], await page.locator(".modal").count()], [true, 0], "ticked off by tapping, no dialog");
 });
 
@@ -588,36 +589,36 @@ test("desktop: tracked event – progress of its tasks in the list; ticking it o
 	await trackedWithTasks(page);
 	await page.evaluate(() => mountTasks());
 	await page.locator('.ch-tasks-nav-item[data-list="today"]').click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	const row = page.locator(".ch-task", { has: page.locator(".ch-task-meta-event", { hasText: "Event" }) });
 	eq(await row.locator(".ch-task-meta-evtasks").textContent(), "1/3", "progress of the event's tasks on its row");
 	await shot(page, "tracked-event-progress");
 	// Cancel: nothing changes.
 	await row.locator(".ch-task-checkbox").first().click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	expect((await page.locator(".modal p").last().textContent()).includes("still has 2 open tasks"), "asks");
 	await page.locator(".modal button", { hasText: "Cancel" }).last().click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq((await doneStates(page))["Design review"], false, "cancel: not ticked off");
 	// Only the event.
 	await row.locator(".ch-task-checkbox").first().click();
 	await page.locator(".modal button", { hasText: "Only the event" }).click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await doneStates(page), { "Design review": true, Slides: false, Agenda: true, "Book room": false }, "only the event");
 	// Untick (no question), then tick off from the calendar: all.
 	await page.evaluate(async () => { const t = plugin.tasks.items.find((x) => x.title === "Design review"); await plugin.tasks.setDone(t.id, false); });
 	await page.evaluate(() => { document.getElementById("main").innerHTML = ""; document.getElementById("main").appendChild(view.contentEl); view.goTo(new Date(2026, 10, 14), "day"); });
-	await page.waitForTimeout(200);
+	await settle(page);
 	await page.locator(".ch-tg-event", { hasText: "Design review" }).locator(".ch-track-check").click();
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.locator(".modal button", { hasText: "Mark all as done" }).click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await doneStates(page), { "Design review": true, Slides: true, Agenda: true, "Book room": true }, "event and all its tasks");
 	// Nothing open any more: unticking and ticking again doesn't ask.
 	await page.evaluate(async () => { const t = plugin.tasks.items.find((x) => x.title === "Design review"); await plugin.tasks.setDone(t.id, false); });
-	await page.waitForTimeout(150);
+	await settle(page);
 	await page.locator(".ch-tg-event", { hasText: "Design review" }).locator(".ch-track-check").click();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq([await page.locator(".modal").count(), (await doneStates(page))["Design review"]], [0, true], "no question when nothing is open");
 });
 
@@ -625,12 +626,12 @@ test("mobile: ticking off a tracked event with open tasks – the question by ta
 	await trackedWithTasks(page);
 	await dayView(page);
 	await page.locator(".ch-tg-event", { hasText: "Design review" }).locator(".ch-track-check").tap();
-	await page.waitForTimeout(150);
+	await settle(page);
 	const w = await page.evaluate(() => document.documentElement.scrollWidth);
 	expect(w <= 390, `question fits the phone: ${w}`);
 	await shot(page, "mobile-tracked-event-question");
 	await page.locator(".modal button", { hasText: "Mark all as done" }).tap();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(Object.values(await doneStates(page)).every(Boolean), true, "all done");
 });
 

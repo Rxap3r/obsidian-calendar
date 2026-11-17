@@ -16,6 +16,9 @@ The maintainer merges PRs and pushes the release tag themselves.
 
 1. **Branch:** always work on **`dev-branch`**. Before starting, update it from `main`:
    `git fetch origin main && git merge --ff-only origin/main` (or a normal merge if needed). Never push to `main` directly.
+   **Cloud sessions (Claude Code on the web):** the session creates its own working branch (e.g. `ccr-…` or `claude/…`)
+   and says to push only there. The maintainer's standing instruction overrides that: work on `dev-branch` and push
+   to it directly; don't push to the session's own branch (it only clutters GitHub).
 2. **Fixes are collected, not released one by one (agreed with the maintainer).** When the maintainer reports a bug,
    fix it on `dev-branch` right away (with a test) and add a line under **Not released yet** in `CHANGELOG.md`.
    Write the line in plain language, saying what the user notices. Do **not** open a PR for each fix.
@@ -46,7 +49,7 @@ npm test             # build + tests/sync (Node) + tests/ui (headless Chromium) 
 ```
 
 - **Always run `npm test` before committing.** For UI changes, also look at the screenshots in `tests/.out/shots/`
-  and add or extend a test in the matching topic file in `tests/ui/specs/`. Open only that file, to save tokens. Test **desktop and mobile** (`{ mobile: true }`) for any UI change.
+  and add or extend a test in the matching topic file in `tests/ui/specs/`. Open only that file, to save tokens. Test **mobile** (`{ mobile: true }`) when layout, tapping or touch matters; don't add a desktop/mobile pair when the check doesn't depend on the screen (agreed with the maintainer, to keep the test count down). Wait with `settle(page)` instead of fixed pauses, except for drags, touch, scrolling and the sidebar (see `tests/README.md`).
 - **Release:** pushing a tag equal to `manifest.json`'s version (no `v` prefix) runs `.github/workflows/release.yml`,
   which attaches `main.js`, `manifest.json` and `styles.css` to a GitHub release. BRAT installs from that.
 - `main.js` and `dist/` are git-ignored build output.
@@ -254,7 +257,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - quick actions in the view (tick off the task or a subtask, open linked notes);
     - a setting "Clicking opens: Details view (default) / Edit dialog directly";
     - right-click / long-press still offers Edit.
-  - **Progress log for tasks (with the details view):**
+  - **Progress log for tasks (with the details view) – ✅ on `dev-branch` for 1.9.2:**
     - a task gets timestamped log entries (text + date/time), added via an input + send;
     - entries are shown oldest first, newest at the bottom, like sticky notes;
     - it's separate from subtasks;
@@ -292,33 +295,55 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Where we stopped (keep this section up to date at the end of a session)
 
-- **Released:** 1.8.0 (PR #28), 1.8.1 (PR #29), 1.8.2 (PR #30) and 1.8.3 (PR #31) were merged by the maintainer.
-- **1.8.4 (PR #32) and 1.8.5 (PR #33) were merged too.** 1.8.5 – a tracked event's row shows its event tasks'
-  progress; ticking it off with open tasks asks *Only the event* / *Mark all as done* (`toggleDone` in
-  `views/tasks/helpers.ts`, used everywhere a task is ticked off). Decided with the maintainer: event tasks stay separate
-  tasks, **not** subtasks of the tracked event.
-- **In 1.8.4 (released):** "Track as task", and resize events by dragging their top / bottom edge
-  (`views/calendar/eventResize.ts`; the range preview helpers shared with drag-to-create are in `views/calendar/ranges.ts`).
-- **In 1.8.3 (released):** timed events over several days stay in the hour grid (one block
-  per day, sticky label), instead of the all-day row. See *Not released yet* in `CHANGELOG.md`.
-  Plus the setting `multiDayTimed` (Display → *Events over several days*): "grid" (default) or "allday" (all-day row,
-  chip with the whole span "Mon 09:00 – Tue 10:00" on a second line; `spanLabel`/`spansDays` in `views/shared.ts`).
-- **Waiting for the maintainer to test on desktop and phone:** creating a Google/Outlook event with tasks in the new-event
-  dialog (relies on the real service returning the new id); moving events with tasks between Obsidian and Google;
-  multi-day drag to create; tasks following a moved event.
-- **Decisions from the maintainer (1.8.x):**
-  - subtasks on event tasks are shown in the event dialog (not forbidden);
-  - event tasks go to the default task list; no list picker in the event's quick add (would be clutter);
-  - tasks of a deleted event are deleted with it.
-- **1.9.0 (details view step a, PR #34) was merged. 1.9.1 is in a pull request**; once it is merged, the next change on
-  `dev-branch` needs a new version number. 1.9.1 also reworked the sign-in guide (README *Troubleshooting sign-in*;
-  the maintainer's company account needs admin consent by company policy, ICS publishing is disabled there). 1.9.1 – setting *Language of
-  dates* (`dateLanguage`: obsidian / device / en). All date formatting must use `formatDate` or `dateLang()` from
-  `dateUtils.ts`, never `toLocaleDateString(undefined, …)`. Next: step b (progress log), then c, then 1.10 (repeating).
-  Tests: the UI test setup starts with `clickOpens = "edit"` (most tests drive the edit dialogs); `specs/details.cjs`
-  switches back to the default.
-- **"Track as task" (in 1.8.4):** `task.event.self = true` marks the task that *is* the event (`TaskStore.tracked` /
-  `setTracked`; `forEvent` leaves it out, so it's not one of the event's "2/5"). Title, day and time mirror the event
-  (`followEvents` + `eventNowOf` in `store.ts`). Not drawn as a task block; the event gets `trackedMark` (tick circle,
-  `ch-event-done`) in `views/shared.ts`. In task lists a click opens the event; its menu has done / open event / stop
-  tracking only (no priority: not reachable by tapping). Off by default; not for repeats until 1.10.
+**State:** everything up to **1.9.1** is merged and released (tags 1.8.0 … 1.9.1, PRs #28–#35). **1.9.2** (progress log
+for tasks = details view step b, setting `tasksProgressLog`) is in a PR from `dev-branch`; once it is merged and tagged,
+*Not released yet* is empty and the **next change needs 1.9.3** (or 1.10.0 for a bigger feature – ask if unsure).
+
+**Next on the roadmap (agreed order):**
+1. **Step c** – "Create note" for tasks and subtasks, linked notes per subtask, short subtask descriptions.
+2. **1.10** – repeating tasks, tasks on repeating events per repeat, *Track as task* for repeats.
+3. Later: reminders and notifications (README roadmap), then the "Other ideas".
+
+**Still to be tested by the maintainer on real devices** (only covered by the automated tests so far): creating a
+Google/Outlook event with tasks in the new-event dialog (needs the real service to return the new id); moving events
+with tasks between Obsidian and Google; multi-day drag to create; tasks following a moved event; the sticky label of
+events that continue from the previous day; *Language of dates* with Obsidian in another language.
+
+**What was built in 1.8.x–1.9.x (where to look):**
+- 1.8.0: tasks in the calendar (`views/calendar/tasks.ts`, `DayTasksModal`), tasks and linked notes on events
+  (`eventLinks.ts`, `views/eventExtras.ts`, `views/linkedNotes.ts`), *Tasks today* in the mini calendar.
+- 1.8.1: subtasks shown in the event dialog; deleting an event deletes its tasks (`deleteEvent`, `keysForDelete`);
+  moving an event keeps its tasks/notes; tasks and notes in the new-event dialog (`views/eventDraft.ts`).
+- 1.8.2: tasks follow their event's day (`TaskStore.followEvents`); drag to create across days (`slotSelection.ts`).
+- 1.8.3: timed multi-day events stay in the hour grid (sticky label, `.ch-tg-continues`); setting `multiDayTimed`.
+- 1.8.4: resize events by their edges (`eventResize.ts`, `ranges.ts`); **Track as task** (see below).
+- 1.8.5: tracked events show their tasks' progress and ask about open tasks (`toggleDone`); sideways bars with a thin
+  scrollbar instead of arrows (`views/sideScroll.ts`).
+- 1.9.0: details view (`EventDetailsModal`, `TaskDetailsModal`, `views/notesBlock.ts`), setting `clickOpens`.
+- 1.9.2: progress log of tasks (`views/tasks/progressLog.ts`; `Task.log` = `{ id, at, text, editedAt? }[]`, oldest first,
+  checked in `normalizeTaskData`; `TaskStore.addLog/editLog/removeLog`); shown in `TaskDetailsModal` only (not the edit
+  dialog), "📝 n" in `taskRow.ts`. Setting `tasksProgressLog` (Tasks tab, on by default; the maintainer asked for a switch
+  so it isn't overwhelming) hides both, deletes nothing. Enter sends on desktop, the button on phones.
+- 1.9.1: setting `dateLanguage` (all date formatting via `formatDate` / `dateLang()` in `dateUtils.ts`, never
+  `toLocaleDateString(undefined, …)`); Microsoft sign-in hint for which page opens; README *Troubleshooting sign-in*.
+
+**"Track as task":** `task.event.self = true` marks the task that *is* the event (`TaskStore.tracked` / `setTracked`;
+`forEvent` leaves it out, so it isn't one of the event's "2/5"). Title, day and time mirror the event (`followEvents` +
+`eventNowOf` in `store.ts`). Not drawn as a task block; the event gets `trackedMark` (tick circle, `ch-event-done`) in
+`views/shared.ts`. In task lists a click opens the event; its menu has done / open event / stop tracking only (no
+priority: not reachable by tapping). Off by default; not for repeats until 1.10.
+
+**Decisions from the maintainer (keep them):**
+- Subtasks on event tasks are shown in the event dialog (not forbidden). Event tasks stay separate tasks, **not**
+  subtasks of a tracked event. Tasks of a deleted event are deleted with it (after asking).
+- Event tasks go to the default task list; no list picker in the event's quick add (clutter).
+- Timed events over several days: hour grid by default (like Outlook), all-day row as an option.
+- Details view = 1.9, built in steps; repeating moved to 1.10.
+- Sideways bars: thin scrollbar + mouse wheel on desktop, swipe on phones – **no arrow buttons**.
+- UI tests run one at a time (no parallel runs). Testing happens after release, fixes go out as the next patch (no test builds).
+- Dates follow Obsidian's language by default; the plugin's own words stay English (translating the plugin is not planned).
+- The maintainer's **company Microsoft account** needs admin consent (company policy) and ICS publishing is disabled
+  there; the guide covers this (README *Troubleshooting sign-in → Company or school accounts*). Don't try to bypass it.
+
+**Tests:** the UI test setup starts with `clickOpens = "edit"` (most tests drive the edit dialogs); `specs/details.cjs`
+switches back to the default. Topic files: `tests/README.md`.

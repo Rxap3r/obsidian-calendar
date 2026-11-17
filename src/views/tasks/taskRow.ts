@@ -8,6 +8,7 @@ import { confirmAction } from "../../modals/ConfirmModal";
 import { noteName, openLinkedNote, openTaskEvent, taskTimeLabel, toggleDone } from "./helpers";
 import { openOccurrence } from "../shared";
 import { openTask } from "./openTask";
+import { entryCount } from "./progressLog";
 import { TaskDetailsModal } from "../../modals/TaskDetailsModal";
 
 export interface TaskRowOptions {
@@ -87,6 +88,8 @@ export function renderTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t
 		};
 	}
 	if (t.notes) setIcon(meta.createSpan({ cls: "ch-task-meta-icon ch-task-has-notes", attr: { "aria-label": "Has notes" } }), "align-left");
+	// Progress log: "📝 3" (the entries themselves are in the details view).
+	if (plugin.settings.tasksProgressLog && t.log?.length) meta.createSpan({ cls: "ch-task-has-log", text: `📝 ${t.log.length}`, attr: { "aria-label": `Progress log: ${entryCount(t.log.length)}` } });
 	if (!meta.childElementCount) meta.remove();
 
 	if (t.priority > 0) {

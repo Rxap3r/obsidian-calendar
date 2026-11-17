@@ -10,6 +10,7 @@ import { linkedNotesBlock } from "../views/linkedNotes";
 import { notesBlock } from "../views/notesBlock";
 import { openTaskEvent, taskTimeLabel, toggleDone } from "../views/tasks/helpers";
 import { openOccurrence } from "../views/shared";
+import { LogDraft, progressLogBlock } from "../views/tasks/progressLog";
 
 /**
  * The details view of a task (1.9): everything at a glance, nothing changed by accident. Quick actions stay possible:
@@ -19,6 +20,8 @@ export class TaskDetailsModal extends Modal {
 	private ref: EventRef | null = null;
 	/** The notes are being edited: don't redraw (that would throw away what is typed). */
 	private editing = false;
+	/** Text typed into the progress log's "add" field, kept across redraws. */
+	private logDraft: LogDraft = { text: "" };
 
 	constructor(private plugin: OmniCalendarPlugin, private task: Task) {
 		super(plugin.app);
@@ -48,6 +51,8 @@ export class TaskDetailsModal extends Modal {
 	private render() {
 		const { contentEl, task: t, plugin } = this;
 		const store = plugin.tasks;
+		// Keep typing in the progress log's field when something else redraws the view.
+		const typing = !!document.activeElement?.classList.contains("ch-log-input") && contentEl.contains(document.activeElement);
 		contentEl.empty();
 		this.setTitle("Task");
 
@@ -109,6 +114,17 @@ export class TaskDetailsModal extends Modal {
 				cb.onclick = () => void store.setSubtaskDone(t.id, st.id, !st.done);
 				row.createSpan({ cls: "ch-event-subtask-title", text: st.title });
 			}
+		}
+
+		if (plugin.settings.tasksProgressLog) {
+			progressLogBlock(plugin, contentEl, t, {
+				draft: this.logDraft,
+				onEditing: (on) => {
+					this.editing = on;
+					if (!on) window.setTimeout(() => this.refresh(), 0);
+				},
+			});
+			if (typing) contentEl.querySelector<HTMLTextAreaElement>(".ch-log-input")?.focus();
 		}
 
 		linkedNotesBlock(plugin, contentEl.createDiv({ cls: "ch-event-notes" }), {

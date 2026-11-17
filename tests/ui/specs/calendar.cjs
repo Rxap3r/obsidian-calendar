@@ -1,10 +1,10 @@
 /* Calendar views: month/week/day/agenda, drag & drop, touch, narrow layouts. Loaded by tests/ui/run.cjs – see tests/README.md. */
-module.exports = ({ test, expect, eq, shot, path, SHOTS }) => {
+module.exports = ({ test, expect, eq, settle, shot, path, SHOTS }) => {
 
 test("desktop: all views render (screenshots)", {}, async ({ page }) => {
 	for (const mode of ["month", "week", "day", "agenda"]) {
 		await page.evaluate((m) => view.goTo(new Date(2026, 10, 14), m), mode);
-		await page.waitForTimeout(150);
+		await settle(page);
 		await shot(page, `desktop-${mode}`);
 		if (mode === "week") eq(await page.locator(".ch-tg-col").count(), 7, "week view columns");
 		if (mode === "day") eq(await page.locator(".ch-tg-col").count(), 1, "day view columns");
@@ -91,7 +91,7 @@ test("month view shows start and end time", {}, async ({ page }) => {
 		await plugin.store.addEvent({ calendarId: "personal", allDay: false, exdates: [], title: "Night shift", start: "2026-11-18T22:00", end: "2026-11-19T02:00" });
 		view.goTo(new Date(2026, 10, 14), "month");
 	});
-	await page.waitForTimeout(150);
+	await settle(page);
 	const chip = (title, day) => page.evaluate(([title, day]) => {
 		const cell = [...document.querySelectorAll(".ch-month-cell")].find((c) => c.querySelector(".ch-day-num")?.textContent === day && !c.classList.contains("ch-other-month"));
 		const ch = [...cell.querySelectorAll(".ch-chip")].find((x) => x.textContent.includes(title));
@@ -101,19 +101,19 @@ test("month view shows start and end time", {}, async ({ page }) => {
 	eq(await chip("Night shift", "18"), "22:00 →", "first day of an overnight event");
 	eq(await chip("Night shift", "19"), "→ 02:00", "last day");
 	await page.evaluate(() => { plugin.settings.use24h = false; view.goTo(new Date(2026, 10, 14), "month"); });
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await chip("Design review", "14"), "10am–11:30am", "12-hour clock");
 	await page.evaluate(() => { plugin.settings.use24h = true; view.goTo(new Date(2026, 10, 14), "month"); });
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.screenshot({ path: path.join(SHOTS, "month-time-ranges.png"), clip: { x: 0, y: 0, width: 1120, height: 620 } });
 });
 
 test("desktop: responsive month/week at narrow widths", { width: 360 }, async ({ page }) => {
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "month"));
-	await page.waitForTimeout(200);
+	await settle(page);
 	expect(await page.locator(".ch-month-compact").count() === 1, "month uses the compact grid when narrow");
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "week"));
-	await page.waitForTimeout(200);
+	await settle(page);
 	expect(await page.locator(".ch-tg-hscroll").count() === 1, "week scrolls sideways when narrow");
 });
 
@@ -174,7 +174,7 @@ test("mobile week: whole week, swipe, alignment, week bar", { mobile: true }, as
 
 test("mobile: compact month grid with bars, selected day list", { mobile: true }, async ({ page }) => {
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "month"));
-	await page.waitForTimeout(200);
+	await settle(page);
 	const r = await page.evaluate(() => ({
 		layout: document.querySelector(".ch-month-compact")?.className,
 		cells: document.querySelectorAll(".ch-mc-row:not(.ch-mc-head) .ch-mc-cell").length,
@@ -193,12 +193,12 @@ test("mobile: compact month grid with bars, selected day list", { mobile: true }
 	// tap another day: selects it, stays in month view
 	const cell = page.locator(".ch-mc-cell", { hasText: "17" }).first();
 	await cell.tap();
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.evaluate(() => [view.mode, document.querySelector(".ch-mc-cell.ch-selected .ch-mc-num").textContent]), ["month", "17"], "tap selects day");
 	expect((await page.textContent(".ch-mc-day")).includes("Vacation"), "list shows the 17th");
 	// heading opens the day view
 	await page.click(".ch-mc-day-title");
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.evaluate(() => view.mode), "day", "heading opens day view");
 });
 
@@ -212,10 +212,10 @@ test("desktop: very narrow month uses dots", { width: 560 }, async ({ page }) =>
 
 test("mobile: week numbers in narrow layouts", { mobile: true }, async ({ page }) => {
 	await page.evaluate(() => { plugin.settings.showWeekNumbers = true; view.goTo(new Date(2026, 10, 14), "month"); });
-	await page.waitForTimeout(200);
+	await settle(page);
 	eq(await page.$$eval(".ch-mc-row:not(.ch-mc-head) .ch-mc-wn", (d) => d.map((x) => x.textContent)), ["44", "45", "46", "47", "48", "49"], "month week numbers");
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "day"));
-	await page.waitForTimeout(150);
+	await settle(page);
 	expect((await page.textContent(".ch-title")).endsWith("· W46"), "day title has week number");
 });
 
@@ -314,8 +314,9 @@ for (const mobile of [false, true]) {
 }
 
 
-for (const mobile of [false, true]) {
-	test(`${mobile ? "mobile" : "desktop"}: setting – events over several days in the all-day row, labelled with their whole span`, { mobile }, async ({ page }) => {
+{ // Desktop only: the phone version checked the same; the default (hour grid) is tested on both above.
+	const mobile = false;
+	test(`desktop: setting – events over several days in the all-day row, labelled with their whole span`, { mobile }, async ({ page }) => {
 		await page.evaluate(async () => {
 			const add = (e) => plugin.store.addEvent({ calendarId: "personal", allDay: false, exdates: [], ...e });
 			await add({ title: "Overnight", start: "2026-11-09T09:00", end: "2026-11-10T10:00" });
@@ -334,7 +335,7 @@ for (const mobile of [false, true]) {
 		await shot(page, `${mobile ? "mobile-" : ""}week-multiday-allday-row`);
 		// Back to the default: in the hours.
 		await page.evaluate(() => { plugin.settings.multiDayTimed = "grid"; plugin.store.notify(); });
-		await page.waitForTimeout(200);
+		await settle(page);
 		eq(await page.locator(".ch-tg-allday-cell .ch-chip", { hasText: "Overnight" }).count(), 0, "default: not in the all-day row");
 	});
 }
