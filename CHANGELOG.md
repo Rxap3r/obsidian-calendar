@@ -14,6 +14,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
   and warn that the redirect address belongs under *Mobile and desktop applications*, not *Web*. *unauthorized_client*
   for a personal account is now explained correctly: the app doesn't allow personal accounts (the account type in
   Azure must not stay at its preselected value).
+- **The Microsoft sign-in dialog says which sign-in page will open** (with your own app registration): personal
+  accounts (Outlook.com, Hotmail) or company/school accounts, with a pointer to *Which Microsoft account?*. *Personal*
+  is preselected there, which was easy to miss with a company account.
 
 ## Known bugs
 

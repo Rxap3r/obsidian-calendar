@@ -116,8 +116,17 @@ export class SignInModal extends Modal {
 			}
 
 			const guideEl = body.createDiv();
+			// Which Microsoft sign-in page will open – easy to miss that "Personal" is preselected.
+			const pageHint = this.provider === "outlook" ? body.createDiv({ cls: "ch-modal-hint ch-signin-page-hint" }) : null;
 			const renderGuide = () => {
 				guideEl.empty();
+				pageHint?.setText(
+					this.tenant === "consumers"
+						? "You'll sign in on Microsoft's page for personal accounts (Outlook.com, Hotmail, Live). Using a company or school account? Change “Which Microsoft account?” above."
+						: this.tenant === "common"
+							? "Microsoft's sign-in page will accept both personal and company/school accounts."
+							: "You'll sign in with a company or school account (Microsoft 365)."
+				);
 				const guide =
 					this.provider === "google"
 						? GOOGLE_GUIDE

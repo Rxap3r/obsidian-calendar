@@ -229,4 +229,30 @@ for (const mobile of [false, true]) {
 	});
 }
 
+
+for (const mobile of [false, true]) {
+	test(`${mobile ? "mobile" : "desktop"}: own Microsoft app – the dialog says which sign-in page opens (personal vs company)`, { mobile }, async ({ page }) => {
+		await page.evaluate(() => { const m = document.getElementById("main"); m.innerHTML = ""; tab.constructor.tab = "accounts"; tab.display(); m.appendChild(tab.containerEl); });
+		await page.waitForTimeout(100);
+		await page.locator("button", { hasText: "Connect Outlook / Microsoft 365" }).click();
+		await page.waitForTimeout(100);
+		await page.locator(".ch-signin-modal select").first().selectOption("own");
+		await page.waitForTimeout(100);
+		const hint = () => page.locator(".ch-signin-page-hint").textContent();
+		expect((await hint()).includes("personal accounts") && (await hint()).includes("company or school account? Change"), `personal preselected, and says so: ${await hint()}`);
+		await page.locator(".ch-signin-modal select").nth(1).selectOption("organizations");
+		await page.waitForTimeout(100);
+		expect((await hint()).includes("company or school account (Microsoft 365)"), `company account: ${await hint()}`);
+		expect((await page.locator(".ch-setup-guide summary").textContent()).includes("work/school"), "work/school guide shown");
+		await page.locator(".ch-signin-modal select").nth(1).selectOption("other");
+		await page.waitForTimeout(100);
+		expect(await page.locator(".setting-item-name", { hasText: "Directory (tenant) ID" }).isVisible(), "single organisation asks for the tenant ID");
+		if (mobile) {
+			const w = await page.evaluate(() => document.documentElement.scrollWidth);
+			expect(w <= 390, `fits the phone: ${w}`);
+		}
+		await shot(page, `${mobile ? "mobile-" : ""}signin-own-microsoft-company`);
+	});
+}
+
 };
