@@ -298,9 +298,10 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Where we stopped (keep this section up to date at the end of a session)
 
-**State:** everything up to **1.9.2** is merged and released (tags 1.8.0 … 1.9.2, PRs #28–#36). `dev-branch` carries
-**1.9.3** (not released yet): **details view step c** – "Create note" for tasks and subtasks, linked notes and short
-descriptions per subtask, setting `taskNoteTemplate`, switch `tasksNoteExtras`.
+**State:** everything up to **1.9.2** is merged and released (tags 1.8.0 … 1.9.2, PRs #28–#36). **1.9.3** (details view
+step c – "Create note" for tasks and subtasks, subtask notes and descriptions, `taskNoteTemplate`, switch `tasksNoteExtras`)
+is in a PR from `dev-branch`; once it is merged and tagged, the **next change needs 1.9.4** (or 1.10.0 for repeating
+tasks – the next roadmap step is a bigger feature, so 1.10.0 is likely).
 
 **Next on the roadmap (agreed order):**
 1. **1.10** – repeating tasks, tasks on repeating events per repeat, *Track as task* for repeats.
