@@ -4,13 +4,9 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet (1.8.4)
+## Not released yet
 
-- **Change how long an event lasts by dragging its edge** (like in Outlook): in the week and day views, drag the
-  bottom edge of an event to change when it ends, or the top edge to change when it starts. It snaps to 15 minutes,
-  and a preview shows the new time while you drag. For events over several days, the start is on the first day's
-  block and the end on the last day's; the end can be dragged into another day. Works with the finger too.
-  Like moving, it works for local and Google/Outlook events, but not for single repeats of a series.
+- *(nothing yet)*
 
 ## Known bugs
 
@@ -20,6 +16,8 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.8.4** – Change how long an event lasts by dragging its top or bottom edge in the week and day views (also into
+  another day, and with the finger).
 - **1.8.3** – Timed events over several days stay in the hour grid (one block per day) instead of the all-day row;
   new setting *Events over several days* to show them in the all-day row with their whole span.
 - **1.8.2** – An event's tasks move with the event when it moves to another day; drag to create can continue into the
