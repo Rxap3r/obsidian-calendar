@@ -286,7 +286,8 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 ## Where we stopped (keep this section up to date at the end of a session)
 
 - **Released:** 1.8.0 (PR #28), 1.8.1 (PR #29), 1.8.2 (PR #30) and 1.8.3 (PR #31) were merged by the maintainer.
-- **1.8.4 (PR #32) was merged too.** On `dev-branch`, not released: **1.8.5** – a tracked event's row shows its event tasks'
+- **1.8.4 (PR #32) was merged too. 1.8.5 is in a pull request**; once it is merged, the next change on `dev-branch`
+  needs a new version number. 1.8.5 – a tracked event's row shows its event tasks'
   progress; ticking it off with open tasks asks *Only the event* / *Mark all as done* (`toggleDone` in
   `views/tasks/helpers.ts`, used everywhere a task is ticked off). Decided with the maintainer: event tasks stay separate
   tasks, **not** subtasks of the tracked event.

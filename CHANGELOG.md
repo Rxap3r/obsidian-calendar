@@ -4,18 +4,9 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet (1.8.5)
+## Not released yet
 
-- **Tracked events show their tasks' progress in the task lists:** an event tracked as a task now shows the same
-  *☐ 2/5* as the event in the calendar, so you can see it has tasks of its own.
-- **Ticking off a tracked event that still has open tasks asks** whether to mark those as done too
-  (*Only the event* / *Mark all as done*). This works the same everywhere: task lists, *Tasks today*, the tick circle
-  in the calendar and the right-click menu. The event's tasks stay separate tasks, not subtasks (agreed with the maintainer).
-- **Fix: the list bar of Tasks in the sidebar couldn't be scrolled on desktop.** When not all lists (Today, Tomorrow,
-  Upcoming, …) fit, a thin scrollbar now shows under the bar (grab it to scroll), and the mouse wheel scrolls the bar
-  sideways. The edge with more lists fades out. On the phone you swipe it as before, without a scrollbar.
-- **The settings tab bar works the same way:** a thin scrollbar under the tabs and the mouse wheel, instead of the
-  arrow buttons.
+- *(nothing yet)*
 
 ## Known bugs
 
@@ -25,6 +16,8 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.8.5** – Tracked events show their tasks' progress and ask about open tasks when ticked off; the Tasks list bar
+  in the sidebar and the settings tab bar scroll with a thin scrollbar and the mouse wheel on desktop.
 - **1.8.4** – Change how long an event lasts by dragging its top or bottom edge in the week and day views (also into
   another day, and with the finger). New *Track as task* switch for events: the event shows up in your task lists to
   tick it off, gets a tick circle in the calendar and is struck through when done (off by default; not yet for repeats).
