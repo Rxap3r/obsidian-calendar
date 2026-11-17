@@ -1,5 +1,5 @@
 import { OmniCalendarSettings } from "./types";
-import { DEFAULT_NOTE_TEMPLATE } from "./notes";
+import { DEFAULT_NOTE_TEMPLATE, DEFAULT_TASK_NOTE_TEMPLATE } from "./notes";
 
 /** Colours offered for new calendars and task lists. */
 export const PALETTE = ["#7c5cff", "#2f9e44", "#e8590c", "#1c7ed6", "#d6336c", "#f59f00", "#0ca678", "#ae3ec9", "#495057"];
@@ -42,6 +42,7 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	tasksProgressLog: true,
 	notesFolder: "Calendar",
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,
+	taskNoteTemplate: DEFAULT_TASK_NOTE_TEMPLATE,
 	defaultCalendarId: "personal",
 	defaultTargets: ["personal"],
 	sources: [{ id: "personal", name: "Personal", color: PALETTE[0], type: "local", enabled: true }],

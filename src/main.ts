@@ -1,5 +1,5 @@
 import { Menu, Notice, Platform, Plugin, TFile, WorkspaceLeaf } from "obsidian";
-import { OmniCalendarSettings, CalendarOccurrence, PluginData, ViewMode } from "./types";
+import { OmniCalendarSettings, CalendarOccurrence, PluginData, Subtask, Task, ViewMode } from "./types";
 import { OmniCalendarSettingTab } from "./settings/SettingTab";
 import { normalizePluginData } from "./settingsData";
 import { CalendarStore } from "./store";
@@ -14,7 +14,7 @@ import { AgendaBlock } from "./views/AgendaBlock";
 import { VIEW_TYPE_CALENDAR, VIEW_TYPE_MINI, VIEW_TYPE_TASKS } from "./views/viewTypes";
 import { TaskModal } from "./modals/TaskModal";
 import { EventModal } from "./modals/EventModal";
-import { createEventNote, eventNotePath } from "./notes";
+import { createEventNote, createTaskNote, eventNotePath, taskNotePath } from "./notes";
 import { applyDateLanguage, MS_DAY, MS_HOUR, MS_MIN, startOfDay, toDateKey } from "./dateUtils";
 
 export default class OmniCalendarPlugin extends Plugin {
@@ -251,6 +251,29 @@ export default class OmniCalendarPlugin extends Plugin {
 		});
 		if (!file) return null;
 		await this.store.addLink(occ, file.path);
+		await this.mainAreaLeaf().openFile(file);
+		return file;
+	}
+
+	/** True when "Create note" on a task / subtask would only open an existing note ("Open note"). */
+	hasTaskNote(t: Task, sub?: Subtask): boolean {
+		return this.app.vault.getAbstractFileByPath(taskNotePath(t, sub, this.settings.notesFolder)) instanceof TFile;
+	}
+
+	/**
+	 * "Create note" for a task or one of its subtasks (1.9.3): creates the note from the task note template (or finds
+	 * the existing one) and opens it. With `link` (default) it's added to the saved task's / subtask's linked notes;
+	 * the task dialog links it to its own copy instead.
+	 */
+	async createNoteForTask(t: Task, sub?: Subtask, link = true): Promise<TFile | null> {
+		const file = await createTaskNote(this.app, t, sub, {
+			folder: this.settings.notesFolder,
+			template: this.settings.taskNoteTemplate,
+			listName: this.tasks.list(t.listId).name,
+			use24h: this.settings.use24h,
+		});
+		if (!file) return null;
+		if (link) await this.tasks.addLink(t.id, file.path, sub?.id);
 		await this.mainAreaLeaf().openFile(file);
 		return file;
 	}

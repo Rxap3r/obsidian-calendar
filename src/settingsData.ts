@@ -67,6 +67,7 @@ export function normalizePluginData(loaded: Partial<PluginData> | null | undefin
 	for (const k of ["tasksInCalendar", "tasksCalendarShowDone", "tasksInMiniCalendar", "tasksProgressLog"] as const) {
 		if (typeof settings[k] !== "boolean") settings[k] = DEFAULT_SETTINGS[k];
 	}
+	if (typeof settings.taskNoteTemplate !== "string") settings.taskNoteTemplate = DEFAULT_SETTINGS.taskNoteTemplate;
 	const tasks = normalizeTaskData(raw.tasks);
 	if (!tasks.lists.some((l) => l.id === settings.tasksDefaultListId)) settings.tasksDefaultListId = tasks.lists[0].id;
 

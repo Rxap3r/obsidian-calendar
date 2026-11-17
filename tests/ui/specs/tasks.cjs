@@ -92,10 +92,10 @@ test("desktop: task dialog – priority, date, time range, subtasks, linked note
 		await m.onChooseSuggestion(pickCreate ? s.find((x) => x.create) : s[0]);
 		return s.map((x) => x.create ? `+${x.create}` : x.basename);
 	}, [q, pickCreate]);
-	await page.click(".ch-task-link-btn");
+	await page.click(".ch-link-note-btn");
 	eq(await pick("website", false), ["Website notes", "Website relaunch", "+website"], "note search (+ create option)");
 	await page.evaluate(() => window.lastModal.close());
-	await page.evaluate(() => [...document.querySelectorAll(".ch-task-link-btn")].pop().click());
+	await page.evaluate(() => [...document.querySelectorAll(".ch-link-note-btn")].pop().click());
 	await pick("Workshop plan", true);
 	await page.evaluate(() => window.lastModal.close());
 	eq(await page.$$eval(".ch-task-link-name", (e) => e.map((x) => x.textContent)), ["Website notes", "Workshop plan"], "links listed in dialog");
@@ -246,6 +246,68 @@ test("desktop: tasks in the sidebar – button opens the Tasks page with the sam
 	eq(await page.$$eval("#main .ch-tasks-open-full", (e) => e.length), 0, "no such button on the full page");
 });
 
+test("desktop: notes for tasks and subtasks – Create note (menu, dialog), subtask description, template, rename/delete", {}, async ({ page }) => {
+	await page.evaluate(async () => {
+		await plugin.tasks.upsert(plugin.tasks.draft({ title: "Fix the bike", date: "2026-11-14", notes: "Chain is rusty",
+			subtasks: [{ id: "s1", title: "Buy chain", done: false }] }));
+		await mountTasks();
+	});
+	const row = page.locator(".ch-task", { hasText: "Fix the bike" });
+	const task = () => page.evaluate(() => JSON.parse(JSON.stringify(plugin.tasks.items.find((x) => x.title === "Fix the bike"))));
+	// Right-click → Create note: made from the task template, linked, opened.
+	await row.locator(".ch-task-title").click({ button: "right" });
+	await page.evaluate(() => window.lastMenu.items.find((i) => i.t === "Create note").fn());
+	await settle(page);
+	const P = "Calendar/2026-11-14 Fix the bike.md";
+	const body = await page.evaluate((p) => window.createdNotes[p], P);
+	for (const t of ['title: "Fix the bike"', "date: 2026-11-14", 'list: "Tasks"', "# Fix the bike", "Chain is rusty"]) expect(body.includes(t), `note has "${t}"`);
+	eq([(await task()).links, await page.evaluate(() => window.openedFile)], [[P], P], "linked and opened");
+	await row.locator(".ch-task-title").click({ button: "right" });
+	expect(await page.evaluate(() => window.lastMenu.items.some((i) => i.t === "Open note")), "menu says Open note once it exists");
+	// Task dialog: ≡ opens the subtask's description and notes; Create note saves the task and opens the note.
+	await row.locator(".ch-task-title").click();
+	await settle(page);
+	eq(await page.locator(".ch-task-sub-extra").count(), 0, "closed by default");
+	await page.locator(".ch-sub-extra-btn").click();
+	await page.fill(".ch-sub-desc", "KMC, 11-speed");
+	await shot(page, "task-dialog-subtask-extra");
+	await page.locator(".ch-task-sub-extra .ch-create-note-btn").click();
+	await settle(page);
+	const SP = "Calendar/2026-11-14 Fix the bike – Buy chain.md";
+	const s1 = (await task()).subtasks[0];
+	eq([s1.description, s1.links, await page.evaluate(() => window.openedFile), await page.locator(".ch-task-modal").count()], ["KMC, 11-speed", [SP], SP, 0], "saved with the note linked; dialog closed; note opened");
+	expect((await page.evaluate((p) => window.createdNotes[p], SP)).includes("# Fix the bike – Buy chain\n\nKMC, 11-speed"), "subtask note: name and description");
+	// In the list: only small icons; the note icon opens the note.
+	await page.evaluate(() => { window.openedFile = null; });
+	eq([await row.locator(".ch-sub-has-desc").count(), await row.locator(".ch-sub-has-notes").count()], [1, 1], "≡ and note icon");
+	await row.locator(".ch-sub-has-notes").click();
+	eq(await page.evaluate(() => window.openedFile), SP, "note icon opens the subtask's note");
+	expect(!(await row.textContent()).includes("KMC"), "description itself not shown in the list");
+	// Subtask links follow renames and disappear on delete.
+	const after = await page.evaluate((sp) => {
+		plugin.tasks.renameLink(sp, "Bike/Chain.md");
+		const renamed = plugin.tasks.items.find((x) => x.title === "Fix the bike").subtasks[0].links.slice();
+		plugin.tasks.removeLink("Bike/Chain.md");
+		return [renamed, plugin.tasks.items.find((x) => x.title === "Fix the bike").subtasks[0].links];
+	}, SP);
+	eq(after, [["Bike/Chain.md"], []], "rename followed, delete dropped");
+	// No date → just the title; own template with all placeholders.
+	const own = await page.evaluate(async () => {
+		plugin.settings.taskNoteTemplate = "{{title}}|{{task}}|{{subtask}}|{{date}}|{{time}}|{{list}}|{{priority}}|{{notes}}";
+		const t = plugin.tasks.draft({ title: "Plan trip", priority: 2, notes: "Ideas" });
+		await plugin.tasks.upsert(t);
+		await plugin.createNoteForTask(plugin.tasks.get(t.id));
+		const u = plugin.tasks.draft({ title: "Call", date: "2026-11-20", start: "09:00", end: "09:30", subtasks: [{ id: "a", title: "Ask price", done: false, description: "max 50", links: [] }] });
+		await plugin.tasks.upsert(u);
+		const saved = plugin.tasks.get(u.id);
+		await plugin.createNoteForTask(saved, saved.subtasks[0]);
+		return [window.createdNotes["Calendar/Plan trip.md"], window.createdNotes["Calendar/2026-11-20 Call – Ask price.md"]];
+	});
+	eq(own, ["Plan trip|Plan trip||||Tasks|Medium|Ideas", "Call – Ask price|Call|Ask price|2026-11-20|09:00–09:30|Tasks|None|max 50"], "own template, no-date name");
+	await page.evaluate(() => { tab.constructor.tab = "notes"; tab.display(); });
+	expect(await page.evaluate(() => [...tab.containerEl.querySelectorAll(".setting-item-name")].some((e) => e.textContent === "Task note template")), "template setting in the Notes tab");
+});
+
 test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mobile: true }, async ({ page }) => {
 	await seedTasks()(page);
 	// Obsidian's mobile theme gives buttons padding and a minimum size – that made the checkboxes oval.
@@ -284,6 +346,16 @@ test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mo
 	});
 	eq(t2, { timeFits: true, date: "Sat, Nov 14, 2026" }, "time row fits inside the dialog; chosen date shown");
 	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile-date.png") });
+	// Subtask ≡: description and notes open under the subtask and fit the phone.
+	await page.locator(".ch-sub-extra-btn").first().tap();
+	await settle(page);
+	const ex = await page.evaluate(() => {
+		const modal = document.querySelector(".ch-task-modal").getBoundingClientRect();
+		const els = [...document.querySelectorAll(".ch-task-sub-row > *, .ch-task-sub-extra, .ch-task-sub-extra button")];
+		return { open: !!document.querySelector(".ch-sub-desc"), fits: Math.max(...els.map((e) => e.getBoundingClientRect().right)) <= modal.right - 4 };
+	});
+	eq(ex, { open: true, fits: true }, "subtask description and notes fit the phone");
+	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile-subtask.png") });
 	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile.png") });
 });
 

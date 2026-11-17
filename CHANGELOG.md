@@ -4,9 +4,14 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet
+## Not released yet (1.9.3)
 
-- *(nothing yet)*
+- **Create note for tasks:** right-click a task, or use the button in the task dialog or the details view, to make a
+  note for it (named "YYYY-MM-DD Task"). It's linked to the task and opened; if it already exists, it just opens.
+- **Notes and short descriptions for subtasks:** in the task dialog, the small ≡ button next to a subtask opens its
+  description and its own linked notes (with *Create note*). The details view shows the description in small grey text
+  and the notes as chips, with a ⋯ button for *Create note* / *Link note*. The task lists only show small icons.
+- New setting *Settings → Omni Calendar → Notes → Task note template* for the text of new task notes.
 
 ## Known bugs
 

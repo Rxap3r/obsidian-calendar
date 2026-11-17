@@ -16,6 +16,8 @@ export class TaskModal extends Modal {
 	private timeRow!: HTMLElement;
 	private subtasksEl!: HTMLElement;
 	private dateField!: DateField;
+	/** Subtasks whose description / notes are open (the ≡ button). */
+	private openSubs = new Set<string>();
 
 	constructor(private plugin: OmniCalendarPlugin, task?: Task, init: Partial<Task> = {}) {
 		super(plugin.app);
@@ -149,7 +151,15 @@ export class TaskModal extends Modal {
 		});
 
 		// Linked notes.
-		linkedNotesBlock(this.plugin, contentEl, { get: () => t.links, set: (links) => void (t.links = links) });
+		linkedNotesBlock(this.plugin, contentEl, {
+			get: () => t.links,
+			set: (links) => void (t.links = links),
+			// "Create note" saves the task first (the note links to the saved task), then opens the note.
+			extra: t.event?.self ? undefined : {
+				label: this.plugin.hasTaskNote(t) ? "Open note" : "Create note", icon: "file-plus", cls: "ch-create-note-btn",
+				run: () => this.createNote(),
+			},
+		});
 
 		new Setting(contentEl)
 			.setName("Notes")
@@ -185,34 +195,86 @@ export class TaskModal extends Modal {
 		el.empty();
 		const t = this.task;
 		t.subtasks.forEach((s, i) => {
-			const row = el.createDiv({ cls: "ch-task-sub-row" });
+			const item = el.createDiv({ cls: "ch-task-sub-item" });
+			const row = item.createDiv({ cls: "ch-task-sub-row" });
 			const cb = row.createEl("input", { type: "checkbox", cls: "ch-task-check" });
 			cb.checked = s.done;
 			cb.onchange = () => (s.done = cb.checked);
 			const txt = row.createEl("input", { type: "text", cls: "ch-input" });
 			txt.value = s.title;
 			txt.addEventListener("input", () => (s.title = txt.value));
+			// ≡ opens the subtask's description and notes on demand (kept closed, so the dialog stays short).
+			const open = this.openSubs.has(s.id);
+			const more = row.createEl("button", { cls: "ch-icon-btn ch-sub-extra-btn", attr: { "aria-label": "Description and notes", "aria-expanded": String(open) } });
+			more.toggleClass("has-content", !!s.description || s.links.length > 0);
+			more.toggleClass("is-active", open);
+			setIcon(more, "align-left");
+			more.onclick = () => {
+				if (open) this.openSubs.delete(s.id);
+				else this.openSubs.add(s.id);
+				this.renderSubtasks();
+			};
 			const del = row.createEl("button", { cls: "ch-icon-btn", attr: { "aria-label": "Remove subtask" } });
 			setIcon(del, "x");
 			del.onclick = () => {
 				t.subtasks.splice(i, 1);
 				this.renderSubtasks();
 			};
+			if (!open) return;
+			const extra = item.createDiv({ cls: "ch-task-sub-extra" });
+			const desc = extra.createEl("textarea", { cls: "ch-input ch-sub-desc", attr: { rows: "2", placeholder: "Short description (optional)" } });
+			desc.value = s.description ?? "";
+			desc.addEventListener("input", () => (s.description = desc.value || undefined));
+			linkedNotesBlock(this.plugin, extra, {
+				get: () => s.links,
+				set: (links) => void (s.links = links),
+				extra: {
+					label: this.plugin.hasTaskNote(t, s) ? "Open note" : "Create note", icon: "file-plus", cls: "ch-create-note-btn",
+					run: () => this.createNote(s.id),
+				},
+			});
 		});
+	}
+
+	/** Problems that stop saving, or null. */
+	private problem(): string | null {
+		const t = this.task;
+		if (!t.title.trim()) return "Please enter a title.";
+		if (t.start && t.end && t.end <= t.start) return "The end time must be after the start time.";
+		return null;
+	}
+
+	/** "Create note" for the task or one subtask: save the task with the note linked, close, open the note. */
+	private async createNote(subId?: string) {
+		const p = this.problem();
+		if (p) {
+			new Notice(p);
+			return;
+		}
+		const t = this.task;
+		t.title = t.title.trim();
+		const sub = subId ? t.subtasks.find((x) => x.id === subId) : undefined;
+		if (subId && !sub?.title.trim()) {
+			new Notice("Give the subtask a title first.");
+			return;
+		}
+		const file = await this.plugin.createNoteForTask(t, sub, false);
+		if (!file) return;
+		const owner = sub ?? t;
+		if (!owner.links.includes(file.path)) owner.links.push(file.path);
+		await this.save();
 	}
 
 	private async save() {
 		const t = this.task;
+		const p = this.problem();
+		if (p) {
+			new Notice(p);
+			return;
+		}
 		t.title = t.title.trim();
-		if (!t.title) {
-			new Notice("Please enter a title.");
-			return;
-		}
 		t.subtasks = t.subtasks.filter((s) => s.title.trim());
-		if (t.start && t.end && t.end <= t.start) {
-			new Notice("The end time must be after the start time.");
-			return;
-		}
+		for (const s of t.subtasks) s.description = s.description?.trim() || undefined;
 		await this.plugin.tasks.upsert(t);
 		this.close();
 	}

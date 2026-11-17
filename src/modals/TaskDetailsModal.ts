@@ -8,7 +8,8 @@ import { EventModal } from "./EventModal";
 import { TaskModal } from "./TaskModal";
 import { linkedNotesBlock } from "../views/linkedNotes";
 import { notesBlock } from "../views/notesBlock";
-import { openTaskEvent, taskTimeLabel, toggleDone } from "../views/tasks/helpers";
+import { noteChips, openTaskEvent, taskTimeLabel, toggleDone } from "../views/tasks/helpers";
+import { subtaskNoteMenu } from "../views/tasks/subtaskNotes";
 import { openOccurrence } from "../views/shared";
 import { LogDraft, progressLogBlock } from "../views/tasks/progressLog";
 
@@ -112,7 +113,14 @@ export class TaskDetailsModal extends Modal {
 				const cb = row.createEl("button", { cls: "ch-task-checkbox ch-small", attr: { role: "checkbox", "aria-checked": String(st.done), "aria-label": st.done ? "Mark as not done" : "Mark as done" } });
 				if (st.done) setIcon(cb, "check");
 				cb.onclick = () => void store.setSubtaskDone(t.id, st.id, !st.done);
-				row.createSpan({ cls: "ch-event-subtask-title", text: st.title });
+				const body = row.createDiv({ cls: "ch-details-subtask-body" });
+				body.createSpan({ cls: "ch-event-subtask-title", text: st.title });
+				// Short description in small grey text; linked notes as chips (1.9.3).
+				if (st.description) body.createDiv({ cls: "ch-details-subtask-desc", text: st.description });
+				noteChips(plugin, body, st.links, "ch-details-subtask-notes");
+				const more = row.createEl("button", { cls: "ch-log-action ch-subtask-more", attr: { "aria-label": "Notes of this subtask" } });
+				setIcon(more, "more-horizontal");
+				more.onclick = (e) => subtaskNoteMenu(plugin, t, st, e);
 			}
 		}
 
@@ -130,6 +138,11 @@ export class TaskDetailsModal extends Modal {
 		linkedNotesBlock(plugin, contentEl.createDiv({ cls: "ch-event-notes" }), {
 			get: () => t.links,
 			set: (links) => store.update(t.id, { links }),
+			// "Create note" (1.9.3); a tracked event has the event's own note instead.
+			extra: t.event?.self ? undefined : {
+				label: plugin.hasTaskNote(t) ? "Open note" : "Create note", icon: "file-plus", cls: "ch-create-note-btn",
+				run: () => void plugin.createNoteForTask(t),
+			},
 		});
 
 		const buttons = new Setting(contentEl).setClass("ch-modal-buttons");

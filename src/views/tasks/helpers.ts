@@ -1,4 +1,4 @@
-import { Notice, TFile } from "obsidian";
+import { Notice, setIcon, TFile } from "obsidian";
 import { chooseAction } from "../../modals/ConfirmModal";
 import { plural } from "../../util";
 import type OmniCalendarPlugin from "../../main";
@@ -12,6 +12,22 @@ export async function openLinkedNote(plugin: OmniCalendarPlugin, path: string) {
 		return;
 	}
 	await plugin.mainAreaLeaf().openFile(file);
+}
+
+/** Linked notes as small chips that open the note (task lists, details view). Nothing when there are none. */
+export function noteChips(plugin: OmniCalendarPlugin, container: HTMLElement, links: string[], cls = ""): void {
+	if (!links.length) return;
+	const wrap = container.createDiv({ cls: `ch-task-linkchips ${cls}`.trim() });
+	for (const path of links) {
+		const chip = wrap.createEl("a", { cls: "ch-task-linkchip", attr: { title: path } });
+		setIcon(chip.createSpan({ cls: "ch-task-meta-icon" }), "file-text");
+		chip.appendText(noteName(path));
+		chip.onclick = (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			void openLinkedNote(plugin, path);
+		};
+	}
 }
 
 /** "10:30–11:00", "10:30" or "". */
