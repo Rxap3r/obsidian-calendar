@@ -572,4 +572,66 @@ test("mobile: 'Track as task' – switch and tick circle by tapping", { mobile: 
 	eq([(await tracked(page))[0][4], await page.locator(".modal").count()], [true, 0], "ticked off by tapping, no dialog");
 });
 
+
+/** "Design review" tracked as task, with two event tasks (one done). */
+const trackedWithTasks = (page) => page.evaluate(async () => {
+	const occ = plugin.store.getOccurrencesForDay(new Date(2026, 10, 14)).find((o) => o.title === "Design review");
+	const key = "local:" + occ.eventId;
+	await plugin.tasks.setTracked(key, { day: "2026-11-14", title: occ.title, start: "10:00", end: "11:30" }, true);
+	await plugin.tasks.upsert(plugin.tasks.draft({ title: "Slides", date: "2026-11-14", event: { key, title: occ.title, date: "2026-11-14" } }));
+	await plugin.tasks.upsert(plugin.tasks.draft({ title: "Agenda", date: "2026-11-13", done: true, completedAt: Date.now(), event: { key, title: occ.title, date: "2026-11-14" } }));
+	await plugin.tasks.upsert(plugin.tasks.draft({ title: "Book room", date: "2026-11-14", event: { key, title: occ.title, date: "2026-11-14" } }));
+});
+const doneStates = (page) => page.evaluate(() => Object.fromEntries(plugin.tasks.items.map((t) => [t.title, t.done])));
+
+test("desktop: tracked event – progress of its tasks in the list; ticking it off asks about its open tasks", {}, async ({ page }) => {
+	await trackedWithTasks(page);
+	await page.evaluate(() => mountTasks());
+	await page.locator('.ch-tasks-nav-item[data-list="today"]').click();
+	await page.waitForTimeout(100);
+	const row = page.locator(".ch-task", { has: page.locator(".ch-task-meta-event", { hasText: "Event" }) });
+	eq(await row.locator(".ch-task-meta-evtasks").textContent(), "1/3", "progress of the event's tasks on its row");
+	await shot(page, "tracked-event-progress");
+	// Cancel: nothing changes.
+	await row.locator(".ch-task-checkbox").first().click();
+	await page.waitForTimeout(100);
+	expect((await page.locator(".modal p").last().textContent()).includes("still has 2 open tasks"), "asks");
+	await page.locator(".modal button", { hasText: "Cancel" }).last().click();
+	await page.waitForTimeout(100);
+	eq((await doneStates(page))["Design review"], false, "cancel: not ticked off");
+	// Only the event.
+	await row.locator(".ch-task-checkbox").first().click();
+	await page.locator(".modal button", { hasText: "Only the event" }).click();
+	await page.waitForTimeout(150);
+	eq(await doneStates(page), { "Design review": true, Slides: false, Agenda: true, "Book room": false }, "only the event");
+	// Untick (no question), then tick off from the calendar: all.
+	await page.evaluate(async () => { const t = plugin.tasks.items.find((x) => x.title === "Design review"); await plugin.tasks.setDone(t.id, false); });
+	await page.evaluate(() => { document.getElementById("main").innerHTML = ""; document.getElementById("main").appendChild(view.contentEl); view.goTo(new Date(2026, 10, 14), "day"); });
+	await page.waitForTimeout(200);
+	await page.locator(".ch-tg-event", { hasText: "Design review" }).locator(".ch-track-check").click();
+	await page.waitForTimeout(100);
+	await page.locator(".modal button", { hasText: "Mark all as done" }).click();
+	await page.waitForTimeout(150);
+	eq(await doneStates(page), { "Design review": true, Slides: true, Agenda: true, "Book room": true }, "event and all its tasks");
+	// Nothing open any more: unticking and ticking again doesn't ask.
+	await page.evaluate(async () => { const t = plugin.tasks.items.find((x) => x.title === "Design review"); await plugin.tasks.setDone(t.id, false); });
+	await page.waitForTimeout(150);
+	await page.locator(".ch-tg-event", { hasText: "Design review" }).locator(".ch-track-check").click();
+	await page.waitForTimeout(150);
+	eq([await page.locator(".modal").count(), (await doneStates(page))["Design review"]], [0, true], "no question when nothing is open");
+});
+
+test("mobile: ticking off a tracked event with open tasks – the question by tapping", { mobile: true }, async ({ page }) => {
+	await trackedWithTasks(page);
+	await dayView(page);
+	await page.locator(".ch-tg-event", { hasText: "Design review" }).locator(".ch-track-check").tap();
+	await page.waitForTimeout(150);
+	const w = await page.evaluate(() => document.documentElement.scrollWidth);
+	expect(w <= 390, `question fits the phone: ${w}`);
+	await shot(page, "mobile-tracked-event-question");
+	await page.locator(".modal button", { hasText: "Mark all as done" }).tap();
+	await page.waitForTimeout(150);
+	eq(Object.values(await doneStates(page)).every(Boolean), true, "all done");
+});
+
 };

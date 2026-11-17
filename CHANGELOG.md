@@ -4,9 +4,13 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet
+## Not released yet (1.8.5)
 
-- *(nothing yet)*
+- **Tracked events show their tasks' progress in the task lists:** an event tracked as a task now shows the same
+  *☐ 2/5* as the event in the calendar, so you can see it has tasks of its own.
+- **Ticking off a tracked event that still has open tasks asks** whether to mark those as done too
+  (*Only the event* / *Mark all as done*). This works the same everywhere: task lists, *Tasks today*, the tick circle
+  in the calendar and the right-click menu. The event's tasks stay separate tasks, not subtasks (agreed with the maintainer).
 
 ## Known bugs
 

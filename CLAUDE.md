@@ -285,7 +285,11 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 ## Where we stopped (keep this section up to date at the end of a session)
 
 - **Released:** 1.8.0 (PR #28), 1.8.1 (PR #29), 1.8.2 (PR #30) and 1.8.3 (PR #31) were merged by the maintainer.
-- **1.8.4 is in a pull request (#32)** (once merged, the next change on `dev-branch` needs a new version number) – "Track as task", and resize events by dragging their top / bottom edge
+- **1.8.4 (PR #32) was merged too.** On `dev-branch`, not released: **1.8.5** – a tracked event's row shows its event tasks'
+  progress; ticking it off with open tasks asks *Only the event* / *Mark all as done* (`toggleDone` in
+  `views/tasks/helpers.ts`, used everywhere a task is ticked off). Decided with the maintainer: event tasks stay separate
+  tasks, **not** subtasks of the tracked event.
+- **In 1.8.4 (released):** "Track as task", and resize events by dragging their top / bottom edge
   (`views/calendar/eventResize.ts`; the range preview helpers shared with drag-to-create are in `views/calendar/ranges.ts`).
 - **In 1.8.3 (released):** timed events over several days stay in the hour grid (one block
   per day, sticky label), instead of the all-day row. See *Not released yet* in `CHANGELOG.md`.

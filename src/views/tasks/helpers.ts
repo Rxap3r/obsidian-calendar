@@ -1,5 +1,6 @@
 import { Notice, TFile } from "obsidian";
 import { chooseAction } from "../../modals/ConfirmModal";
+import { plural } from "../../util";
 import type OmniCalendarPlugin from "../../main";
 import { CalendarOccurrence, Task } from "../../types";
 
@@ -44,4 +45,29 @@ export async function openTaskEvent(plugin: OmniCalendarPlugin, t: Task, open: (
 	]);
 	if (answer === "delete") await plugin.tasks.remove(t.id);
 	else if (answer === "keep") await plugin.tasks.update(t.id, { event: undefined });
+}
+
+/**
+ * Tick a task off (or on again). Ticking off a tracked event ("Track as task") whose event still has open tasks asks
+ * whether to mark those as done too. Used everywhere a task can be ticked off, so all places behave the same.
+ */
+export async function toggleDone(plugin: OmniCalendarPlugin, t: Task) {
+	const store = plugin.tasks;
+	if (!t.done && t.event?.self) {
+		const open = store.forEvent(t.event.key).filter((x) => !x.done);
+		if (open.length) {
+			const answer = await chooseAction(
+				plugin.app, "Event done",
+				`“${t.title}” still has ${plural(open.length, "open task")}. Mark ${open.length === 1 ? "it" : "them"} as done too?`,
+				[
+					{ label: "Only the event", value: "event" },
+					{ label: open.length === 1 ? "Mark the task as done too" : "Mark all as done", value: "all" },
+				]
+			);
+			if (!answer) return;
+			await store.setDoneMany([t.id, ...(answer === "all" ? open.map((x) => x.id) : [])], true);
+			return;
+		}
+	}
+	await store.setDone(t.id, !t.done);
 }

@@ -8,7 +8,7 @@ import { eventNotePath } from "../notes";
 import { eventNowOf } from "../store";
 import { NotePickerModal } from "../modals/NotePickerModal";
 import { TaskModal } from "../modals/TaskModal";
-import { noteName, openLinkedNote } from "./tasks/helpers";
+import { noteName, openLinkedNote, toggleDone } from "./tasks/helpers";
 import { EventModal } from "../modals/EventModal";
 import { EventDetailsModal } from "../modals/EventDetailsModal";
 
@@ -53,7 +53,7 @@ export function occurrenceMenu(plugin: OmniCalendarPlugin, occ: CalendarOccurren
 		const key = eventKey(occ);
 		const tracked = plugin.tasks.tracked(key);
 		if (tracked) {
-			menu.addItem((i) => i.setTitle(tracked.done ? "Mark event as not done" : "Mark event as done").setIcon("check-circle-2").onClick(() => void plugin.tasks.setDone(tracked.id, !tracked.done)));
+			menu.addItem((i) => i.setTitle(tracked.done ? "Mark event as not done" : "Mark event as done").setIcon("check-circle-2").onClick(() => void toggleDone(plugin, tracked)));
 		}
 		menu.addItem((i) =>
 			i.setTitle(tracked ? "Stop tracking as task" : "Track as task").setIcon("list-checks").onClick(() =>
@@ -179,7 +179,7 @@ export function trackedMark(plugin: OmniCalendarPlugin, el: HTMLElement, occ: Ca
 	cb.addEventListener("pointerdown", (e) => e.stopPropagation());
 	cb.addEventListener("click", (e) => {
 		e.stopPropagation();
-		void plugin.tasks.setDone(t.id, !t.done);
+		void toggleDone(plugin, t);
 	});
 	into.prepend(cb);
 }

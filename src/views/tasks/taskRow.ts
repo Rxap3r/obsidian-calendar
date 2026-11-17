@@ -5,7 +5,7 @@ import { PRIORITY_NAMES } from "../../tasks";
 import { addDays, formatDate, parseLocal, toDateKey } from "../../dateUtils";
 import { TaskModal } from "../../modals/TaskModal";
 import { confirmAction } from "../../modals/ConfirmModal";
-import { noteName, openLinkedNote, openTaskEvent, taskTimeLabel } from "./helpers";
+import { noteName, openLinkedNote, openTaskEvent, taskTimeLabel, toggleDone } from "./helpers";
 import { openOccurrence } from "../shared";
 
 export interface TaskRowOptions {
@@ -32,7 +32,7 @@ export function renderTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t
 	if (t.done) setIcon(check, "check");
 	check.onclick = (e) => {
 		e.stopPropagation();
-		void store.setDone(t.id, !t.done);
+		void toggleDone(plugin, t);
 	};
 
 	const body = line.createDiv({ cls: "ch-task-body" });
@@ -62,6 +62,17 @@ export function renderTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t
 			e.stopPropagation();
 			void openTaskEvent(plugin, t, (occ) => openOccurrence(plugin, occ));
 		};
+	}
+	// A tracked event: the progress of the event's own tasks, as on the event in the calendar.
+	if (t.event?.self) {
+		const evTasks = store.forEvent(t.event.key);
+		if (evTasks.length) {
+			const d = evTasks.filter((x) => x.done).length;
+			const h = meta.createSpan({ cls: "ch-task-hint ch-task-meta-evtasks", attr: { "aria-label": `${d} of ${evTasks.length} event tasks done` } });
+			h.toggleClass("is-complete", d === evTasks.length);
+			setIcon(h.createSpan({ cls: "ch-task-hint-icon" }), d === evTasks.length ? "check-square" : "square");
+			h.appendText(`${d}/${evTasks.length}`);
+		}
 	}
 	if (t.subtasks.length) {
 		const doneN = t.subtasks.filter((s) => s.done).length;
@@ -129,7 +140,7 @@ export function taskMenu(plugin: OmniCalendarPlugin, t: Task, e: MouseEvent) {
 	const today = new Date();
 	if (t.event?.self) {
 		// "Track as task": day, time and title belong to the event; the rest is done there.
-		menu.addItem((i) => i.setTitle(t.done ? "Mark as not done" : "Mark as done").setIcon("check").onClick(() => void store.setDone(t.id, !t.done)));
+		menu.addItem((i) => i.setTitle(t.done ? "Mark as not done" : "Mark as done").setIcon("check").onClick(() => void toggleDone(plugin, t)));
 		menu.addItem((i) => i.setTitle("Open event").setIcon("calendar").onClick(() => void openTaskEvent(plugin, t, (occ) => openOccurrence(plugin, occ))));
 		// (Everything here is also reachable by tapping: the tick circle, and the event dialog's "Track as task" switch.)
 		menu.addSeparator();
