@@ -38,21 +38,25 @@ export const MS_WORK_GUIDE: SetupGuide = {
 	needs: [
 		"A work or school Microsoft 365 account.",
 		"Permission to register apps in your organisation (usually allowed; otherwise ask IT to create it with the steps below).",
+		"Possibly an admin's approval afterwards – many organisations require it for every app.",
 		"No client secret and no cost.",
 	],
 	steps: [
 		"Open entra.microsoft.com (or portal.azure.com) with your work account → App registrations → New registration.",
-		"Name: anything. Supported account types: “Accounts in this organizational directory only” (recommended – Microsoft doesn't let ordinary users approve new multi-tenant apps) or “Accounts in any organizational directory”.",
+		"Name: anything. Supported account types: “Accounts in this organizational directory only” – preselected, and recommended: Microsoft by default doesn't let employees approve new apps that are open to other organisations.",
 		"Redirect URI: platform “Public client/native (mobile & desktop)”, value http://localhost → Register. (Adding it later under Authentication → Add a platform: choose “Mobile and desktop applications”, not “Web”.)",
 		"API permissions → Add a permission → Microsoft Graph → Delegated → Calendars.ReadWrite → Add permissions.",
-		"Overview → copy the Application (client) ID into the field below. For a single-organisation app choose “Single organisation” above and also copy the Directory (tenant) ID.",
+		"Overview → copy the Application (client) ID and the Directory (tenant) ID. Above, choose “Work or school – single organisation (tenant ID)” and paste both below.",
 	],
 	problems: [
-		"“Need admin approval” / “request approval” or AADSTS65001 → your organisation (or Microsoft's default since 2025 for multi-tenant apps) doesn't let users approve the app. First switch the app to “Accounts in this organizational directory only” (Authentication) and use “Single organisation” with the tenant ID. Still asked? An admin opens the app → API permissions → “Grant admin consent for …” once (or ask IT).",
-		"AADSTS700016 “application … was not found in the directory” → the client ID is wrong or incomplete, or the account type chosen below doesn't match the app's Supported account types.",
-		"AADSTS50011 “redirect URI … does not match” → the redirect URI must be exactly http://localhost (not https, not 127.0.0.1, no slash at the end).",
-		"AADSTS7000218 “must contain client_assertion or client_secret” → the redirect URI was added under platform “Web”; remove it there and add it under “Mobile and desktop applications”.",
-		"AADSTS50194 “not configured as multi-tenant” → choose “Single organisation” and enter the tenant ID.",
+		"“Need admin approval”, a “request approval” button or AADSTS65001 → your organisation requires an admin to approve the app. If the app is set to “any organizational directory”, switch it to “this organizational directory only” first. Still asked? It's your organisation's policy: an admin opens the app → API permissions → “Grant admin consent for …” once (or send the request to IT).",
+		"IT won't approve it → you can still see the calendar read-only: an ICS link (Outlook on the web → Settings → Calendar → Shared calendars → Publish a calendar), or, if publishing is off, a calendar file saved from classic Outlook (File → Save Calendar) into your vault and added as a subscription with its path.",
+		"A sign-in page for personal accounts opens → choose a work or school type under “Which Microsoft account?” above.",
+		"AADSTS50194 “not configured as a multi-tenant application” → choose “Work or school – single organisation (tenant ID)” and enter the tenant ID.",
+		"AADSTS700016 “application … was not found in the directory” → the client ID is wrong or incomplete, or the account type above doesn't match the app.",
+		"AADSTS50011 “redirect URI … does not match” → it must be exactly http://localhost (not https, not 127.0.0.1, no slash at the end).",
+		"AADSTS7000218 “must contain client_assertion or client_secret” → the redirect URI is under platform “Web”; move it to “Mobile and desktop applications”.",
+		"More help: README → Troubleshooting sign-in.",
 	],
 };
 
@@ -73,12 +77,14 @@ export const MS_PERSONAL_GUIDE: SetupGuide = {
 	],
 	problems: [
 		"No directory / cannot create app registrations → finish the Azure sign-up (step 1).",
+		"A sign-in page for company accounts opens → choose “Personal” under “Which Microsoft account?” above.",
 		"AADSTS50020 “account does not exist in tenant” → the app does not allow personal accounts; change Supported account types under Authentication.",
 		"“unauthorized_client” (“not enabled for consumers”) → the app doesn't allow personal accounts. Easiest: create a new app registration and choose “Personal Microsoft accounts only” (step 3). Otherwise see the next point. Less often, the redirect URI isn't platform “Public client/native” with value exactly http://localhost.",
 		"AADSTS700016 “application … was not found in the directory” → the client ID is wrong or incomplete, or the account type chosen below doesn't match the app's Supported account types.",
 		"AADSTS50011 “redirect URI … does not match” → the redirect URI must be exactly http://localhost (not https, not 127.0.0.1, no slash at the end).",
 		"AADSTS7000218 “must contain client_assertion or client_secret” → the redirect URI was added under platform “Web”; remove it there and add it under “Mobile and desktop applications”.",
 		"“Property api.requestedAccessTokenVersion is invalid” when allowing personal accounts → open the app's Manifest, in the \"api\" section change \"requestedAccessTokenVersion\": null to 2, save, then change Supported account types again (or simply create a new app registration with personal accounts).",
+		"More help: README → Troubleshooting sign-in.",
 	],
 };
 

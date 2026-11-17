@@ -29,7 +29,8 @@ Calendar, iCloud** or any other calendar that offers an ICS link.
 - [Using the calendar](#using-the-calendar): views, sidebar, creating events, notes, agenda in notes
 - [Tasks](#tasks): lists, priorities, subtasks, linked notes
 - [Which connection method should I use?](#which-connection-method-should-i-use)
-- [Google & Outlook (two-way)](#two-way-sync-with-google-calendar-and-outlook--microsoft-365): sign-in, editing, security
+- [Google & Outlook (two-way)](#two-way-sync-with-google-calendar-and-outlook--microsoft-365): sign-in, own app registration, editing, security
+  - [Troubleshooting sign-in](#troubleshooting-sign-in): error messages, company accounts that need an admin's approval
 - [Read-only ICS subscriptions](#read-only-subscriptions-via-ics-link-proton-icloud-google-outlook-) (Proton, iCloud, …)
 - [Settings](#settings-reference) · [Commands](#commands) · [Where data is stored](#where-data-is-stored)
 - [Development & releases](#development) · [Changelog](CHANGELOG.md) · [Roadmap](#roadmap-ideas)
@@ -332,8 +333,8 @@ PKCE, and the tokens stay on that device. No Omni Calendar server is involved.
 It asks for nothing else: no e-mail, contacts or files. The app may be marked **"unverified"**. That only means the publisher hasn't done Microsoft's
 partner verification, and the sign-in itself is Microsoft's standard sign-in.
 
-**Work/school accounts:** many organisations only let users approve verified apps. If you see *"Need admin approval"*, ask your IT team to approve
-"Omni Calendar", or use your own app registration (Method B below).
+**Work or school account?** Many organisations don't let employees approve apps themselves. If you see *"Need admin approval"*, see
+[Company or school accounts](#company-or-school-accounts-approval-and-company-rules).
 
 ### Google: just sign in
 
@@ -350,20 +351,29 @@ partner verification, and the sign-in itself is Microsoft's standard sign-in.
 - To remove access, use Omni Calendar → *Sign out*, which revokes it at Google, or [myaccount.google.com → Security → Third-party connections](https://myaccount.google.com/connections).
 - The built-in client ID and client secret are public by design. For desktop apps Google documents the "client secret" as not confidential. On their own they give no access to anyone's calendar.
 
-### Optional: use your own app registration
+### Optional: your own app registration
 
-Omni Calendar has **no central server**. If you prefer, or your organisation requires it, you can register a small app of your own, so that only you,
-your devices and Google/Microsoft are involved. You only do this once per account, and other devices then just sign in with the same Client ID.
-The steps are also shown in the sign-in dialog. Click a method below to expand it.
+Omni Calendar has **no central server**. If you prefer, you can register a small app of your own, so that only you, your devices and
+Google/Microsoft are involved. You do this once per account; other devices then sign in with the same Client ID.
+The same steps are shown in the sign-in dialog (*Use my own app registration (advanced)*).
+
+**Which method?**
+
+| Your account | Method | Time |
+| --- | --- | --- |
+| Google (Gmail or Workspace) | **A** | 10–15 min |
+| Microsoft **work or school** (Microsoft 365) | **B** | ~10 min |
+| Microsoft **personal** (Outlook.com, Hotmail, Live) | **C** | 20–30 min |
+
+Click a method to expand it. If something goes wrong, see [Troubleshooting sign-in](#troubleshooting-sign-in).
 
 <details>
-<summary><b>Method A (optional): own Google app</b></summary>
-
+<summary><b>Method A: own Google app</b></summary>
 
 **You need**
-- A Google account (personal Gmail works. With a Google Workspace work/school account, your admin may block self-made apps)
-- About 10–15 minutes on a desktop computer
-- No credit card and no billing account. The Google Calendar API is free for this kind of personal use
+- A Google account. Personal Gmail works; with a Google Workspace (work/school) account, your admin may block self-made apps.
+- A desktop computer for the setup.
+- No credit card and no billing account. The Google Calendar API is free for this kind of personal use.
 
 **Steps**
 
@@ -372,88 +382,125 @@ The steps are also shown in the sign-in dialog. Click a method below to expand i
 3. *Google Auth Platform* (formerly *OAuth consent screen*) → *Get started*:
    - App name: anything (e.g. "My Obsidian Calendar"). Support and contact e-mail: your address.
    - Audience: **External**.
-   - Under **Audience**, click **Publish app** (status "In production"). Otherwise Google signs you out every 7 days. You don't need to submit for verification.
+   - Under **Audience**, click **Publish app** (status "In production"). Otherwise Google signs you out every 7 days. You don't need to submit it for verification.
 4. *Clients* (or *Credentials*) → **Create client** → application type **Desktop app** → *Create*.
 5. Copy the **Client ID** (ends in `.apps.googleusercontent.com`) and the **Client secret** (starts with `GOCSPX-`).
 6. In Obsidian: *Settings → Omni Calendar → **Google & Outlook** → **Connect Google*** → *Use my own app registration (advanced)*. Paste both values and click **Sign in with Google**.
-7. In the browser, choose your account. Google shows **"Google hasn't verified this app"**. This is expected because the app is your own. Click *Advanced → Go to (your app name)*, then **Allow**.
+7. In the browser, choose your account. Google shows **"Google hasn't verified this app"**. That's expected, because the app is your own: click *Advanced → Go to (your app name)*, then **Allow**.
 8. Back in Obsidian, switch on the calendars you want to see.
-
-**Common problems**
-- *"Access blocked: app has not completed verification"* → in step 3 you didn't publish the app or add yourself as a test user.
-- Signed out again after a week → the app is still in "Testing". Click *Publish app* (step 3).
-- *"Error 403: org_internal"* or blocked by your admin → your Workspace administrator doesn't allow it. Use an ICS link instead.
 
 </details>
 
 <details>
-<summary><b>Method B (optional): own Microsoft app for a work or school account</b></summary>
-
+<summary><b>Method B: own Microsoft app for a work or school account</b></summary>
 
 **You need**
-- A work or school Microsoft 365 account
-- Permission to register apps in your organisation. Most organisations allow it by default. If *New registration* is greyed out or forbidden, ask your IT team to create the registration for you (steps below) or to allow it
-- About 10 minutes. No client secret and no cost
+- A work or school Microsoft 365 account.
+- Permission to register apps in your organisation. Most organisations allow it. If *New registration* is greyed out or forbidden, ask your IT team to create the registration for you (steps below).
+- Possibly an **admin's approval** afterwards. Many organisations require it for every app; see [Company or school accounts](#company-or-school-accounts-approval-and-company-rules).
+- No client secret and no cost.
 
 **Steps**
 
 1. Open [entra.microsoft.com](https://entra.microsoft.com) (or [portal.azure.com](https://portal.azure.com)) with your work account → *App registrations* → **New registration**.
-2. Name: anything. **Supported account types:** *Accounts in this organizational directory only* (single tenant, **recommended**) or *Accounts in any organizational directory*. Since 2025 Microsoft by default doesn't let ordinary users approve new multi-tenant apps, so a multi-tenant app needs an admin's approval.
-3. **Redirect URI:** platform **Public client/native (mobile & desktop)**, value `http://localhost` → **Register**. (If you add it later under *Authentication* → *Add a platform*, choose **Mobile and desktop applications**, not *Web*.)
-4. *API permissions* → *Add a permission* → *Microsoft Graph* → *Delegated permissions* → tick **Calendars.ReadWrite** → *Add permissions*. (`offline_access` is requested automatically at sign-in.)
-5. On the *Overview* page, copy the **Application (client) ID**. For a single-tenant app, also copy the **Directory (tenant) ID**.
-6. In Obsidian: **Connect Outlook / Microsoft 365** → *Use my own app registration (advanced)* → paste the client ID → account type **Work or school only**, or **Other (tenant ID)** for a single-tenant app → **Sign in with Microsoft**.
-
-**Common problems**
-- *AADSTS50194 / "not configured as a multi-tenant application"* → choose **Other (tenant ID)** and enter your Directory (tenant) ID.
-- *"Need admin approval"*, a *"request approval"* button, or *AADSTS65001* → your organisation doesn't let users approve the app. Microsoft's default since 2025 blocks this for new **multi-tenant** apps. First switch the app to *Accounts in this organizational directory only* (*Authentication*) and choose **Other (tenant ID)** in Obsidian. If you're still asked, someone with admin rights (e.g. *Global Administrator* or *Cloud Application Administrator*) opens the app → *API permissions* → **Grant admin consent for …** once, or you ask IT. If IT won't approve it, you can still see the calendar read-only via an [ICS link](#read-only-subscriptions-via-ics-link-proton-icloud-google-outlook-).
-- *AADSTS700016 / "Application … was not found in the directory"* → the client ID is wrong or incomplete, or the account type chosen in Obsidian doesn't match the app's *Supported account types*.
-- *AADSTS50011 / "redirect URI … does not match"* → the redirect URI must be exactly `http://localhost` (not `https`, not `127.0.0.1`, no `/` at the end).
-- *AADSTS7000218 / "must contain client_assertion or client_secret"* → the redirect URI was added under platform **Web**. Remove it there and add it under **Mobile and desktop applications** (*Authentication* → *Add a platform*).
+2. Name: anything. **Supported account types:** **Accounts in this organizational directory only** (single tenant). This is the preselected option and the recommended one: Microsoft by default doesn't let employees approve new apps that are open to *other* organisations.
+3. **Redirect URI:** platform **Public client/native (mobile & desktop)**, value `http://localhost` → **Register**.
+4. *API permissions* → *Add a permission* → *Microsoft Graph* → *Delegated permissions* → tick **Calendars.ReadWrite** → *Add permissions*. (Staying signed in, `offline_access`, is requested automatically.)
+5. On the *Overview* page, copy the **Application (client) ID** and the **Directory (tenant) ID**.
+6. In Obsidian: **Connect Outlook / Microsoft 365** → *Use my own app registration (advanced)* → *Which Microsoft account?* **Work or school – single organisation (tenant ID)** → paste both IDs → **Sign in with Microsoft**.
 
 </details>
 
 <details>
-<summary><b>Method C (optional): own Microsoft app for a personal account</b></summary>
+<summary><b>Method C: own Microsoft app for a personal account</b></summary>
 
-
-You only need this if you don't want to use the built-in app. Microsoft only lets you create app registrations inside a Microsoft Entra **directory (tenant)**,
-though, and a personal account doesn't have one on its own. You get a directory by signing up for a free Azure account.
+Microsoft only lets you create app registrations inside a Microsoft Entra **directory (tenant)**, and a personal account doesn't have one on its own.
+You get one by signing up for a free Azure account.
 
 **You need**
-- Your Outlook.com / Hotmail / Live account
-- A **free Azure account** ([azure.microsoft.com/free](https://azure.microsoft.com/free)). Microsoft asks for a phone number and a credit card to verify your identity. Creating the app registration costs nothing, and you don't need any paid Azure services. Reports say the registration keeps working after the free trial ends because it belongs to the directory, not the subscription, but Microsoft doesn't explicitly guarantee this.
-- About 20–30 minutes
+- Your Outlook.com / Hotmail / Live account.
+- A **free Azure account** ([azure.microsoft.com/free](https://azure.microsoft.com/free)). Microsoft asks for a phone number and a credit card to verify your identity. The app registration itself costs nothing, and you don't need any paid Azure services. Reports say it keeps working after the free trial ends, because it belongs to the directory, not the subscription; Microsoft doesn't explicitly guarantee this.
+- A desktop computer for the setup.
 
 **Steps**
 
 1. Sign up at [azure.microsoft.com/free](https://azure.microsoft.com/free) with your Outlook.com account (skip this if you already have Azure). This creates your directory.
 2. Open [portal.azure.com](https://portal.azure.com) → search **App registrations** → **New registration**.
-3. Name: anything. **Supported account types:** **Personal Microsoft accounts only**, or *Accounts in any organizational directory and personal Microsoft accounts*. **Important:** this is *not* the preselected option, and changing it later is fiddly (see *Common problems*).
-4. **Redirect URI:** platform **Public client/native (mobile & desktop)**, value `http://localhost` → **Register**. (If you add it later under *Authentication* → *Add a platform*, choose **Mobile and desktop applications**, not *Web*.)
+3. Name: anything. **Supported account types:** **Personal Microsoft accounts only** (or *Accounts in any organizational directory and personal Microsoft accounts*). ⚠️ This is **not** the preselected option, and changing it later is fiddly.
+4. **Redirect URI:** platform **Public client/native (mobile & desktop)**, value `http://localhost` → **Register**.
 5. *API permissions* → *Add a permission* → *Microsoft Graph* → *Delegated* → **Calendars.ReadWrite** → *Add permissions*.
 6. Copy the **Application (client) ID** from the *Overview* page.
-7. In Obsidian: **Connect Outlook / Microsoft 365** → *Use my own app registration (advanced)* → paste the client ID → account type **Personal** → **Sign in with Microsoft** → sign in with your Outlook.com account and **Accept**.
-
-**Common problems**
-- *"You can't create app registrations"* or no directory shown → the Azure sign-up (step 1) isn't finished.
-- *AADSTS50020 / "account does not exist in tenant"* → the app was registered for organisational accounts only. Change *Supported account types* to include personal accounts (*Authentication* page), or re-register.
-- *"unauthorized_client"* (*"not enabled for consumers"*) → the app doesn't allow personal accounts; this happens when *Supported account types* was left at its default. Easiest fix: create a **new app registration** and choose **Personal Microsoft accounts only** (step 3). Or change the existing app (next point). Less often the cause is the redirect URI: its platform isn't **Public client/native**, or the value isn't exactly `http://localhost`.
-- *AADSTS700016 / "Application … was not found in the directory"* → the client ID is wrong or incomplete, or the account type chosen in Obsidian doesn't match the app's *Supported account types*.
-- *AADSTS50011 / "redirect URI … does not match"* → the redirect URI must be exactly `http://localhost` (not `https`, not `127.0.0.1`, no `/` at the end).
-- *AADSTS7000218 / "must contain client_assertion or client_secret"* → the redirect URI was added under platform **Web**. Remove it there and add it under **Mobile and desktop applications** (*Authentication* → *Add a platform*).
-- *"Property api.requestedAccessTokenVersion is invalid"* when you change *Supported account types* to include personal accounts → open the app's **Manifest**, find the `"api"` section, change `"requestedAccessTokenVersion": null` to `2`, **Save**, then change the account types again under *Authentication*. (Or simply create a new app registration with personal accounts.)
+7. In Obsidian: **Connect Outlook / Microsoft 365** → *Use my own app registration (advanced)* → *Which Microsoft account?* **Personal** → paste the client ID → **Sign in with Microsoft** → sign in with your Outlook.com account and **Accept**.
 
 </details>
 
-#### Signing in (all methods)
+### Signing in on mobile and on other devices
 
 Your browser opens, you sign in there and approve access, and Obsidian picks up the result automatically. On **mobile**, or if the browser
-can't hand the result back, the browser ends on a "can't connect to localhost" page. That's expected. Copy that page's full address
-and paste it into the sign-in dialog. Sign-in tokens stay on the device, so each device signs in once with the same Client ID
-(and, for Google, the same Client secret).
+can't hand the result back, the browser ends on a "can't connect to localhost" page. That's expected: copy that page's full address
+and paste it into the sign-in dialog.
 
+Sign-in tokens stay on the device, so **each device signs in once**, with the same Client ID (and, for Google, the same Client secret).
 After signing in, switch on the calendars you want to see. The primary calendar is on by default.
+
+### Troubleshooting sign-in
+
+#### Google
+
+| You see | What's wrong | What to do |
+| --- | --- | --- |
+| *"Access blocked: app has not completed verification"* | Your own app isn't published | Method A, step 3: *Publish app* |
+| Signed out again after a week | Your own app is still in "Testing" | Method A, step 3: *Publish app* |
+| *"Error 403: org_internal"*, or blocked by your admin | Your Workspace administrator doesn't allow the app | Ask your admin, or use an [ICS link](#read-only-subscriptions-via-ics-link-proton-icloud-google-outlook-) to see the calendar |
+| Sign-in refused, mentioning the user limit | The built-in app is limited to 100 users until Google verifies it | Use your own app (Method A) |
+
+#### Microsoft: error messages
+
+These come up with your own app registration (Methods B and C). The code (`AADSTS…`) is shown in the browser after signing in.
+
+| You see | What's wrong | What to do |
+| --- | --- | --- |
+| A sign-in page for the **wrong kind of account** (personal instead of company, or the other way round) | *Which Microsoft account?* in the sign-in dialog doesn't match your account. *Personal* is preselected | Choose the right type in the dialog. The dialog says which sign-in page will open |
+| *unauthorized_client* ("not enabled for consumers") with a personal account | The app doesn't allow personal accounts (*Supported account types* left at its default) | Easiest: create a **new** app registration with *Personal Microsoft accounts only* (Method C, step 3) |
+| *"Property api.requestedAccessTokenVersion is invalid"* when allowing personal accounts on an existing app | Azure needs one manifest setting changed first | App → **Manifest** → in the `"api"` section change `"requestedAccessTokenVersion": null` to `2` → *Save* → change the account types again under *Authentication*. Or create a new app registration |
+| *AADSTS50020* "account does not exist in tenant" | The app doesn't allow this kind of account | Change *Supported account types* (*Authentication*), or create a new app registration |
+| *AADSTS700016* "Application … was not found in the directory" | Wrong or incomplete client ID, or the account type in Obsidian doesn't match the app | Copy the whole *Application (client) ID* again; check *Which Microsoft account?* |
+| *AADSTS50194* "not configured as a multi-tenant application" | A single-organisation app, but Obsidian isn't using its tenant ID | Choose **Work or school – single organisation (tenant ID)** and enter the *Directory (tenant) ID* |
+| *AADSTS50011* "redirect URI … does not match" | The redirect address differs | It must be exactly `http://localhost` (not `https`, not `127.0.0.1`, no `/` at the end) |
+| *AADSTS7000218* "must contain client_assertion or client_secret" | The redirect address was added under platform **Web** | *Authentication*: remove it under *Web*, then *Add a platform* → **Mobile and desktop applications** → `http://localhost` |
+| *unauthorized_client* even though personal accounts are allowed | The redirect address is under the wrong platform | As in the row above |
+| *"You can't create app registrations"*, or no directory shown (personal) | The Azure sign-up isn't finished | Method C, step 1 |
+| *"Need admin approval"*, a *"request approval"* button, or *AADSTS65001* | Your organisation requires an admin to approve the app | See the next section |
+
+#### Company or school accounts: approval and company rules
+
+Every organisation decides whether employees may approve apps themselves. Many don't allow it, or only for apps from "verified publishers". Since 2025
+Microsoft's default also blocks employees from approving new apps that are open to *other* organisations (multi-tenant). In both cases sign-in works,
+but Microsoft then asks for an **admin's approval**. Omni Calendar can't change this, and doesn't try to get around it.
+
+Try these in order:
+
+1. **Use a single-organisation app** (Method B): *Supported account types* **Accounts in this organizational directory only**, and in Obsidian
+   **Work or school – single organisation (tenant ID)** with the *Directory (tenant) ID*. This is enough if your organisation only blocks multi-tenant apps.
+2. **Still asked for approval?** Then it's your organisation's policy. Someone with admin rights (e.g. *Global Administrator*, *Privileged Role
+   Administrator* or *Cloud Application Administrator*) approves the app **once**: Entra → *App registrations* → your app → *API permissions* →
+   **Grant admin consent for …**. The *request approval* button in the sign-in page sends this request to your admins, if your organisation has turned that on.
+3. **Asking IT?** Tell them what the app needs, for example:
+   > I'd like to connect my work calendar to a calendar tool on my computer (Omni Calendar for Obsidian). I created an app registration in our
+   > directory: *[app name]*, client ID *[Application (client) ID]*. It only needs the delegated permissions **Calendars.ReadWrite** (my own
+   > calendars; no mail, files or contacts) and **offline_access** (stay signed in). It has no client secret and only accepts accounts from our
+   > organisation. Could you grant admin consent for it (Entra → App registrations → the app → API permissions → "Grant admin consent")?
+
+   *Quick sign-in* runs into the same rule: for company accounts, the built-in app also needs an admin's approval.
+
+**If IT says no**, you can still **see** your work calendar, read-only:
+
+- **ICS link:** Outlook on the web → *Settings → Calendar → Shared calendars → Publish a calendar* → copy the ICS link →
+  [add it as a subscription](#read-only-subscriptions-via-ics-link-proton-icloud-google-outlook-). Many organisations switch publishing off.
+- **Calendar file in your vault**, if publishing is off: in **classic Outlook for Windows**, open the calendar → *File → Save Calendar* → choose a date range
+  (e.g. the next 3 months) and *Full details* → save it as e.g. `work.ics` **inside your vault**. Then *Settings → Omni Calendar → Calendars →
+  Add subscription* with the file's path, e.g. `Calendar/work.ics`. It's a snapshot: save the file again over the old one and press ⟳ to update it.
+  The new Outlook and Outlook on the web can't export like this. Check that exporting calendar data is allowed in your organisation.
 
 ### How editing works
 

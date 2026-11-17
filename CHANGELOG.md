@@ -20,6 +20,10 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 - **Company accounts and "Need admin approval":** the work/school guide now recommends a single-organisation app
   (Microsoft no longer lets ordinary users approve new multi-tenant apps by default) and explains where an admin grants
   approval once, or how to see the calendar read-only via ICS if IT says no.
+- **Cleaner sign-in guide (README):** a "Which method?" table for your own app registration, the steps per method, and
+  one new **Troubleshooting sign-in** section: Google problems, all Microsoft error messages in one table (they used to be
+  listed twice), and *Company or school accounts* – admin approval, what to ask IT, and read-only alternatives when IT
+  says no (ICS link, or a calendar file saved from classic Outlook into the vault). The sign-in dialog's guides match.
 
 ## Known bugs
 
