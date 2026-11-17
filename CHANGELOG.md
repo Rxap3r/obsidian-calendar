@@ -4,15 +4,9 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet (1.8.2)
+## Not released yet
 
-- **An event's tasks move with the event.** Before, they kept the day they were created on, so after moving an event
-  they stayed in *Tasks today* (or *Tomorrow*, …) for the old day. Now, when an event moves to another day – in the
-  dialog, by dragging, or in Google/Outlook itself – its tasks move by the same number of days. A task on the event's day
-  stays on it; one you set two days earlier stays two days earlier. Times are kept.
-- **Drag to create over several days:** in the week view, dragging to create an event can now continue into the next
-  days, e.g. from Wednesday 12:00 to Thursday 06:00. The preview is drawn on each day and reads *Wed 12:00 – Thu 06:00*.
-  Before, the selection stopped at midnight. On the phone: press and hold, then drag into the next day.
+- *(nothing yet)*
 
 ## Known bugs
 
@@ -22,6 +16,8 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.8.2** – An event's tasks move with the event when it moves to another day; drag to create can continue into the
+  next days in the week view.
 - **1.8.1** – Subtasks of event tasks shown in the event dialog; deleting an event deletes its tasks (after asking);
   moving an event to another calendar keeps its tasks and notes; tasks and notes can be added while creating an event;
   tasks whose event is gone are marked and can be kept or deleted.

@@ -284,10 +284,9 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Where we stopped (keep this section up to date at the end of a session)
 
-- **Released:** 1.8.0 (PR #28) and 1.8.1 (PR #29) were merged by the maintainer.
-- **On `dev-branch`, not released:** version **1.8.2** – tasks move with their event; drag-to-create across days in the
-  week view; cached test browser in the GitHub check. See *Not released yet* in `CHANGELOG.md`. Open a PR only when
-  the maintainer says "pull it".
+- **Released:** 1.8.0 (PR #28) and 1.8.1 (PR #29) were merged by the maintainer. **1.8.2** (tasks move with their event,
+  drag-to-create across days, cached test browser in the GitHub check) is in a pull request; once it is merged, the next
+  change on `dev-branch` needs a new version number.
 - **Waiting for the maintainer to test on desktop and phone:** creating a Google/Outlook event with tasks in the new-event
   dialog (relies on the real service returning the new id); moving events with tasks between Obsidian and Google;
   multi-day drag to create; tasks following a moved event.
