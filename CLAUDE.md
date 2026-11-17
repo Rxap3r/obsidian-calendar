@@ -306,7 +306,8 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
   - subtasks on event tasks are shown in the event dialog (not forbidden);
   - event tasks go to the default task list; no list picker in the event's quick add (would be clutter);
   - tasks of a deleted event are deleted with it.
-- **On `dev-branch`, not released: 1.9.0 – details view step a.** Next: step b (progress log), then c, then 1.10 (repeating).
+- **1.9.0 (details view step a) is in a pull request**; once it is merged, the next change on `dev-branch` needs a new
+  version number. Next: step b (progress log), then c, then 1.10 (repeating).
   Tests: the UI test setup starts with `clickOpens = "edit"` (most tests drive the edit dialogs); `specs/details.cjs`
   switches back to the default.
 - **"Track as task" (in 1.8.4):** `task.event.self = true` marks the task that *is* the event (`TaskStore.tracked` /
