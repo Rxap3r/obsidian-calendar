@@ -1,6 +1,7 @@
 import { Events } from "obsidian";
 import type OmniCalendarPlugin from "./main";
 import { SmartListId, Subtask, Task, TaskData, TaskEventLink, TaskList, TaskPriority } from "./types";
+import type { EventNow } from "./store";
 import { addDays, dayDiff, MS_DAY, parseLocal, startOfDay, timeKeyToMinutes, toDateKey, uid } from "./dateUtils";
 
 export const DEFAULT_TASK_LIST: TaskList = { id: "tasks", name: "Tasks", color: "#7c5cff" };
@@ -63,7 +64,7 @@ export function normalizeTaskData(raw: unknown): TaskData {
 function normalizeEventLink(raw: unknown): TaskEventLink | undefined {
 	const e = raw as Partial<TaskEventLink> | undefined;
 	if (!e || typeof e.key !== "string" || !e.key || !/^\d{4}-\d{2}-\d{2}$/.test(e.date ?? "")) return undefined;
-	return { key: e.key, title: String(e.title ?? ""), date: e.date as string };
+	return { key: e.key, title: String(e.title ?? ""), date: e.date as string, ...(e.self ? { self: true } : {}) };
 }
 
 /** Minutes since midnight; tasks without a time sort after all timed ones. */
@@ -120,8 +121,31 @@ export class TaskStore extends Events {
 		this.trigger("changed");
 	}
 
-	/** The tasks that belong to an event occurrence (by `eventKey()`), in list order. */
+	/** The tasks that belong to an event occurrence (by `eventKey()`), in list order – not its "Track as task" entry. */
 	forEvent(key: string): Task[] {
+		return this.eventTasks(key).filter((t) => !t.event?.self);
+	}
+
+	/** The event's "Track as task" entry, if it is tracked. */
+	tracked(key: string): Task | undefined {
+		return this.eventTasks(key).find((t) => t.event?.self);
+	}
+
+	/** Turn "Track as task" on or off for an event (`now`: its title / day / time, see `eventNowOf`). */
+	async setTracked(key: string, now: EventNow, on: boolean) {
+		const existing = this.tracked(key);
+		if (!on) {
+			if (existing) await this.remove(existing.id);
+			return;
+		}
+		if (existing) return;
+		await this.upsert(this.draft({
+			title: now.title, date: now.day, start: now.start, end: now.end,
+			event: { key, title: now.title, date: now.day, self: true },
+		}));
+	}
+
+	private eventTasks(key: string): Task[] {
 		if (!this.byEvent || this.byEvent.items !== this.items || this.byEvent.version !== this.version) {
 			const map = new Map<string, Task[]>();
 			for (const t of this.items) {
@@ -176,7 +200,16 @@ export class TaskStore extends Events {
 		for (const t of this.items) {
 			if (!t.event) continue;
 			const now = this.plugin.store.eventNow(t.event.key);
-			if (!now || (now.day === t.event.date && now.title === t.event.title)) continue;
+			if (!now) continue;
+			// "Track as task": the task mirrors the event (title, day, time).
+			if (t.event.self) {
+				if (t.title === now.title && t.date === now.day && t.start === now.start && t.end === now.end && t.event.date === now.day) continue;
+				Object.assign(t, { title: now.title, date: now.day, start: now.start, end: now.end });
+				t.event = { ...t.event, title: now.title, date: now.day };
+				moved++;
+				continue;
+			}
+			if (now.day === t.event.date && now.title === t.event.title) continue;
 			if (now.day !== t.event.date && t.date) {
 				const shift = dayDiff(parseLocal(t.event.date), parseLocal(now.day));
 				t.date = toDateKey(addDays(parseLocal(t.date), shift));
@@ -206,7 +239,8 @@ export class TaskStore extends Events {
 		const s = this.plugin.settings;
 		if (!s.tasksEnabled || !s.tasksInCalendar) return [];
 		return this.items
-			.filter((t) => t.date === date && (s.tasksCalendarShowDone || !t.done) && (!t.event || !!t.start))
+			// The event of a "Track as task" entry is already in the calendar (with a tick circle).
+			.filter((t) => t.date === date && (s.tasksCalendarShowDone || !t.done) && (!t.event || (!!t.start && !t.event.self)))
 			.sort((a, b) => Number(a.done) - Number(b.done) || compareTasks(a, b));
 	}
 

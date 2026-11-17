@@ -485,4 +485,91 @@ test("desktop: tasks move with their event – dialog, drag, Google; 'Tasks toda
 	eq(await page.evaluate(() => { const t = plugin.tasks.items.find((x) => x.title === "Insurance card"); return [t.date, t.event.title]; }), ["2026-11-18", "Dentist (moved)"], "Google change followed");
 });
 
+
+const tracked = (page) => page.evaluate(() => plugin.tasks.items.filter((t) => t.event?.self).map((t) => [t.title, t.date, t.start ?? null, t.end ?? null, t.done]));
+
+test("desktop: 'Track as task' – switch in the dialog, task in the lists, tick circle on the event, follows and goes with it", {}, async ({ page }) => {
+	await dayView(page);
+	await page.locator(".ch-tg-event", { hasText: "Design review" }).click();
+	await page.waitForTimeout(100);
+	await page.locator(".ch-track-setting .checkbox-container").click();
+	await page.waitForTimeout(100);
+	eq(await tracked(page), [["Design review", "2026-11-14", "10:00", "11:30", false]], "task with the event's title, day and time");
+	eq(await page.locator(".ch-event-tasks-progress").textContent(), "", "not counted as one of the event's tasks");
+	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).click();
+	await page.waitForTimeout(150);
+	// Calendar: no extra task block, a tick circle on the event instead.
+	eq(await page.locator(".ch-tg-task").count(), 0, "not drawn twice");
+	await page.locator(".ch-tg-event", { hasText: "Design review" }).locator(".ch-track-check").click();
+	await page.waitForTimeout(150);
+	eq((await tracked(page))[0][4], true, "ticked off in the calendar");
+	expect(await page.locator(".ch-tg-event.ch-event-done", { hasText: "Design review" }).count() === 1, "event struck through");
+	eq(await page.locator(".modal").count(), 0, "ticking didn't open the dialog");
+	await shot(page, "track-as-task-calendar");
+	// The event changes: the task follows (title, day, time).
+	await page.evaluate(async () => {
+		const ev = plugin.data.events.find((e) => e.title === "Design review");
+		await plugin.store.updateEvent(ev.id, { title: "Design review v2", start: "2026-11-16T14:00", end: "2026-11-16T15:00" });
+	});
+	await page.waitForTimeout(150);
+	eq(await tracked(page), [["Design review v2", "2026-11-16", "14:00", "15:00", true]], "follows the event");
+	// Task lists: marked "Event"; a click opens the event.
+	await page.evaluate(async () => { await plugin.tasks.setDone(plugin.tasks.items[0].id, false); await mountTasks(); });
+	await page.locator('.ch-tasks-nav-item[data-list="upcoming"]').click();
+	await page.waitForTimeout(100);
+	eq(await page.locator(".ch-task", { hasText: "Design review v2" }).locator(".ch-task-meta-event").textContent(), "Event", "marked as event");
+	await page.locator(".ch-task", { hasText: "Design review v2" }).locator(".ch-task-title").click();
+	await page.waitForTimeout(150);
+	eq(await page.inputValue(".ch-title-input"), "Design review v2", "opens the event dialog");
+	// Deleting the event takes the tracking entry with it, without asking (it has no other tasks).
+	await page.locator(".ch-modal-buttons button", { hasText: /^Delete$/ }).click();
+	await page.waitForTimeout(150);
+	eq([await tracked(page), await page.locator(".modal").count()], [[], 0], "gone with the event");
+});
+
+test("desktop: 'Track as task' – new events, Google events via the menu, not for repeats", {}, async ({ page }) => {
+	await page.evaluate(() => new __eventMod.EventModal(plugin, { start: new Date(2026, 10, 20, 9) }).open());
+	await page.waitForTimeout(100);
+	await page.fill(".ch-title-input", "Workshop");
+	await page.locator(".ch-track-setting .checkbox-container").click();
+	await page.click(".ch-modal-buttons button.mod-cta");
+	await page.waitForTimeout(200);
+	eq(await tracked(page), [["Workshop", "2026-11-20", "09:00", "10:00", false]], "new event tracked on save");
+	// Repeating new event: not tracked (comes with 1.9), says so.
+	await page.evaluate(() => new __eventMod.EventModal(plugin, { start: new Date(2026, 10, 21, 9) }).open());
+	await page.waitForTimeout(100);
+	await page.fill(".ch-title-input", "Weekly");
+	await page.selectOption(".ch-repeat-row select", "weekly");
+	await page.locator(".ch-track-setting .checkbox-container").click();
+	await page.click(".ch-modal-buttons button.mod-cta");
+	await page.waitForTimeout(200);
+	eq((await tracked(page)).length, 1, "repeating event not tracked");
+	expect(await page.evaluate(() => window.notices.some((n) => /repeating events/.test(n))), "says why");
+	// Google event via the right-click menu; repeats have no entry.
+	await dayView(page, 15);
+	await page.locator(".ch-tg-event", { hasText: "Dentist" }).click({ button: "right" });
+	await page.evaluate(() => window.lastMenu.items.find((i) => i.t === "Track as task").fn());
+	await page.waitForTimeout(150);
+	eq((await tracked(page))[1], ["Dentist (Google)", "2026-11-15", "14:00", "15:00", false], "Google event tracked (kept in Obsidian)");
+	await page.locator(".ch-tg-event", { hasText: "Dentist" }).click({ button: "right" });
+	const items = await page.evaluate(() => window.lastMenu.items.map((i) => i.t));
+	expect(items.includes("Mark event as done") && items.includes("Stop tracking as task"), `menu: ${items}`);
+	await page.locator(".ch-tg-event", { hasText: "Standup" }).first().click({ button: "right" });
+	expect(!(await page.evaluate(() => window.lastMenu.items.map((i) => i.t))).includes("Track as task"), "no entry for a repeat");
+});
+
+test("mobile: 'Track as task' – switch and tick circle by tapping", { mobile: true }, async ({ page }) => {
+	await dayView(page);
+	await page.locator(".ch-tg-event", { hasText: "Design review" }).tap();
+	await page.waitForTimeout(150);
+	await page.locator(".ch-track-setting .checkbox-container").tap();
+	await page.locator(".ch-track-setting").scrollIntoViewIfNeeded();
+	await shot(page, "mobile-track-as-task-dialog");
+	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).tap();
+	await page.waitForTimeout(150);
+	await page.locator(".ch-tg-event", { hasText: "Design review" }).locator(".ch-track-check").tap();
+	await page.waitForTimeout(150);
+	eq([(await tracked(page))[0][4], await page.locator(".modal").count()], [true, 0], "ticked off by tapping, no dialog");
+});
+
 };

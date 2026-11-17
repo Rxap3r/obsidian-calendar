@@ -2,7 +2,7 @@ import type OmniCalendarPlugin from "../../main";
 import { CalendarOccurrence } from "../../types";
 import { addDays, formatDate, formatTime, isSameDay, onDay, startOfDay, toDateKey } from "../../dateUtils";
 import { dayTaskCounter } from "./tasks";
-import { occurrenceMenu, openOccurrence, taskHint } from "../shared";
+import { occurrenceMenu, openOccurrence, taskHint, trackedMark } from "../shared";
 import { CalendarHost } from "./host";
 
 /** The agenda: the events of the next days as a list, grouped by day. */
@@ -49,7 +49,9 @@ function agendaItem(plugin: OmniCalendarPlugin, parent: HTMLElement, o: Calendar
 	}
 	row.createSpan({ cls: "ch-dot" });
 	const main = row.createDiv({ cls: "ch-agenda-main" });
-	taskHint(plugin, main.createDiv({ cls: "ch-agenda-title", text: o.title }), o);
+	const title = main.createDiv({ cls: "ch-agenda-title", text: o.title });
+	taskHint(plugin, title, o);
+	trackedMark(plugin, row, o, title);
 	const sub = [o.location, plugin.store.getSource(o.sourceId)?.name].filter(Boolean).join(" · ");
 	if (sub) main.createDiv({ cls: "ch-agenda-sub", text: sub });
 	row.onclick = () => openOccurrence(plugin, o);

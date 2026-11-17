@@ -285,7 +285,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 ## Where we stopped (keep this section up to date at the end of a session)
 
 - **Released:** 1.8.0 (PR #28), 1.8.1 (PR #29), 1.8.2 (PR #30) and 1.8.3 (PR #31) were merged by the maintainer.
-- **1.8.4 is in a pull request** (once merged, the next change on `dev-branch` needs a new version number) – resize events by dragging their top / bottom edge
+- **1.8.4 is in a pull request (#32)** (once merged, the next change on `dev-branch` needs a new version number) – "Track as task", and resize events by dragging their top / bottom edge
   (`views/calendar/eventResize.ts`; the range preview helpers shared with drag-to-create are in `views/calendar/ranges.ts`).
 - **In 1.8.3 (released):** timed events over several days stay in the hour grid (one block
   per day, sticky label), instead of the all-day row. See *Not released yet* in `CHANGELOG.md`.
@@ -299,8 +299,8 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
   - event tasks go to the default task list; no list picker in the event's quick add (would be clutter);
   - tasks of a deleted event are deleted with it.
 - **Next planned feature:** the details view for events and tasks (see Roadmap above and the README roadmap), then 1.9.
-- **New idea from the maintainer, timing not decided:** "Track as task" for events (README roadmap, before step 3).
-  Off by default, per event (dialog checkbox + menu). Proposed design: an event task marked as *the event itself*
-  (e.g. a flag on `task.event`), shown in task lists with the event's time, **not** drawn as an extra task block in the
-  calendar (the event gets a tick circle / is struck through when done); follows and is deleted with the event via the
-  existing 1.8 machinery. Repeating events only with 1.9. Suggested to the maintainer as 1.8.5 (single events) or with the details view.
+- **"Track as task" (in 1.8.4):** `task.event.self = true` marks the task that *is* the event (`TaskStore.tracked` /
+  `setTracked`; `forEvent` leaves it out, so it's not one of the event's "2/5"). Title, day and time mirror the event
+  (`followEvents` + `eventNowOf` in `store.ts`). Not drawn as a task block; the event gets `trackedMark` (tick circle,
+  `ch-event-done`) in `views/shared.ts`. In task lists a click opens the event; its menu has done / open event / stop
+  tracking only (no priority: not reachable by tapping). Off by default; not for repeats until 1.9.
