@@ -98,7 +98,9 @@ Shared helpers live in one place. Before writing a small helper (error text, plu
 | `pickers/` | Own `DateField` (month calendar) and `TimeField` (15-minute list, typing); `popup.ts` has the shared pop-up helpers and `keepFocusOnTap` |
 | `modals/EventModal.ts`, `eventForm.ts` | Create/edit dialog (local + remote, multi-calendar "Save to"); `eventForm.ts` fills its fields |
 | `modals/SignInModal.ts` | Account connection (quick sign-in or own app registration) |
-| `modals/EventDetailsModal.ts`, `ConfirmModal.ts`, `confirmations.ts` | Read-only details; yes/no dialog; the shared "delete Google/Outlook event" and "delete list" questions |
+| `modals/EventDetailsModal.ts`, `modals/TaskDetailsModal.ts` | The details view (1.9) of events (also read-only ones) and tasks: everything at a glance, quick actions, **Edit notes** (`views/notesBlock.ts`), Edit button. They redraw on changes, but not while notes are being edited |
+| `views/tasks/openTask.ts`, `openOccurrence` / `editOccurrence` in `views/shared.ts` | What a click opens (setting `clickOpens`: details / edit); right-click menus offer *Show details* and *Edit* |
+| `modals/ConfirmModal.ts`, `confirmations.ts` | Yes/no and multiple-choice dialogs; the shared "delete event (with its tasks)" and "delete list" questions |
 | `settings/` | Settings window: `SettingTab.ts` (tab bar), one file per tab (`calendarsTab`, `accountsTab`, `displayTab`, `tasksTab`, `notesTab`), `controls.ts` (`periodSetting`, `numberSetting`, calendar row) |
 | `notes.ts`, `dateUtils.ts`, `periods.ts`, `util.ts` | Event notes + template; date helpers; period choices and wording; error text, plural, clamp |
 
@@ -239,8 +241,9 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - update paths on vault rename/move, and drop them on delete.
     - Events: migrate the existing single `notePath` into the list. Remote events store their links locally, keyed by remote ID.
   - **1.7 (done):** Tasks page (full + sidebar), lists, task editing, subtasks, quick add, **linked notes on tasks**, Tasks settings tab, menu entry and commands.
-  - **1.8 (done):** calendar integration, tasks on events (dialog section, "2/5" hint), **linked notes on events** (local + remote), "Tasks today" in the mini calendar. Tasks on a repeating event belong to the clicked repeat only; the "template" behaviour is 1.9.
-  - **Details view (with 1.8 or right after; see README roadmap):** clicking an event or task opens a large
+  - **1.8 (done):** calendar integration, tasks on events (dialog section, "2/5" hint), **linked notes on events** (local + remote), "Tasks today" in the mini calendar. Tasks on a repeating event belong to the clicked repeat only; the "template" behaviour is 1.10 (renumbered: 1.9 became the details view).
+  - **Details view = 1.9, built in steps (agreed): a) ✅ 1.9.0 – the view, Edit notes, quick actions, setting `clickOpens`;
+    b) progress log; c) "Create note" + notes/descriptions for tasks and subtasks.** Clicking an event or task opens a large
     read-only view by default, with an **Edit** button for the edit dialog. It also needs a small **"Edit notes"**
     button: inline editing of only the event description or task notes (Save/Cancel), never triggered by just clicking
     the text. For remote events, save to Google/Outlook. Also confirmed by the maintainer:
@@ -268,7 +271,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
       - dialog: an "add description" link that opens a small field on demand.
 
       Longer content belongs in a note.
-  - **1.9:** repeating tasks, and per-occurrence tasks on repeating events. A repeating task stays ONE item; completed occurrences are small "done on date" entries, not copies (agreed, to keep Done uncluttered).
+  - **1.10 (was 1.9):** repeating tasks, per-occurrence tasks on repeating events, *Track as task* for repeats. A repeating task stays ONE item; completed occurrences are small "done on date" entries, not copies (agreed, to keep Done uncluttered).
   - **Completed tasks (1.7.5):**
     - Done shows the last `tasksDoneVisibleDays` (default 30, -1 = everything), with "Show older";
     - "Clear completed";
@@ -286,8 +289,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 ## Where we stopped (keep this section up to date at the end of a session)
 
 - **Released:** 1.8.0 (PR #28), 1.8.1 (PR #29), 1.8.2 (PR #30) and 1.8.3 (PR #31) were merged by the maintainer.
-- **1.8.4 (PR #32) was merged too. 1.8.5 is in a pull request**; once it is merged, the next change on `dev-branch`
-  needs a new version number. 1.8.5 – a tracked event's row shows its event tasks'
+- **1.8.4 (PR #32) and 1.8.5 (PR #33) were merged too.** 1.8.5 – a tracked event's row shows its event tasks'
   progress; ticking it off with open tasks asks *Only the event* / *Mark all as done* (`toggleDone` in
   `views/tasks/helpers.ts`, used everywhere a task is ticked off). Decided with the maintainer: event tasks stay separate
   tasks, **not** subtasks of the tracked event.
@@ -304,9 +306,11 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
   - subtasks on event tasks are shown in the event dialog (not forbidden);
   - event tasks go to the default task list; no list picker in the event's quick add (would be clutter);
   - tasks of a deleted event are deleted with it.
-- **Next planned feature:** the details view for events and tasks (see Roadmap above and the README roadmap), then 1.9.
+- **On `dev-branch`, not released: 1.9.0 – details view step a.** Next: step b (progress log), then c, then 1.10 (repeating).
+  Tests: the UI test setup starts with `clickOpens = "edit"` (most tests drive the edit dialogs); `specs/details.cjs`
+  switches back to the default.
 - **"Track as task" (in 1.8.4):** `task.event.self = true` marks the task that *is* the event (`TaskStore.tracked` /
   `setTracked`; `forEvent` leaves it out, so it's not one of the event's "2/5"). Title, day and time mirror the event
   (`followEvents` + `eventNowOf` in `store.ts`). Not drawn as a task block; the event gets `trackedMark` (tick circle,
   `ch-event-done`) in `views/shared.ts`. In task lists a click opens the event; its menu has done / open event / stop
-  tracking only (no priority: not reachable by tapping). Off by default; not for repeats until 1.9.
+  tracking only (no priority: not reachable by tapping). Off by default; not for repeats until 1.10.

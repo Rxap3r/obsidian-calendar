@@ -17,8 +17,17 @@ export const DRAG_MIME = "application/x-omni-calendar-event";
 /** Linked notes listed at most in an event's right-click menu (the dialog shows all). */
 const MENU_MAX_NOTES = 5;
 
-/** Open the editor for local events or the details view for external events. */
+/**
+ * A click on an event: the details view (default, setting "Clicking opens"), or the edit dialog directly.
+ * Read-only events always get the details view.
+ */
 export function openOccurrence(plugin: OmniCalendarPlugin, occ: CalendarOccurrence) {
+	if (plugin.settings.clickOpens === "edit" && !occ.readOnly) editOccurrence(plugin, occ);
+	else new EventDetailsModal(plugin, occ).open();
+}
+
+/** The edit dialog of an event (local or Google / Outlook); the details view for read-only events. */
+export function editOccurrence(plugin: OmniCalendarPlugin, occ: CalendarOccurrence) {
 	if (!occ.readOnly && occ.remote) {
 		new EventModal(plugin, { remote: occ }).open();
 		return;
@@ -35,7 +44,9 @@ export function openOccurrence(plugin: OmniCalendarPlugin, occ: CalendarOccurren
 
 export function occurrenceMenu(plugin: OmniCalendarPlugin, occ: CalendarOccurrence, evt: MouseEvent) {
 	const menu = new Menu();
-	menu.addItem((i) => i.setTitle(occ.readOnly ? "Show details" : "Edit").setIcon(occ.readOnly ? "info" : "pencil").onClick(() => openOccurrence(plugin, occ)));
+	// Both are always offered, whatever a click opens (setting "Clicking opens").
+	menu.addItem((i) => i.setTitle("Show details").setIcon("info").onClick(() => new EventDetailsModal(plugin, occ).open()));
+	if (!occ.readOnly) menu.addItem((i) => i.setTitle("Edit").setIcon("pencil").onClick(() => editOccurrence(plugin, occ)));
 	// Linked notes (also for Google / Outlook / ICS events – kept only in Obsidian).
 	const links = plugin.store.linksFor(occ);
 	for (const path of links.slice(0, MENU_MAX_NOTES)) {

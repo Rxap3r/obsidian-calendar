@@ -21,6 +21,7 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	agendaDays: 30,
 	sidebarUpcomingDays: 7,
 	multiDayTimed: "grid",
+	clickOpens: "details",
 	sidebarSide: "right",
 	sidebarView: "none",
 	sidebarCalendarMode: "day",

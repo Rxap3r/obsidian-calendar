@@ -4,9 +4,17 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet
+## Not released yet (1.9.0)
 
-- *(nothing yet)*
+- **Details view for events and tasks:** clicking an event or a task now opens a details window instead of the edit
+  dialog, so nothing changes by accident. It shows everything at a glance (calendar or list, date and time, location,
+  priority, the description or notes, tasks and subtasks, linked notes). Its **Edit** button opens the dialog you know.
+- **Quick actions in the details view:** tick off the task, its subtasks or the event's tasks; open and link notes;
+  *Track as task*. **Edit notes** changes only the description (or a task's notes) right there, with *Save* / *Cancel* –
+  for Google and Outlook events it's saved there too. Clicking the text itself never starts editing.
+- **New setting *Clicking an event or task opens*** (*Settings → Omni Calendar → Display*): *Details view* (default) or
+  *Edit dialog directly* (as before). Right-click (long-press) always offers both *Show details* and *Edit*.
+- Read-only events (subscriptions, read-only Google calendars) use the same details view, without the editing parts.
 
 ## Known bugs
 

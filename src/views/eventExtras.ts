@@ -4,7 +4,7 @@ import type OmniCalendarPlugin from "../main";
 import { CalendarOccurrence, Task } from "../types";
 import { formatDate, parseLocal, toDateKey } from "../dateUtils";
 import { eventKey } from "../eventLinks";
-import { TaskModal } from "../modals/TaskModal";
+import { openTask } from "./tasks/openTask";
 import { linkedNotesBlock } from "./linkedNotes";
 import { taskMenu } from "./tasks/taskRow";
 import { taskTimeLabel } from "./tasks/helpers";
@@ -118,7 +118,7 @@ function eventTaskRow(
 		};
 	}
 	if (t.priority > 0) row.createSpan({ cls: `ch-task-prio ch-prio-${t.priority}`, text: "!".repeat(t.priority) });
-	row.onclick = () => new TaskModal(plugin, t).open();
+	row.onclick = () => openTask(plugin, t);
 	row.addEventListener("contextmenu", (e) => {
 		e.preventDefault();
 		taskMenu(plugin, t, e);

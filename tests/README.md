@@ -6,7 +6,7 @@ Two automated test suites. Neither needs Obsidian, a real phone, or real Google 
 npm test            # build + both suites
 npm run test:sync   # sign-in (OAuth/PKCE) and Google / Outlook connectors – Node only
 npm run test:ui     # views, dialogs, settings, touch gestures – headless Chromium
-npm run test:ui -- tasks    # one topic file (see below): data, calendar, calendartasks, events, sidebar, settings, pickers, tasks
+npm run test:ui -- tasks    # one topic file (see below): data, calendar, calendartasks, details, events, sidebar, settings, pickers, tasks
 npm run test:ui -- mobile   # only UI tests whose name contains "mobile"
 ```
 
@@ -49,11 +49,14 @@ The downloaded test browser is kept in GitHub's Actions cache between runs (not 
   | `settings.cjs` | settings tabs and tab bar, scroll position, period settings, deleting calendars, commands |
   | `pickers.cjs` | own date/time pickers, dialog focus rules (tablet keyboard bugs) |
   | `tasks.cjs` | Tasks page, task dialog, lists, completed tasks, tasks sidebar |
+  | `details.cjs` | 1.9: details view of events and tasks, *Edit notes*, the *Clicking opens* setting, right-click entries |
   | `calendartasks.cjs` | 1.8: tasks on events ("2/5"), linked notes on events, tasks in the calendar (blocks, day counter, drag), *Tasks today* |
 
   Add new tests to the matching file. Make a new file only for a genuinely new topic; it's picked up automatically.
   To save tokens, only open the file you need.
   - **Time is frozen at 2026-11-14 10:00 Europe/Zurich**, so results are reproducible.
+  - Clicking an event or task opens the **edit dialog** in the tests (`clickOpens = "edit"` in `entry.ts`); `details.cjs`
+    switches back to the default, the details view.
   - Desktop tests run at 1400×900. Mobile tests use a 390×800 touch device (`{ mobile: true }`), which also sets
     Obsidian's `Platform.isMobile`.
   - Touch gestures are sent with real CDP touch events.
