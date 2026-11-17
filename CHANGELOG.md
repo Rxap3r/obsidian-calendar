@@ -4,12 +4,9 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet (1.9.2)
+## Not released yet
 
-- **Progress log for tasks:** in a task's details there's a new *Progress log*. Type what you did and press Enter (or the
-  send button); each entry gets the date and time and is added at the bottom, so the history reads top to bottom. Entries
-  can be corrected (the original time stays) or deleted. Tasks with entries show "📝 3" in the lists.
-- New setting *Settings → Omni Calendar → Tasks → Progress log* to hide the log if you don't want it. Turning it off deletes nothing.
+- *(nothing yet)*
 
 ## Known bugs
 
@@ -19,6 +16,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.9.2** – Progress log for tasks: dated updates in a task's details view (Enter or the send button), added at the
+  bottom, can be corrected (original time kept) or deleted; "📝 3" in the lists. New setting *Tasks → Progress log* hides it
+  (deletes nothing).
 - **1.9.1** – Setting *Language of dates* (follows Obsidian's language by default); the Microsoft sign-in dialog says
   which sign-in page opens; a cleaner sign-in guide with a troubleshooting section, incl. company accounts that need
   an admin's approval.

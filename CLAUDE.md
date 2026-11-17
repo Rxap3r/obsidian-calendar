@@ -295,8 +295,9 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Where we stopped (keep this section up to date at the end of a session)
 
-**State:** everything up to **1.9.1** is merged and released (tags 1.8.0 … 1.9.1, PRs #28–#35). `dev-branch` carries
-**1.9.2** (not released yet): the **progress log for tasks** (details view step b) + setting `tasksProgressLog`.
+**State:** everything up to **1.9.1** is merged and released (tags 1.8.0 … 1.9.1, PRs #28–#35). **1.9.2** (progress log
+for tasks = details view step b, setting `tasksProgressLog`) is in a PR from `dev-branch`; once it is merged and tagged,
+*Not released yet* is empty and the **next change needs 1.9.3** (or 1.10.0 for a bigger feature – ask if unsure).
 
 **Next on the roadmap (agreed order):**
 1. **Step c** – "Create note" for tasks and subtasks, linked notes per subtask, short subtask descriptions.
