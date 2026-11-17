@@ -5,6 +5,7 @@ import { CalendarOccurrence } from "../types";
 import { formatTime, formatTimeRange, isSameDay, toDateKey } from "../dateUtils";
 import { eventKey } from "../eventLinks";
 import { eventNotePath } from "../notes";
+import { eventNowOf } from "../store";
 import { NotePickerModal } from "../modals/NotePickerModal";
 import { TaskModal } from "../modals/TaskModal";
 import { noteName, openLinkedNote } from "./tasks/helpers";
@@ -48,6 +49,18 @@ export function occurrenceMenu(plugin: OmniCalendarPlugin, occ: CalendarOccurren
 			new NotePickerModal(plugin.app, plugin.settings.notesFolder, links, (path) => void plugin.store.addLink(occ, path)).open()
 		)
 	);
+	if (plugin.settings.tasksEnabled && !occ.recurring) {
+		const key = eventKey(occ);
+		const tracked = plugin.tasks.tracked(key);
+		if (tracked) {
+			menu.addItem((i) => i.setTitle(tracked.done ? "Mark event as not done" : "Mark event as done").setIcon("check-circle-2").onClick(() => void plugin.tasks.setDone(tracked.id, !tracked.done)));
+		}
+		menu.addItem((i) =>
+			i.setTitle(tracked ? "Stop tracking as task" : "Track as task").setIcon("list-checks").onClick(() =>
+				void plugin.tasks.setTracked(key, eventNowOf(occ.title, occ.start, occ.end, occ.allDay), !tracked)
+			)
+		);
+	}
 	if (plugin.settings.tasksEnabled) {
 		menu.addItem((i) =>
 			i.setTitle("Add task…").setIcon("check-square").onClick(() => {
@@ -115,6 +128,7 @@ export function createChip(
 	}
 	chip.createSpan({ cls: "ch-chip-title", text: occ.title });
 	taskHint(plugin, chip, occ);
+	trackedMark(plugin, chip, occ);
 	// Multi-day event in the all-day row: its whole span on a second line, so it never reads like "09:00–10:00" each day.
 	if (span) chip.createSpan({ cls: "ch-chip-span", text: spanLabel(occ, plugin.settings.use24h) });
 	chip.setAttr("title", tooltip(plugin, occ));
@@ -146,6 +160,28 @@ export function tooltip(plugin: OmniCalendarPlugin, occ: CalendarOccurrence): st
 	const tasks = plugin.settings.tasksEnabled ? plugin.tasks.forEvent(eventKey(occ)) : [];
 	const progress = tasks.length ? `Tasks: ${tasks.filter((t) => t.done).length}/${tasks.length} done` : "";
 	return [occ.title, time, occ.location, src?.name, progress].filter(Boolean).join("\n");
+}
+
+/**
+ * "Track as task": a tick circle at the start of `el` (an event chip, block or row) to mark the event as done; a done
+ * event gets the class `ch-event-done` (struck through). Nothing happens for events that aren't tracked.
+ */
+export function trackedMark(plugin: OmniCalendarPlugin, el: HTMLElement, occ: CalendarOccurrence, into: HTMLElement = el) {
+	if (!plugin.settings.tasksEnabled || occ.recurring) return;
+	const t = plugin.tasks.tracked(eventKey(occ));
+	if (!t) return;
+	el.toggleClass("ch-event-done", t.done);
+	const cb = into.createEl("button", {
+		cls: "ch-task-checkbox ch-small ch-track-check",
+		attr: { role: "checkbox", "aria-checked": String(t.done), "aria-label": t.done ? "Mark event as not done" : "Mark event as done" },
+	});
+	if (t.done) setIcon(cb, "check");
+	cb.addEventListener("pointerdown", (e) => e.stopPropagation());
+	cb.addEventListener("click", (e) => {
+		e.stopPropagation();
+		void plugin.tasks.setDone(t.id, !t.done);
+	});
+	into.prepend(cb);
 }
 
 /** The small "☑ 2/5" progress of an event's tasks (nothing when it has none, or tasks are off). */

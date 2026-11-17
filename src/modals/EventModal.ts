@@ -7,7 +7,8 @@ import { errorMessage } from "../util";
 import { deleteEvent } from "./confirmations";
 import { eventKey } from "../eventLinks";
 import { eventExtras } from "../views/eventExtras";
-import { attachDraft, draftExtras, EventDraft } from "../views/eventDraft";
+import { attachDraft, draftExtras, draftHasContent, EventDraft } from "../views/eventDraft";
+import { eventNowOf } from "../store";
 import { EventForm, EventModalInit, formForNew, formFromLocal, formFromRemote, LocalEventData } from "./eventForm";
 
 /** Create / edit an event: a local one, or one in a connected Google / Outlook calendar. */
@@ -32,7 +33,7 @@ export class EventModal extends Modal {
 	constructor(private plugin: OmniCalendarPlugin, private init: EventModalInit = {}) {
 		super(plugin.app);
 		this.f = init.remote ? formFromRemote(init.remote) : init.event ? formFromLocal(init.event) : formForNew(plugin, init);
-		this.draft = { tasks: [], links: init.notePath ? [init.notePath] : [] };
+		this.draft = { tasks: [], links: init.notePath ? [init.notePath] : [], track: false };
 	}
 
 	onOpen() {
@@ -453,7 +454,9 @@ export class EventModal extends Modal {
 				}
 				saved.push(t);
 				// Only one copy gets them (the first one saved), so they aren't duplicated.
-				if (key && (this.draft.tasks.length || this.draft.links.length)) await attachDraft(this.plugin, this.draft, key, data.title, day);
+				if (key && draftHasContent(this.draft)) {
+					await attachDraft(this.plugin, this.draft, key, eventNowOf(data.title, input.start, input.end, data.allDay), !!data.recurrence);
+				}
 			} catch (e) {
 				failed.push(`${t.name}: ${errorMessage(e)}`);
 			}

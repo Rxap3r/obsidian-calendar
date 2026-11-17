@@ -87,6 +87,7 @@ follows, so it never pops back unexpectedly. Commands can be given hotkeys in *S
 - **Month view:** events show their **start and end time** (e.g. *10:00–11:30*). Events over midnight show *22:00 →* on the first day and *→ 02:00* on the last. Click a **day number** to open that day. **Double-click** a cell, or click the **+** that appears on hover, to create an event. When a day is full, click "+N more".
 - **Week / Day view:** **click** an empty slot to create an event there. **Click and drag** to create an event covering the selected range (it snaps to 15 minutes). While you drag, a filled preview in the colour of your default calendar shows the exact start and end time. In the **week view** you can drag on into the next days, e.g. from Wednesday 12:00 to Thursday 06:00, or across several days (the preview then reads *Wed 12:00 – Thu 06:00*). The day view shows one day, so there you set a later end date in the dialog. Overlapping events are shown side by side, and a red line marks the current time. An event with a time that runs into the next day (e.g. Monday 09:00 – Tuesday 10:00) is drawn on each day it covers: *09:00 →* on the first, *→ 10:00* on the last, *→* in between. Only *All day* events go into the all-day row. If you prefer them in the all-day row, choose that in *Settings → Omni Calendar → Display → Events over several days*; they then show their whole span under the name, e.g. *Mon 09:00 – Tue 10:00*. Double-click the *all-day* row to create an all-day event.
 - **On touch screens:** swipe scrolls as usual, **tap** an empty slot to create an event there, and **press and hold** (about half a second), then drag, to select a time range (also into the next day, in the week view).
+- **Change the length:** drag the **bottom edge** of an event in week/day view to change when it ends, or the **top edge** to change when it starts (the pointer shows ↕). It snaps to 15 minutes and shows the new time while you drag. For an event over several days, the start is on its first day and the end on its last day; you can drag the end into another day. Works with the finger too, and for the same events as drag and drop.
 - **Drag and drop:** drag a local, non-recurring event to another day (month view) or another time (week/day view) to move it. In week/day view a preview block shows exactly where the event will land, with its new time; it snaps to 15 minutes.
 - **Click an event** to edit it. For an external event this shows its details instead. **Right-click an event** for a menu with *Edit*, the event's linked notes, *Create/Open note*, *Link note…*, *Add task…*, *Duplicate*, *Delete this occurrence* and *Delete*.
 
@@ -249,6 +250,16 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   Moving an event to another calendar keeps its tasks and linked notes.
 - If an event disappears some other way (e.g. deleted in Google Calendar), its tasks show the event name crossed out
   (for local events) or say it can't be found. Clicking the name lets you keep the task without the event, or delete it.
+
+**Track an event as a task** (new in **1.8.4**):
+- Sometimes an event itself is something to tick off. Switch on **Track as task** in the event dialog (also when creating
+  it), or right-click the event → **Track as task**. It's **off by default**, so your task lists don't fill up with every event.
+- The event then shows up in your task lists (*Today*, *Upcoming*, …) with its time and the mark *Event*. Tick it off there.
+  Clicking it opens the event, because its name, day and time belong to the event and follow it when it changes.
+- In the calendar it isn't shown twice: the event gets a small **tick circle**; ticked off, it's **struck through**.
+- Works for local, Google, Outlook and ICS events; the "done" mark is kept only in Obsidian. Deleting the event removes it.
+- Not yet for repeating events (each repeat ticked off separately comes with 1.9). Switch it off again in the dialog or with
+  right-click → *Stop tracking as task*.
 
 **Tasks in the calendar** (new in **1.8**):
 - **Tasks with a time** appear in *Week* and *Day* as **light, dashed blocks** with a tick circle, next to the events.
@@ -702,6 +713,15 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
   - **Task list:** only a small ≡ icon on subtasks that have a description, never the text;
   - **Details view:** the description in small grey text under the subtask;
   - **Task dialog:** a small "add description" link per subtask opens a field only when needed (no big text boxes by default).
+
+**"Track as task" for events – done in 1.8.4 for single events (repeats with step 3)**
+- Sometimes an event itself is something to tick off. A checkbox **Track as task** in the event dialog (and in the
+  right-click menu) turns it on for that one event. **Off by default**, so the task lists don't fill up with every event.
+- The event then appears in the task lists like a task (with its time and a small calendar icon) and can be ticked off there.
+- In the calendar it is **not shown twice**: the event gets a small tick circle and is struck through once done.
+- It follows the event (title, day) and is deleted with it, like event tasks. Works for Google/Outlook/ICS events too;
+  the "done" mark is kept only in Obsidian.
+- Repeating events (tick off each repeat separately) come with step 3 (1.9).
 
 **Step 3 – version 1.9: repeating**
 - **Repeating tasks**, each occurrence ticked off separately. A repeating task stays **one** task: each completed occurrence is only a small "done on …" entry, not a copy, so Done doesn't fill up with duplicates.

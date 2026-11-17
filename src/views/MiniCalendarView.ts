@@ -13,7 +13,7 @@ import { rangeLabel } from "../periods";
 import { plural } from "../util";
 import { OmniView } from "./OmniView";
 import { VIEW_TYPE_MINI } from "./viewTypes";
-import { markDayCell, occurrenceMenu, openOccurrence, taskHint, tooltip } from "./shared";
+import { markDayCell, occurrenceMenu, openOccurrence, taskHint, tooltip, trackedMark } from "./shared";
 
 /** Compact month calendar + upcoming events, meant for the left/right sidebar. */
 export class MiniCalendarView extends OmniView {
@@ -207,8 +207,9 @@ export class MiniCalendarView extends OmniView {
 		if (o.end < new Date()) row.addClass("ch-past");
 		row.createSpan({ cls: "ch-mini-item-bar" });
 		row.createSpan({ cls: "ch-mini-item-time", text: o.allDay ? "All day" : formatTime(o.start, s.use24h) });
-		row.createSpan({ cls: "ch-mini-item-title", text: o.title });
+		const title = row.createSpan({ cls: "ch-mini-item-title", text: o.title });
 		taskHint(this.plugin, row, o);
+		trackedMark(this.plugin, row, o, title);
 		row.setAttr("title", tooltip(this.plugin, o));
 		row.onclick = () => openOccurrence(this.plugin, o);
 		row.oncontextmenu = (e) => {

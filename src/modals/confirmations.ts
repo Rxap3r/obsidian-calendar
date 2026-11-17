@@ -13,7 +13,7 @@ import { confirmAction } from "./ConfirmModal";
 export async function deleteEvent(plugin: OmniCalendarPlugin, occ: CalendarOccurrence, series: boolean): Promise<boolean> {
 	const store = plugin.store;
 	const match = store.keysForDelete(occ, series);
-	const n = plugin.tasks.forEvents(match).length;
+	const n = plugin.tasks.forEvents(match).filter((t) => !t.event?.self).length;
 	const tasks = n ? ` ${n === 1 ? "Its task" : `Its ${plural(n, "task")}`} will be deleted too.` : "";
 	const what = series && occ.recurring ? "all occurrences of this event" : occ.recurring ? "this occurrence" : "this event";
 	try {

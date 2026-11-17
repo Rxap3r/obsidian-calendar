@@ -1,4 +1,5 @@
-import { setIcon } from "obsidian";
+import { Notice, Setting, setIcon } from "obsidian";
+import type { EventNow } from "../store";
 import type OmniCalendarPlugin from "../main";
 import { linkedNotesBlock } from "./linkedNotes";
 
@@ -6,6 +7,8 @@ import { linkedNotesBlock } from "./linkedNotes";
 export interface EventDraft {
 	tasks: string[];
 	links: string[];
+	/** "Track as task" switched on. */
+	track: boolean;
 }
 
 /**
@@ -16,6 +19,11 @@ export function draftExtras(plugin: OmniCalendarPlugin, container: HTMLElement, 
 	const hint = container.createDiv({ cls: "ch-modal-hint ch-muted ch-extras-hint" });
 	hint.hide();
 	if (plugin.settings.tasksEnabled) {
+		new Setting(container)
+			.setName("Track as task")
+			.setDesc("Show this event in your task lists, to tick it off when it's done.")
+			.setClass("ch-track-setting")
+			.addToggle((t) => t.setValue(draft.track).onChange((v) => (draft.track = v)));
 		const wrap = container.createDiv({ cls: "ch-event-tasks" });
 		wrap.createDiv({ cls: "ch-task-section-head" }).createSpan({ text: "Tasks" });
 		const list = wrap.createDiv({ cls: "ch-event-task-list" });
@@ -58,10 +66,22 @@ export function draftExtras(plugin: OmniCalendarPlugin, container: HTMLElement, 
 	};
 }
 
-/** Attach the draft to the saved event (`key` = its `eventKey()`, `date` = its first day), then empty it. */
-export async function attachDraft(plugin: OmniCalendarPlugin, draft: EventDraft, key: string, title: string, date: string) {
+/** True when the draft has something to attach. */
+export function draftHasContent(draft: EventDraft): boolean {
+	return draft.tasks.length > 0 || draft.links.length > 0 || draft.track;
+}
+
+/**
+ * Attach the draft to the saved event (`key` = its `eventKey()`, `now` = its title / first day / time), then empty it.
+ * "Track as task" is skipped for repeating events (comes with 1.9).
+ */
+export async function attachDraft(plugin: OmniCalendarPlugin, draft: EventDraft, key: string, now: EventNow, repeating: boolean) {
+	const { title, day: date } = now;
 	for (const t of draft.tasks) await plugin.tasks.upsert(plugin.tasks.draft({ title: t, date, event: { key, title, date } }));
 	await plugin.store.setLinksAt(key, draft.links);
+	if (draft.track && repeating) new Notice("“Track as task” isn't available for repeating events yet.");
+	else if (draft.track) await plugin.tasks.setTracked(key, now, true);
 	draft.tasks = [];
 	draft.links = [];
+	draft.track = false;
 }

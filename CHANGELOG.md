@@ -16,6 +16,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.8.4** – Change how long an event lasts by dragging its top or bottom edge in the week and day views (also into
+  another day, and with the finger). New *Track as task* switch for events: the event shows up in your task lists to
+  tick it off, gets a tick circle in the calendar and is struck through when done (off by default; not yet for repeats).
 - **1.8.3** – Timed events over several days stay in the hour grid (one block per day) instead of the all-day row;
   new setting *Events over several days* to show them in the all-day row with their whole span.
 - **1.8.2** – An event's tasks move with the event when it moves to another day; drag to create can continue into the

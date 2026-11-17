@@ -265,6 +265,11 @@ export interface TaskEventLink {
 	title: string;
 	/** Day of the occurrence (YYYY-MM-DD), used to find the event again. */
 	date: string;
+	/**
+	 * "Track as task" (1.8.4): this task *is* the event – ticking it off marks the event as done. Its title, day and
+	 * time follow the event; it is shown in task lists but not drawn a second time in the calendar.
+	 */
+	self?: boolean;
 }
 
 export interface TaskData {

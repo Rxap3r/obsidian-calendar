@@ -5,10 +5,11 @@ import {
 	startOfWeek, toDateKey,
 } from "../../dateUtils";
 import { EventModal } from "../../modals/EventModal";
-import { createChip, occurrenceMenu, openOccurrence, spansDays, taskHint, timeRangeForDay, tooltip } from "../shared";
+import { createChip, occurrenceMenu, openOccurrence, spansDays, taskHint, timeRangeForDay, tooltip, trackedMark } from "../shared";
 import { CalendarHost } from "./host";
 import { HOUR_HEIGHT, HSCROLL_GUTTER, layoutColumns, minutesAt } from "./layout";
 import { dayTaskCounter, taskBlock, TaskSlot, timedTaskSlots } from "./tasks";
+import { justResized, resizeHandles } from "./eventResize";
 
 /**
  * Week / day view: a time grid for `days` days starting at `first`. When only `visible` days fit,
@@ -166,6 +167,7 @@ function eventBlock(
 	if (label !== el) el.addClass("ch-tg-continues");
 	const title = label.createDiv({ cls: "ch-tg-event-title", text: occ.title });
 	taskHint(plugin, title, occ);
+	trackedMark(plugin, el, occ, title);
 	label.createDiv({
 		cls: "ch-tg-event-time",
 		// Over several days: "09:00 →" on the first day, "→ 10:00" on the last, "→" in between.
@@ -175,7 +177,7 @@ function eventBlock(
 	el.addEventListener("pointerdown", (e) => e.stopPropagation());
 	el.addEventListener("click", (e) => {
 		e.stopPropagation();
-		openOccurrence(plugin, occ);
+		if (!justResized()) openOccurrence(plugin, occ);
 	});
 	el.addEventListener("contextmenu", (e) => {
 		e.preventDefault();
@@ -183,6 +185,8 @@ function eventBlock(
 		occurrenceMenu(plugin, occ, e);
 	});
 	host.drag.grabbable(el, occ, segStart);
+	// Drag the top / bottom edge to change the start / end.
+	resizeHandles(plugin, col, el, occ, at);
 }
 
 /**

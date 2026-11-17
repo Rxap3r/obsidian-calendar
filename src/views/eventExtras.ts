@@ -1,4 +1,5 @@
-import { setIcon } from "obsidian";
+import { Setting, setIcon } from "obsidian";
+import { eventNowOf } from "../store";
 import type OmniCalendarPlugin from "../main";
 import { CalendarOccurrence, Task } from "../types";
 import { formatDate, parseLocal, toDateKey } from "../dateUtils";
@@ -25,6 +26,16 @@ export function eventExtras(
 
 	if (plugin.settings.tasksEnabled) {
 		void plugin.tasks.refreshEventInfo(key, occ.title, day);
+		// "Track as task": the event itself in the task lists, to tick it off (repeating events: with 1.9).
+		if (!occ.recurring) {
+			new Setting(container)
+				.setName("Track as task")
+				.setDesc("Show this event in your task lists, to tick it off when it's done.")
+				.setClass("ch-track-setting")
+				.addToggle((t) =>
+					t.setValue(!!plugin.tasks.tracked(key)).onChange((v) => void plugin.tasks.setTracked(key, eventNowOf(occ.title, occ.start, occ.end, occ.allDay), v))
+				);
+		}
 		const wrap = container.createDiv({ cls: "ch-event-tasks" });
 		const head = wrap.createDiv({ cls: "ch-task-section-head" });
 		head.createSpan({ text: "Tasks" });

@@ -56,7 +56,8 @@ export function renderTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t
 		const m = meta.createSpan({ cls: "ch-task-meta-event", attr: { "aria-label": gone ? "Event deleted" : "Open event", title: gone ? `${t.event.title} (deleted)` : t.event.title } });
 		m.toggleClass("is-gone", gone);
 		setIcon(m.createSpan({ cls: "ch-task-meta-icon" }), "calendar");
-		m.appendText(t.event.title || "Event");
+		// "Track as task": the task is the event itself, so its name is the task's title already.
+		m.appendText(t.event.self ? "Event" : t.event.title || "Event");
 		m.onclick = (e) => {
 			e.stopPropagation();
 			void openTaskEvent(plugin, t, (occ) => openOccurrence(plugin, occ));
@@ -112,7 +113,8 @@ export function renderTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t
 		}
 	}
 
-	row.onclick = () => new TaskModal(plugin, t).open();
+	// A tracked event is edited as an event (its title, day and time come from there).
+	row.onclick = () => (t.event?.self ? void openTaskEvent(plugin, t, (occ) => openOccurrence(plugin, occ)) : new TaskModal(plugin, t).open());
 	row.addEventListener("contextmenu", (e) => {
 		e.preventDefault();
 		taskMenu(plugin, t, e);
@@ -125,6 +127,16 @@ export function taskMenu(plugin: OmniCalendarPlugin, t: Task, e: MouseEvent) {
 	const store = plugin.tasks;
 	const menu = new Menu();
 	const today = new Date();
+	if (t.event?.self) {
+		// "Track as task": day, time and title belong to the event; the rest is done there.
+		menu.addItem((i) => i.setTitle(t.done ? "Mark as not done" : "Mark as done").setIcon("check").onClick(() => void store.setDone(t.id, !t.done)));
+		menu.addItem((i) => i.setTitle("Open event").setIcon("calendar").onClick(() => void openTaskEvent(plugin, t, (occ) => openOccurrence(plugin, occ))));
+		// (Everything here is also reachable by tapping: the tick circle, and the event dialog's "Track as task" switch.)
+		menu.addSeparator();
+		menu.addItem((i) => i.setTitle("Stop tracking as task").setIcon("list-x").onClick(() => void store.remove(t.id)));
+		menu.showAtMouseEvent(e);
+		return;
+	}
 	const when = (title: string, icon: string, date: string | undefined) =>
 		menu.addItem((i) => i.setTitle(title).setIcon(icon).onClick(() => void store.update(t.id, { date })));
 	menu.addItem((i) => i.setTitle(t.done ? "Mark as not done" : "Mark as done").setIcon("check").onClick(() => void store.setDone(t.id, !t.done)));

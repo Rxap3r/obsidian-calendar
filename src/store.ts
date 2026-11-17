@@ -5,7 +5,7 @@ import { providerFor } from "./sync/providers";
 import { ApiError } from "./sync/http";
 import { IcsCalendar, isRemoteUrl, normalizeIcsUrl } from "./ics";
 import {
-	addDays, addMonths, addMinutes, dayDiff, isValidDate, parseLocal, startOfDay, toDateKey, toDateTimeKey, uid,
+	addDays, addMonths, addMinutes, dayDiff, isValidDate, parseLocal, startOfDay, toDateKey, toDateTimeKey, toTimeKey, uid,
 } from "./dateUtils";
 import { errorMessage } from "./util";
 import { eventKey } from "./eventLinks";
@@ -388,15 +388,17 @@ export class CalendarStore extends Events {
 	 * a local event that doesn't repeat, or a loaded Google / Outlook event. Undefined for anything else
 	 * (repeats and ICS events are keyed by their day; unknown or not loaded events).
 	 */
-	eventNow(key: string): { day: string; title: string } | undefined {
+	eventNow(key: string): EventNow | undefined {
 		const local = /^local:([^@]+)$/.exec(key);
 		if (local) {
 			const ev = this.getEvent(local[1]);
-			return ev && !ev.recurrence ? { day: ev.start.slice(0, 10), title: ev.title } : undefined;
+			if (!ev || ev.recurrence) return undefined;
+			const { start, end } = CalendarStore.bounds(ev);
+			return eventNowOf(ev.title, start, end, ev.allDay);
 		}
 		const i = key.indexOf(":");
 		const e = this.remote.get(key.slice(0, i))?.find((x) => x.id === key.slice(i + 1));
-		return e ? { day: toDateKey(e.start), title: e.title } : undefined;
+		return e ? eventNowOf(e.title, e.start, e.end, e.allDay) : undefined;
 	}
 
 	/**
@@ -639,6 +641,24 @@ export class CalendarStore extends Events {
 		if (dayDiff(start, end) !== 0) end = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59);
 		return { start, end };
 	}
+}
+
+/** Where an event is now, as task fields: its first day, title, and (timed events) start / end time on that day. */
+export interface EventNow {
+	day: string;
+	title: string;
+	/** HH:MM, timed events only. */
+	start?: string;
+	/** HH:MM, only when the event ends on the same day. */
+	end?: string;
+}
+
+/** The task fields of an event ("Track as task" and following events): day, title, start and same-day end. */
+export function eventNowOf(title: string, start: Date, end: Date, allDay: boolean): EventNow {
+	const day = toDateKey(start);
+	if (allDay) return { day, title };
+	const sameDay = toDateKey(new Date(end.getTime() - 1)) === day && end > start;
+	return { day, title, start: toTimeKey(start), end: sameDay ? toTimeKey(end) : undefined };
 }
 
 /**
