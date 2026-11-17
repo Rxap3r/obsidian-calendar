@@ -32,6 +32,8 @@ export function notesTab(ctx: SettingsContext, el: HTMLElement) {
 			})
 		);
 
+	// Only when "Create note and subtask details" (Tasks tab) is on.
+	if (!s.tasksEnabled || !s.tasksNoteExtras) return;
 	new Setting(el).setName("Task notes").setDesc("“Create note” on a task or subtask makes a note from this template, in the same folder. It's named “YYYY-MM-DD Task” (only the title when the task has no date), or “YYYY-MM-DD Task – Subtask”.").setHeading();
 	new Setting(el)
 		.setName("Task note template")

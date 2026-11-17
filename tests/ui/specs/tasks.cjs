@@ -306,6 +306,26 @@ test("desktop: notes for tasks and subtasks – Create note (menu, dialog), subt
 	eq(own, ["Plan trip|Plan trip||||Tasks|Medium|Ideas", "Call – Ask price|Call|Ask price|2026-11-20|09:00–09:30|Tasks|None|max 50"], "own template, no-date name");
 	await page.evaluate(() => { tab.constructor.tab = "notes"; tab.display(); });
 	expect(await page.evaluate(() => [...tab.containerEl.querySelectorAll(".setting-item-name")].some((e) => e.textContent === "Task note template")), "template setting in the Notes tab");
+	// The setting off: everything of this feature is hidden, nothing is deleted.
+	await page.evaluate(async () => {
+		const t = plugin.tasks.items.find((x) => x.title === "Fix the bike");
+		await plugin.tasks.update(t.id, { subtasks: [{ ...t.subtasks[0], links: ["Inbox.md"] }] });
+		plugin.settings.tasksNoteExtras = false; plugin.tasks.trigger("changed");
+	});
+	await settle(page);
+	eq([await row.locator(".ch-sub-has-desc").count(), await row.locator(".ch-sub-has-notes").count()], [0, 0], "no subtask icons when off");
+	await row.locator(".ch-task-title").click({ button: "right" });
+	expect(!(await page.evaluate(() => window.lastMenu.items.some((i) => /note/i.test(i.t)))), "no Create/Open note in the menu");
+	await row.locator(".ch-task-title").click();
+	await settle(page);
+	eq([await page.locator(".ch-sub-extra-btn").count(), await page.locator(".ch-task-modal .ch-create-note-btn").count(), await page.locator(".ch-task-modal .ch-link-note-btn").count()], [0, 0, 1], "dialog: no ≡, no Create note; Link note stays");
+	await page.locator(".ch-modal-buttons button", { hasText: "Save" }).click();
+	await settle(page);
+	eq(await page.evaluate(() => { const s = plugin.tasks.items.find((x) => x.title === "Fix the bike").subtasks[0]; return [s.description, s.links]; }), ["KMC, 11-speed", ["Inbox.md"]], "description and notes kept after saving");
+	await page.evaluate(() => { tab.constructor.tab = "tasks"; tab.display(); });
+	expect(await page.evaluate(() => [...tab.containerEl.querySelectorAll(".setting-item-name")].some((e) => e.textContent === "Create note and subtask details")), "switch in the Tasks tab");
+	await page.evaluate(() => { tab.constructor.tab = "notes"; tab.display(); });
+	expect(!(await page.evaluate(() => [...tab.containerEl.querySelectorAll(".setting-item-name")].some((e) => e.textContent === "Task note template"))), "template hidden when off");
 });
 
 test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mobile: true }, async ({ page }) => {

@@ -229,6 +229,8 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
     subtask, its notes as small chips, and the **⋯** button offers *Create note*, *Link note…* and removing a link.
     In the task lists you only see small icons: ≡ for a description, a note icon that opens the subtask's note.
   - The text of new task notes comes from *Settings → Omni Calendar → Notes → Task note template*.
+  - Don't need it? *Settings → Omni Calendar → Tasks → Create note and subtask details* hides all of this (Create note,
+    subtask descriptions and subtask notes). Turning it off deletes nothing; the task's own linked notes stay.
 - **Progress log** (new in **1.9.2**): in a task's details there's a **Progress log** section. Type what you did or what
   happened and press **Enter** (on a phone: the send button). Each entry is saved with its **date and time**, like a sticky
   note; new entries go **below** the older ones, so the history reads top to bottom. It's separate from subtasks: subtasks
@@ -603,6 +605,7 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 | | Tasks in sidebar | Shows the Tasks page in the sidebar (same side as the calendar), independent of mini calendar / day planner |
 | | Done section in lists | Collapsed "Done" section in your lists and *All* |
 | | Progress log | Dated updates on a task in its details view, "📝 3" in the lists (on by default). Off only hides it |
+| | Create note and subtask details | *Create note* on tasks and subtasks, descriptions and notes on subtasks (on by default). Off only hides them |
 | | Upcoming list | How far ahead the "Upcoming" list looks: standard periods (default 7 days) or custom |
 | | Tasks in the calendar | Timed tasks as light blocks in Week/Day, one counter per day for the others (on by default) |
 | | Completed tasks in the calendar | *Struck through* (default) or *Hidden* |
@@ -612,7 +615,7 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 | | Default priority / Default list | Used for new tasks |
 | | Lists | Rename, recolour, add or delete task lists ("Tasks" is the default list and can't be deleted) |
 | **Notes** | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
-| | Task note template | What goes in notes made with *Create note* on a task or subtask (placeholders listed in the setting) |
+| | Task note template | What goes in notes made with *Create note* on a task or subtask (placeholders listed in the setting). Shown while *Create note and subtask details* is on |
 
 **Periods ("how long / how far" settings):** they all offer the **same standard choices**: *7 days, 2 weeks, 30 days, 60 days, 90 days, 6 months, 1 year*. A few add their own extras (*Never*, *Hidden*, *Tomorrow only*, *Everything*, *Same as agenda length*). And they all have **Custom…**. It shows a number and a unit (days, weeks, months, years), for example *2 years* or *200 days*. Values over the maximum are limited, and the field then shows the value that is used.
 

@@ -111,8 +111,8 @@ export function renderTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t
 			};
 			sr.createSpan({ cls: "ch-task-sub-title", text: s.title });
 			// Kept small on purpose: a ≡ icon for a description, a note icon for linked notes (details view shows them).
-			if (s.description) setIcon(sr.createSpan({ cls: "ch-task-meta-icon ch-sub-has-desc", attr: { "aria-label": s.description, title: s.description } }), "align-left");
-			if (s.links.length) {
+			if (plugin.settings.tasksNoteExtras && s.description) setIcon(sr.createSpan({ cls: "ch-task-meta-icon ch-sub-has-desc", attr: { "aria-label": s.description, title: s.description } }), "align-left");
+			if (plugin.settings.tasksNoteExtras && s.links.length) {
 				const n = sr.createEl("a", { cls: "ch-task-meta-icon ch-sub-has-notes", attr: { "aria-label": s.links.length === 1 ? `Open note: ${noteName(s.links[0])}` : `${s.links.length} linked notes`, title: s.links.map(noteName).join(", ") } });
 				setIcon(n, "file-text");
 				n.onclick = (e) => {
@@ -158,7 +158,7 @@ export function taskMenu(plugin: OmniCalendarPlugin, t: Task, e: MouseEvent) {
 	menu.addItem((i) => i.setTitle(t.done ? "Mark as not done" : "Mark as done").setIcon("check").onClick(() => void store.setDone(t.id, !t.done)));
 	menu.addItem((i) => i.setTitle("Show details").setIcon("info").onClick(() => new TaskDetailsModal(plugin, t).open()));
 	menu.addItem((i) => i.setTitle("Edit…").setIcon("pencil").onClick(() => new TaskModal(plugin, t).open()));
-	menu.addItem((i) => i.setTitle(plugin.hasTaskNote(t) ? "Open note" : "Create note").setIcon("file-plus").onClick(() => void plugin.createNoteForTask(t)));
+	if (plugin.settings.tasksNoteExtras) menu.addItem((i) => i.setTitle(plugin.hasTaskNote(t) ? "Open note" : "Create note").setIcon("file-plus").onClick(() => void plugin.createNoteForTask(t)));
 	menu.addSeparator();
 	when("Today", "sun", toDateKey(today));
 	when("Tomorrow", "sunrise", toDateKey(addDays(today, 1)));

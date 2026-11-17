@@ -12,6 +12,8 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
   description and its own linked notes (with *Create note*). The details view shows the description in small grey text
   and the notes as chips, with a ⋯ button for *Create note* / *Link note*. The task lists only show small icons.
 - New setting *Settings → Omni Calendar → Notes → Task note template* for the text of new task notes.
+- New switch *Settings → Omni Calendar → Tasks → Create note and subtask details* to hide all of the above if it's
+  confusing. Turning it off deletes nothing.
 
 ## Known bugs
 

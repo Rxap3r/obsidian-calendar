@@ -52,6 +52,16 @@ export function tasksTab(ctx: SettingsContext, el: HTMLElement) {
 				store.trigger("changed");
 			})
 		);
+	new Setting(el)
+		.setName("Create note and subtask details")
+		.setDesc("“Create note” on tasks and subtasks, plus a short description and linked notes for each subtask. Turning it off only hides them; nothing is deleted.")
+		.addToggle((t) =>
+			t.setValue(s.tasksNoteExtras).onChange(async (v) => {
+				s.tasksNoteExtras = v;
+				await ctx.save();
+				store.trigger("changed");
+			})
+		);
 	periodSetting(ctx, el, "Upcoming list", "How far ahead the “Upcoming” task list looks (today plus this many days). Later tasks are under “All”.",
 		s.tasksUpcomingDays, {},
 		1, 3650, (v) => { s.tasksUpcomingDays = v; store.trigger("changed"); });

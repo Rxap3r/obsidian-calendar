@@ -155,7 +155,7 @@ export class TaskModal extends Modal {
 			get: () => t.links,
 			set: (links) => void (t.links = links),
 			// "Create note" saves the task first (the note links to the saved task), then opens the note.
-			extra: t.event?.self ? undefined : {
+			extra: t.event?.self || !this.plugin.settings.tasksNoteExtras ? undefined : {
 				label: this.plugin.hasTaskNote(t) ? "Open note" : "Create note", icon: "file-plus", cls: "ch-create-note-btn",
 				run: () => this.createNote(),
 			},
@@ -204,11 +204,13 @@ export class TaskModal extends Modal {
 			txt.value = s.title;
 			txt.addEventListener("input", () => (s.title = txt.value));
 			// ≡ opens the subtask's description and notes on demand (kept closed, so the dialog stays short).
-			const open = this.openSubs.has(s.id);
+			const extras = this.plugin.settings.tasksNoteExtras;
+			const open = extras && this.openSubs.has(s.id);
 			const more = row.createEl("button", { cls: "ch-icon-btn ch-sub-extra-btn", attr: { "aria-label": "Description and notes", "aria-expanded": String(open) } });
 			more.toggleClass("has-content", !!s.description || s.links.length > 0);
 			more.toggleClass("is-active", open);
 			setIcon(more, "align-left");
+			if (!extras) more.remove();
 			more.onclick = () => {
 				if (open) this.openSubs.delete(s.id);
 				else this.openSubs.add(s.id);

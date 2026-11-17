@@ -115,6 +115,7 @@ export class TaskDetailsModal extends Modal {
 				cb.onclick = () => void store.setSubtaskDone(t.id, st.id, !st.done);
 				const body = row.createDiv({ cls: "ch-details-subtask-body" });
 				body.createSpan({ cls: "ch-event-subtask-title", text: st.title });
+				if (!plugin.settings.tasksNoteExtras) continue;
 				// Short description in small grey text; linked notes as chips (1.9.3).
 				if (st.description) body.createDiv({ cls: "ch-details-subtask-desc", text: st.description });
 				noteChips(plugin, body, st.links, "ch-details-subtask-notes");
@@ -139,7 +140,7 @@ export class TaskDetailsModal extends Modal {
 			get: () => t.links,
 			set: (links) => store.update(t.id, { links }),
 			// "Create note" (1.9.3); a tracked event has the event's own note instead.
-			extra: t.event?.self ? undefined : {
+			extra: t.event?.self || !plugin.settings.tasksNoteExtras ? undefined : {
 				label: plugin.hasTaskNote(t) ? "Open note" : "Create note", icon: "file-plus", cls: "ch-create-note-btn",
 				run: () => void plugin.createNoteForTask(t),
 			},

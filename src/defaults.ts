@@ -40,6 +40,7 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	tasksCalendarShowDone: true,
 	tasksInMiniCalendar: true,
 	tasksProgressLog: true,
+	tasksNoteExtras: true,
 	notesFolder: "Calendar",
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,
 	taskNoteTemplate: DEFAULT_TASK_NOTE_TEMPLATE,

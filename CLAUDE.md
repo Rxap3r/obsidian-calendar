@@ -300,7 +300,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 **State:** everything up to **1.9.2** is merged and released (tags 1.8.0 … 1.9.2, PRs #28–#36). `dev-branch` carries
 **1.9.3** (not released yet): **details view step c** – "Create note" for tasks and subtasks, linked notes and short
-descriptions per subtask, setting `taskNoteTemplate`.
+descriptions per subtask, setting `taskNoteTemplate`, switch `tasksNoteExtras`.
 
 **Next on the roadmap (agreed order):**
 1. **1.10** – repeating tasks, tasks on repeating events per repeat, *Track as task* for repeats.
@@ -333,6 +333,8 @@ events that continue from the previous day; *Language of dates* with Obsidian in
   covers subtasks (`linkOwners`). Task dialog: ≡ button per subtask (`ch-sub-extra-btn`) opens description + notes – this
   replaced the "add description" link of the design; its *Create note* saves the task first. Details view: grey
   description, chips, ⋯ menu (`views/tasks/subtaskNotes.ts`). Lists: ≡ and note icons only (`taskRow.ts`).
+  Switch `tasksNoteExtras` (Tasks tab, on by default; the maintainer asked for it because it may confuse some people)
+  hides all of step c incl. the Notes tab's task template; task-level linked notes (1.7) stay; nothing is deleted.
 - 1.9.1: setting `dateLanguage` (all date formatting via `formatDate` / `dateLang()` in `dateUtils.ts`, never
   `toLocaleDateString(undefined, …)`); Microsoft sign-in hint for which page opens; README *Troubleshooting sign-in*.
 
