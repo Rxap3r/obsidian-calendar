@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	refreshIntervalMinutes: 30,
 	agendaDays: 30,
 	sidebarUpcomingDays: 7,
+	multiDayTimed: "grid",
 	sidebarSide: "right",
 	sidebarView: "none",
 	sidebarCalendarMode: "day",

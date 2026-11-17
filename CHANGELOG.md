@@ -11,6 +11,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
   Now the week and day views show a block from 09:00 to the end of Monday (*09:00 →*) and one from the start of Tuesday
   to 10:00 (*→ 10:00*); days in between are filled (*→*). The name stays visible at the top while you scroll.
   Only events marked *All day* go into the all-day row.
+- **New setting *Events over several days*** (*Settings → Omni Calendar → Display*): keep them in the hours (default),
+  or show them in the all-day row. In the all-day row they now show their whole span under the name, e.g.
+  *Mon 09:00 – Tue 10:00*, instead of a confusing *09:00–10:00* on each day.
 
 ## Known bugs
 

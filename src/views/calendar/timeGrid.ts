@@ -5,7 +5,7 @@ import {
 	startOfWeek, toDateKey,
 } from "../../dateUtils";
 import { EventModal } from "../../modals/EventModal";
-import { createChip, occurrenceMenu, openOccurrence, taskHint, timeRangeForDay, tooltip } from "../shared";
+import { createChip, occurrenceMenu, openOccurrence, spansDays, taskHint, timeRangeForDay, tooltip } from "../shared";
 import { CalendarHost } from "./host";
 import { HOUR_HEIGHT, HSCROLL_GUTTER, layoutColumns, minutesAt } from "./layout";
 import { dayTaskCounter, taskBlock, TaskSlot, timedTaskSlots } from "./tasks";
@@ -21,8 +21,10 @@ export function renderTimeGrid(host: CalendarHost, first: Date, days: number, vi
 	const occs = host.occurrences(first, addDays(first, days));
 	// Only real all-day events go into the all-day row. Timed events stay in the hour grid even when they last
 	// longer than a day: one block per day (e.g. Mon 09:00 → end of day, Tue start of day → 10:00).
-	const allDay = occs.filter((o) => o.allDay);
-	const timed = occs.filter((o) => !o.allDay);
+	// (Setting "Events over several days" → all-day row: those go there too, labelled with their whole span.)
+	const inRow = (o: CalendarOccurrence) => o.allDay || (s.multiDayTimed === "allday" && spansDays(o));
+	const allDay = occs.filter(inRow);
+	const timed = occs.filter((o) => !inRow(o));
 	const today = new Date();
 
 	const wrap = host.bodyEl.createDiv({ cls: "ch-timegrid" });
@@ -55,7 +57,7 @@ export function renderTimeGrid(host: CalendarHost, first: Date, days: number, vi
 		// Tasks without a time: one counter for the day.
 		dayTaskCounter(plugin, cell, toDateKey(day), false);
 		for (const o of onDay(allDay, day)) {
-			const chip = createChip(plugin, cell, o, { draggable: true });
+			const chip = createChip(plugin, cell, o, { draggable: true, span: true });
 			if (!isSameDay(o.start, day)) chip.addClass("ch-continued");
 		}
 		cell.addEventListener("dblclick", () => new EventModal(plugin, { start: day, allDay: true }).open());

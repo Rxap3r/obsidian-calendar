@@ -60,6 +60,9 @@
 .ch-chip-allday.ch-continued { border-top-left-radius: 0; border-bottom-left-radius: 0; opacity: 0.85; }
 .ch-chip-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--ch-event-color); }
 .ch-chip-time { color: var(--text-muted); flex: none; }
+/* A timed event over several days in the all-day row: name, then its whole span ("Mon 09:00 – Tue 10:00") on a second line. */
+.ch-chip.ch-chip-multiday { flex-wrap: wrap; row-gap: 0; }
+.ch-chip-span { flex: 1 0 100%; box-sizing: border-box; min-width: 0; font-size: 0.9em; color: var(--text-muted); white-space: normal; padding-left: 10px; line-height: 1.2; }
 .ch-chip-title { overflow: hidden; text-overflow: ellipsis; }
 .ch-past { opacity: 0.6; }
 .ch-dragging { opacity: 0.4; }

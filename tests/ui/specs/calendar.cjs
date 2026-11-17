@@ -306,4 +306,30 @@ for (const mobile of [false, true]) {
 	});
 }
 
+
+for (const mobile of [false, true]) {
+	test(`${mobile ? "mobile" : "desktop"}: setting – events over several days in the all-day row, labelled with their whole span`, { mobile }, async ({ page }) => {
+		await page.evaluate(async () => {
+			const add = (e) => plugin.store.addEvent({ calendarId: "personal", allDay: false, exdates: [], ...e });
+			await add({ title: "Overnight", start: "2026-11-09T09:00", end: "2026-11-10T10:00" });
+			await add({ title: "Late show", start: "2026-11-11T20:00", end: "2026-11-12T00:00" }); // ends at midnight: one day only
+			plugin.settings.multiDayTimed = "allday";
+			view.goTo(new Date(2026, 10, 9), "week");
+		});
+		await page.waitForTimeout(250);
+		const r = await page.evaluate(() => ({
+			row: [...document.querySelectorAll(".ch-tg-allday-cell .ch-chip")].filter((c) => /Overnight|Late show/.test(c.textContent))
+				.map((c) => [c.closest(".ch-tg-allday-cell") === document.querySelectorAll(".ch-tg-allday-cell")[0] ? "Mon" : "Tue", c.querySelector(".ch-chip-span")?.textContent ?? null, c.querySelector(".ch-chip-title").textContent]),
+			grid: [...document.querySelectorAll(".ch-tg-event-title")].map((t) => t.firstChild.textContent).filter((t) => /Overnight|Late show/.test(t)),
+		}));
+		eq(r.row, [["Mon", "Mon 09:00 – Tue 10:00", "Overnight"], ["Tue", "Mon 09:00 – Tue 10:00", "Overnight"]], "all-day row, whole span on both days");
+		eq(r.grid, ["Late show"], "an event ending at midnight stays a normal block");
+		await shot(page, `${mobile ? "mobile-" : ""}week-multiday-allday-row`);
+		// Back to the default: in the hours.
+		await page.evaluate(() => { plugin.settings.multiDayTimed = "grid"; plugin.store.notify(); });
+		await page.waitForTimeout(200);
+		eq(await page.locator(".ch-tg-allday-cell .ch-chip", { hasText: "Overnight" }).count(), 0, "default: not in the all-day row");
+	});
+}
+
 };
