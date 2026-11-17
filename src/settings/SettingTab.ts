@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, setIcon } from "obsidian";
 import type OmniCalendarPlugin from "../main";
 import { SettingsContext } from "./controls";
+import { scrollArrows } from "../views/scrollArrows";
 import { calendarsTab } from "./calendarsTab";
 import { accountsTab } from "./accountsTab";
 import { displayTab } from "./displayTab";
@@ -23,7 +24,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab implements Settings
 	/** Last opened settings tab (kept while Obsidian runs). */
 	private static tab: TabId = "calendars";
 	private resetScroll = false;
-	private tabsObserver: ResizeObserver | null = null;
+	private stopArrows: (() => void) | null = null;
 
 	constructor(app: App, readonly plugin: OmniCalendarPlugin) {
 		super(app, plugin);
@@ -63,32 +64,10 @@ export class OmniCalendarSettingTab extends PluginSettingTab implements Settings
 		}
 
 		// When the tabs do not fit: fade the edge with more tabs and show an arrow button beside the bar.
-		const prev = barWrap.createEl("button", { cls: "ch-tabs-arrow ch-tabs-prev", attr: { "aria-label": "More tabs" } });
-		barWrap.prepend(prev);
-		setIcon(prev, "chevron-left");
-		const next = barWrap.createEl("button", { cls: "ch-tabs-arrow ch-tabs-next", attr: { "aria-label": "More tabs" } });
-		setIcon(next, "chevron-right");
-		prev.onclick = () => bar.scrollBy({ left: -160, behavior: "smooth" });
-		next.onclick = () => bar.scrollBy({ left: 160, behavior: "smooth" });
-		const updateFade = () => {
-			// Not laid out yet (settings window still opening): no arrows; the observer below re-checks.
-			const laidOut = bar.clientWidth > 0;
-			const left = laidOut && bar.scrollLeft > 2;
-			const right = laidOut && bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 2;
-			bar.toggleClass("ch-more-left", left);
-			bar.toggleClass("ch-more-right", right);
-			prev.toggleClass("is-hidden", !left);
-			next.toggleClass("is-hidden", !right);
-		};
-		bar.addEventListener("scroll", updateFade, { passive: true });
-		// Re-check whenever the width changes (window resized, settings opened, arrows shown/hidden).
-		this.tabsObserver?.disconnect();
-		this.tabsObserver = new ResizeObserver(() => updateFade());
-		this.tabsObserver.observe(barWrap);
-		this.tabsObserver.observe(bar);
+		this.stopArrows?.();
+		this.stopArrows = scrollArrows(barWrap, bar, "More tabs");
 		window.requestAnimationFrame(() => {
 			bar.querySelector<HTMLElement>(".ch-settings-tab.is-active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
-			updateFade();
 		});
 
 		const body = containerEl.createDiv({ cls: "ch-settings-body" });
@@ -101,8 +80,8 @@ export class OmniCalendarSettingTab extends PluginSettingTab implements Settings
 	}
 
 	hide(): void {
-		this.tabsObserver?.disconnect();
-		this.tabsObserver = null;
+		this.stopArrows?.();
+		this.stopArrows = null;
 	}
 }
 

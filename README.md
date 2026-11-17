@@ -193,7 +193,7 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   - The **⤢ button** at the top of the sidebar version opens the full Tasks page with the same list. The sidebar version stays where it is.
 
 **The Tasks page:**
-- **Lists on the left.** On the phone and in the sidebar, they become a bar at the top that you swipe sideways.
+- **Lists on the left.** On the phone and in the sidebar, they become a bar at the top that you swipe sideways. On desktop, use the **‹ ›** arrows at its edges or the mouse wheel.
   - **Today:** due today, plus anything overdue.
   - **Tomorrow.**
   - **Upcoming:** today and the next days, one heading per day. It covers 7 days by default; change it in *Settings → Omni Calendar → Tasks → Upcoming list*. Later tasks are under *All*.

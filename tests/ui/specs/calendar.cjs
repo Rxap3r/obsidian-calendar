@@ -54,7 +54,14 @@ test("desktop: dragging an event in the week view lands exactly where the previe
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "week"));
 	await page.waitForTimeout(250);
 	const ev = page.locator(".ch-tg-event", { hasText: "Design review" });
-	const box = await ev.boundingBox();
+	// Wait until the grid has finished scrolling to its start hour (the block stops moving).
+	let box = await ev.boundingBox();
+	for (let i = 0; i < 20; i++) {
+		await page.waitForTimeout(50);
+		const next = await ev.boundingBox();
+		if (next.y === box.y) break;
+		box = next;
+	}
 	const H = 48; // px per hour
 	// Grab the event 45 minutes below its top edge, move it 2 hours down and one day to the left.
 	const x0 = box.x + box.width / 2, y0 = box.y + (45 / 60) * H;

@@ -468,9 +468,10 @@
 .ch-tabs-arrow svg { width: 16px; height: 16px; }
 .ch-tabs-arrow.is-hidden { display: none; }
 .ch-settings-tabs::-webkit-scrollbar { display: none; }
-.ch-settings-tabs.ch-more-right { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
-.ch-settings-tabs.ch-more-left { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }
-.ch-settings-tabs.ch-more-left.ch-more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); }
+/* Bars that scroll sideways (settings tabs, Tasks list bar; views/scrollArrows.ts): the edge with more fades out. */
+.ch-scroll-bar.ch-more-right { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
+.ch-scroll-bar.ch-more-left { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }
+.ch-scroll-bar.ch-more-left.ch-more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); }
 .ch-settings-tab {
 	flex: none; white-space: nowrap;
 	display: inline-flex; align-items: center; gap: 6px;
@@ -543,10 +544,15 @@
 
 /* Narrow (phone, sidebar): the lists become a bar that scrolls sideways. */
 .ch-tasks.ch-narrow { flex-direction: column; }
-.ch-tasks-bar {
-	display: flex; flex: none; gap: 4px; overflow-x: auto; overflow-y: hidden; padding: 6px 8px;
-	border-bottom: 1px solid var(--background-modifier-border); scrollbar-width: none; overscroll-behavior-x: contain;
+.ch-tasks-bar-wrap {
+	display: flex; flex: none; align-items: center; gap: 2px; padding: 0 4px;
+	border-bottom: 1px solid var(--background-modifier-border);
 }
+.ch-tasks-bar {
+	display: flex; flex: 1; min-width: 0; gap: 4px; overflow-x: auto; overflow-y: hidden; padding: 6px 4px;
+	scrollbar-width: none; overscroll-behavior-x: contain;
+}
+.ch-tasks-bar-wrap .ch-tabs-arrow { margin: 0; width: 24px; height: 24px; min-width: 24px; }
 .ch-tasks-bar::-webkit-scrollbar { display: none; }
 .ch-tasks-bar .ch-tasks-nav-item { width: auto; flex: none; padding: 5px 10px; border-radius: 16px; white-space: nowrap; }
 .ch-tasks-bar .ch-tasks-nav-name { overflow: visible; }

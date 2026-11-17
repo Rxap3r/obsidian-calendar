@@ -286,4 +286,40 @@ test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mo
 	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile.png") });
 });
 
+
+test("desktop: Tasks in the sidebar – the list bar has arrows and scrolls with the mouse wheel", {}, async ({ page }) => {
+	await page.evaluate(async () => {
+		// A fixed sidebar width, like Obsidian's (the test page's sidebar would otherwise grow with its content).
+		Object.assign(document.getElementById("side").style, { flex: "none", minWidth: "0", width: "280px" });
+		for (const n of ["Work", "Home", "Project X"]) await plugin.tasks.addList(n, "#1c7ed6");
+		await mountTasks({ side: true });
+	});
+	await page.waitForTimeout(200);
+	const state = () => page.evaluate(() => {
+		const bar = document.querySelector("#side .ch-tasks-bar");
+		const vis = (sel) => { const b = document.querySelector(`#side ${sel}`); return !!b && !b.classList.contains("is-hidden"); };
+		return { left: Math.round(bar.scrollLeft), prev: vis(".ch-tabs-prev"), next: vis(".ch-tabs-next"), more: bar.scrollWidth > bar.clientWidth };
+	});
+	let s = await state();
+	eq([s.more, s.prev, s.next, s.left], [true, false, true, 0], "doesn't fit: only the right arrow at the start");
+	await page.locator("#side").screenshot({ path: path.join(SHOTS, "tasks-sidebar-bar-arrows.png") });
+	await page.locator("#side .ch-tabs-next").click();
+	await page.waitForTimeout(500);
+	s = await state();
+	expect(s.left > 0 && s.prev, `arrow scrolled right: ${JSON.stringify(s)}`);
+	// Mouse wheel over the bar scrolls it sideways.
+	await page.locator("#side .ch-tabs-prev").click();
+	await page.waitForTimeout(500);
+	const box = await page.locator("#side .ch-tasks-bar").boundingBox();
+	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+	await page.mouse.wheel(0, 200);
+	await page.waitForTimeout(200);
+	expect((await state()).left > 0, "wheel scrolls sideways");
+	// At the end of the bar: only the left arrow.
+	await page.evaluate(() => { const b = document.querySelector("#side .ch-tasks-bar"); b.scrollLeft = b.scrollWidth; });
+	await page.waitForTimeout(200);
+	s = await state();
+	eq([s.prev, s.next], [true, false], "at the end: only the left arrow");
+});
+
 };

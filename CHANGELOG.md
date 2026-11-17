@@ -11,6 +11,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 - **Ticking off a tracked event that still has open tasks asks** whether to mark those as done too
   (*Only the event* / *Mark all as done*). This works the same everywhere: task lists, *Tasks today*, the tick circle
   in the calendar and the right-click menu. The event's tasks stay separate tasks, not subtasks (agreed with the maintainer).
+- **Fix: the list bar of Tasks in the sidebar couldn't be scrolled on desktop.** When not all lists (Today, Tomorrow,
+  Upcoming, …) fit, arrow buttons now appear at the edges, and the mouse wheel scrolls the bar sideways. On the phone
+  you can still swipe it; the arrows are there too.
 
 ## Known bugs
 
