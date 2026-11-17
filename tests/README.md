@@ -13,6 +13,7 @@ npm run test:ui -- mobile   # only UI tests whose name contains "mobile"
 Requirements: `npm install`, plus **Playwright with Chromium**. In Claude Code's cloud environment it is
 pre-installed. Locally you can use `npm i --no-save playwright && npx playwright install chromium`.
 On GitHub, every push runs both suites (`.github/workflows/ci.yml`); screenshots of failed tests are attached to the run.
+The downloaded test browser is kept in GitHub's Actions cache between runs (not in the repository); its version is set in `ci.yml` in two places.
 
 ## `tests/sync/` (Node)
 

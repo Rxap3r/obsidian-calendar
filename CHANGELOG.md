@@ -16,6 +16,8 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.8.2** – An event's tasks move with the event when it moves to another day; drag to create can continue into the
+  next days in the week view.
 - **1.8.1** – Subtasks of event tasks shown in the event dialog; deleting an event deletes its tasks (after asking);
   moving an event to another calendar keeps its tasks and notes; tasks and notes can be added while creating an event;
   tasks whose event is gone are marked and can be kept or deleted.

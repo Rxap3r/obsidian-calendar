@@ -384,6 +384,22 @@ export class CalendarStore extends Events {
 	}
 
 	/**
+	 * Where an event is now – its first day (YYYY-MM-DD) and title – for keys whose event can move:
+	 * a local event that doesn't repeat, or a loaded Google / Outlook event. Undefined for anything else
+	 * (repeats and ICS events are keyed by their day; unknown or not loaded events).
+	 */
+	eventNow(key: string): { day: string; title: string } | undefined {
+		const local = /^local:([^@]+)$/.exec(key);
+		if (local) {
+			const ev = this.getEvent(local[1]);
+			return ev && !ev.recurrence ? { day: ev.start.slice(0, 10), title: ev.title } : undefined;
+		}
+		const i = key.indexOf(":");
+		const e = this.remote.get(key.slice(0, i))?.find((x) => x.id === key.slice(i + 1));
+		return e ? { day: toDateKey(e.start), title: e.title } : undefined;
+	}
+
+	/**
 	 * Find an event occurrence again by its `eventKey()` (e.g. for a task that belongs to it).
 	 * Local and Google / Outlook events are found wherever they were moved; ICS events on `date`.
 	 */

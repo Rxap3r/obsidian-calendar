@@ -212,4 +212,69 @@ test("mobile: week numbers in narrow layouts", { mobile: true }, async ({ page }
 	expect((await page.textContent(".ch-title")).endsWith("· W46"), "day title has week number");
 });
 
+
+test("desktop: drag to create continues into the next days (overnight, several days, backwards)", {}, async ({ page }) => {
+	await page.evaluate(() => { view.goTo(new Date(2026, 10, 9), "week"); });
+	await page.waitForTimeout(250);
+	// Start at Wednesday 12:00 regardless of where the grid is scrolled.
+	await page.evaluate(() => { document.querySelector(".ch-grid-scroll").scrollTop = 11 * 48; });
+	await page.waitForTimeout(100);
+	const H = 48;
+	const cols = page.locator(".ch-tg-col");
+	const colBox = async (i) => cols.nth(i).boundingBox();
+	const yAt = async (i, hour) => (await colBox(i)).y + hour * H + 2;
+	const xAt = async (i) => { const b = await colBox(i); return b.x + b.width / 2; };
+	let shotTaken = 0;
+	const drag = async (from, to) => {
+		await page.mouse.move(await xAt(from[0]), await yAt(from[0], from[1]));
+		await page.mouse.down();
+		await page.mouse.move(await xAt(to[0]), await yAt(to[0], to[1]), { steps: 10 });
+		await page.waitForTimeout(80);
+		const shown = await page.evaluate(() => ({ blocks: document.querySelectorAll(".ch-tg-selection").length, label: document.querySelector(".ch-tg-selection-time")?.textContent }));
+		if (!shotTaken++) await shot(page, "drag-create-overnight");
+		await page.mouse.up();
+		await page.waitForTimeout(120);
+		await page.fill(".ch-title-input", "Dragged");
+		await page.click(".ch-modal-buttons button.mod-cta");
+		await page.waitForTimeout(120);
+		const ev = await page.evaluate(() => { const e = plugin.data.events.filter((x) => x.title === "Dragged").pop(); return [e.start, e.end]; });
+		return { shown, ev };
+	};
+	// Wednesday 12:00 → Thursday 06:00 (ends at the end of the 05:45 slot = 06:00).
+	let r = await drag([2, 12], [3, 5.75]);
+	eq(r.shown, { blocks: 2, label: "Wed 12:00 – Thu 06:00" }, "two blocks, label with weekdays");
+	eq(r.ev, ["2026-11-11T12:00", "2026-11-12T06:00"], "overnight event");
+	// Several days: Monday 22:00 → Thursday 01:00.
+	await page.evaluate(() => { document.querySelector(".ch-grid-scroll").scrollTop = 0; });
+	await page.waitForTimeout(80);
+	r = await drag([0, 15], [3, 0.75]);
+	eq(r.shown.blocks, 4, "a block on each day");
+	eq(r.ev, ["2026-11-09T15:00", "2026-11-12T01:00"], "multi-day event");
+	// Dragging backwards into the previous day.
+	r = await drag([4, 3], [3, 15]);
+	eq(r.ev, ["2026-11-12T15:00", "2026-11-13T03:15"], "backwards: from the earlier slot to the pressed one");
+});
+
+
+test("mobile touch: long press, then drag into the next day of the week", { mobile: true }, async ({ page, ctx }) => {
+	await page.evaluate(() => view.goTo(new Date(2026, 10, 9), "week"));
+	await page.waitForTimeout(300);
+	await page.evaluate(() => { document.querySelector(".ch-grid-scroll").scrollTop = 18 * 48; });
+	await page.waitForTimeout(100);
+	const cdp = await ctx.newCDPSession(page);
+	const touch = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+	const c0 = await page.locator(".ch-tg-col").nth(0).boundingBox();
+	const c1 = await page.locator(".ch-tg-col").nth(1).boundingBox();
+	const x0 = c0.x + c0.width / 2, y0 = c0.y + 20 * 48 + 2; // Monday 20:00
+	await touch("touchStart", x0, y0); await page.waitForTimeout(550);
+	const x1 = c1.x + c1.width / 2, y1 = c1.y + 18 * 48 + 2; // Tuesday 18:00 (still on screen)
+	for (let i = 1; i <= 8; i++) { await touch("touchMove", x0 + ((x1 - x0) * i) / 8, y0 + ((y1 - y0) * i) / 8); await page.waitForTimeout(15); }
+	eq(await page.evaluate(() => document.querySelectorAll(".ch-tg-selection").length), 2, "selection on both days");
+	await touch("touchEnd"); await page.waitForTimeout(150);
+	await page.fill(".ch-title-input", "Night shift");
+	await page.locator(".ch-modal-buttons button.mod-cta").tap();
+	await page.waitForTimeout(150);
+	eq(await page.evaluate(() => { const e = plugin.data.events.find((x) => x.title === "Night shift"); return [e.start, e.end]; }), ["2026-11-09T20:00", "2026-11-10T18:15"], "event over two days");
+});
+
 };

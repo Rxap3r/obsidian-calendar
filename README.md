@@ -85,8 +85,8 @@ follows, so it never pops back unexpectedly. Commands can be given hotkeys in *S
 
 - **Toolbar:** `‹ Today ›` navigates. *Month / Week / Day / Agenda* switches the view. The filter icon shows or hides individual calendars. ⟳ re-downloads external calendars. **+ New** creates an event.
 - **Month view:** events show their **start and end time** (e.g. *10:00–11:30*). Events over midnight show *22:00 →* on the first day and *→ 02:00* on the last. Click a **day number** to open that day. **Double-click** a cell, or click the **+** that appears on hover, to create an event. When a day is full, click "+N more".
-- **Week / Day view:** **click** an empty slot to create an event there. **Click and drag** to create an event covering the selected range (it snaps to 15 minutes). While you drag, a filled preview in the colour of your default calendar shows the exact start and end time. Overlapping events are shown side by side, and a red line marks the current time. Double-click the *all-day* row to create an all-day event.
-- **On touch screens:** swipe scrolls as usual, **tap** an empty slot to create an event there, and **press and hold** (about half a second), then drag, to select a time range.
+- **Week / Day view:** **click** an empty slot to create an event there. **Click and drag** to create an event covering the selected range (it snaps to 15 minutes). While you drag, a filled preview in the colour of your default calendar shows the exact start and end time. In the **week view** you can drag on into the next days, e.g. from Wednesday 12:00 to Thursday 06:00, or across several days (the preview then reads *Wed 12:00 – Thu 06:00*). The day view shows one day, so there you set a later end date in the dialog. Overlapping events are shown side by side, and a red line marks the current time. Double-click the *all-day* row to create an all-day event.
+- **On touch screens:** swipe scrolls as usual, **tap** an empty slot to create an event there, and **press and hold** (about half a second), then drag, to select a time range (also into the next day, in the week view).
 - **Drag and drop:** drag a local, non-recurring event to another day (month view) or another time (week/day view) to move it. In week/day view a preview block shows exactly where the event will land, with its new time; it snaps to 15 minutes.
 - **Click an event** to edit it. For an external event this shows its details instead. **Right-click an event** for a menu with *Edit*, the event's linked notes, *Create/Open note*, *Link note…*, *Add task…*, *Duplicate*, *Delete this occurrence* and *Delete*.
 
@@ -243,6 +243,8 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
 - **A new event** can get its tasks (and linked notes) right away in its dialog. They are attached when you click
   *Save*; *Cancel* forgets them. Saved to several calendars, they go with **one** copy, the first calendar in *Save to*
   (the dialog says which). A new repeating event gets them on its first repeat. *Create note* is offered once the event is saved.
+- **Tasks move with their event:** when the event moves to another day (dialog, drag, or in Google/Outlook), its tasks
+  move by the same number of days, so they stay on (or the same distance before) the event. Times are kept.
 - **Deleting an event deletes its tasks**, after asking (deleting one repeat deletes only that repeat's tasks).
   Moving an event to another calendar keeps its tasks and linked notes.
 - If an event disappears some other way (e.g. deleted in Google Calendar), its tasks show the event name crossed out

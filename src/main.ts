@@ -45,6 +45,8 @@ export default class OmniCalendarPlugin extends Plugin {
 		registerCommands(this);
 		this.registerMarkdownCodeBlockProcessor("omni-calendar", (source, el, ctx) => ctx.addChild(new AgendaBlock(this, el, source)));
 		this.followNoteChanges();
+		// Tasks of an event move with it when the event moves to another day.
+		this.registerEvent(this.store.on("changed", () => void this.tasks.followEvents()));
 
 		this.app.workspace.onLayoutReady(async () => {
 			await this.store.loadCached();
