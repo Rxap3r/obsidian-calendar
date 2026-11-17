@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, setIcon } from "obsidian";
 import type OmniCalendarPlugin from "../main";
 import { SettingsContext } from "./controls";
-import { scrollArrows } from "../views/scrollArrows";
+import { sideScroll } from "../views/sideScroll";
 import { calendarsTab } from "./calendarsTab";
 import { accountsTab } from "./accountsTab";
 import { displayTab } from "./displayTab";
@@ -24,7 +24,7 @@ export class OmniCalendarSettingTab extends PluginSettingTab implements Settings
 	/** Last opened settings tab (kept while Obsidian runs). */
 	private static tab: TabId = "calendars";
 	private resetScroll = false;
-	private stopArrows: (() => void) | null = null;
+	private stopScroll: (() => void) | null = null;
 
 	constructor(app: App, readonly plugin: OmniCalendarPlugin) {
 		super(app, plugin);
@@ -63,9 +63,9 @@ export class OmniCalendarSettingTab extends PluginSettingTab implements Settings
 			};
 		}
 
-		// When the tabs do not fit: fade the edge with more tabs and show an arrow button beside the bar.
-		this.stopArrows?.();
-		this.stopArrows = scrollArrows(barWrap, bar, "More tabs");
+		// When the tabs do not fit: a thin scrollbar (desktop), the mouse wheel and a faded edge.
+		this.stopScroll?.();
+		this.stopScroll = sideScroll(bar);
 		window.requestAnimationFrame(() => {
 			bar.querySelector<HTMLElement>(".ch-settings-tab.is-active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
 		});
@@ -80,8 +80,8 @@ export class OmniCalendarSettingTab extends PluginSettingTab implements Settings
 	}
 
 	hide(): void {
-		this.stopArrows?.();
-		this.stopArrows = null;
+		this.stopScroll?.();
+		this.stopScroll = null;
 	}
 }
 

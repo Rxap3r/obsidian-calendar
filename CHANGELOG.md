@@ -12,8 +12,10 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
   (*Only the event* / *Mark all as done*). This works the same everywhere: task lists, *Tasks today*, the tick circle
   in the calendar and the right-click menu. The event's tasks stay separate tasks, not subtasks (agreed with the maintainer).
 - **Fix: the list bar of Tasks in the sidebar couldn't be scrolled on desktop.** When not all lists (Today, Tomorrow,
-  Upcoming, …) fit, arrow buttons now appear at the edges, and the mouse wheel scrolls the bar sideways. On the phone
-  you can still swipe it; the arrows are there too.
+  Upcoming, …) fit, a thin scrollbar now shows under the bar (grab it to scroll), and the mouse wheel scrolls the bar
+  sideways. The edge with more lists fades out. On the phone you swipe it as before, without a scrollbar.
+- **The settings tab bar works the same way:** a thin scrollbar under the tabs and the mouse wheel, instead of the
+  arrow buttons.
 
 ## Known bugs
 

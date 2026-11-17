@@ -287,7 +287,7 @@ test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mo
 });
 
 
-test("desktop: Tasks in the sidebar – the list bar has arrows and scrolls with the mouse wheel", {}, async ({ page }) => {
+test("desktop: Tasks in the sidebar – the list bar has a visible scrollbar and scrolls with the mouse wheel", {}, async ({ page }) => {
 	await page.evaluate(async () => {
 		// A fixed sidebar width, like Obsidian's (the test page's sidebar would otherwise grow with its content).
 		Object.assign(document.getElementById("side").style, { flex: "none", minWidth: "0", width: "280px" });
@@ -297,29 +297,32 @@ test("desktop: Tasks in the sidebar – the list bar has arrows and scrolls with
 	await page.waitForTimeout(200);
 	const state = () => page.evaluate(() => {
 		const bar = document.querySelector("#side .ch-tasks-bar");
-		const vis = (sel) => { const b = document.querySelector(`#side ${sel}`); return !!b && !b.classList.contains("is-hidden"); };
-		return { left: Math.round(bar.scrollLeft), prev: vis(".ch-tabs-prev"), next: vis(".ch-tabs-next"), more: bar.scrollWidth > bar.clientWidth };
+		return { left: Math.round(bar.scrollLeft), more: bar.scrollWidth > bar.clientWidth,
+			// The test browser hides all scrollbars, so this checks that ours isn't switched off (Obsidian shows it).
+			scrollbar: getComputedStyle(bar).scrollbarWidth !== "none", fadeRight: bar.classList.contains("ch-more-right"), fadeLeft: bar.classList.contains("ch-more-left"),
+			arrows: document.querySelectorAll("#side .ch-tabs-arrow").length };
 	});
 	let s = await state();
-	eq([s.more, s.prev, s.next, s.left], [true, false, true, 0], "doesn't fit: only the right arrow at the start");
-	await page.locator("#side").screenshot({ path: path.join(SHOTS, "tasks-sidebar-bar-arrows.png") });
-	await page.locator("#side .ch-tabs-next").click();
-	await page.waitForTimeout(500);
-	s = await state();
-	expect(s.left > 0 && s.prev, `arrow scrolled right: ${JSON.stringify(s)}`);
+	eq([s.more, s.scrollbar, s.fadeRight, s.fadeLeft, s.arrows], [true, true, true, false, 0], "doesn't fit: scrollbar on, right edge faded, no arrows");
+	await page.locator("#side").screenshot({ path: path.join(SHOTS, "tasks-sidebar-bar-scrollbar.png") });
 	// Mouse wheel over the bar scrolls it sideways.
-	await page.locator("#side .ch-tabs-prev").click();
-	await page.waitForTimeout(500);
 	const box = await page.locator("#side .ch-tasks-bar").boundingBox();
-	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+	await page.mouse.move(box.x + box.width / 2, box.y + 12);
 	await page.mouse.wheel(0, 200);
 	await page.waitForTimeout(200);
-	expect((await state()).left > 0, "wheel scrolls sideways");
-	// At the end of the bar: only the left arrow.
+	s = await state();
+	expect(s.left > 0 && s.fadeLeft, `wheel scrolls sideways: ${JSON.stringify(s)}`);
+	// Scrolled to the end: the right edge is no longer faded.
 	await page.evaluate(() => { const b = document.querySelector("#side .ch-tasks-bar"); b.scrollLeft = b.scrollWidth; });
 	await page.waitForTimeout(200);
 	s = await state();
-	eq([s.prev, s.next], [true, false], "at the end: only the left arrow");
+	expect(!s.fadeRight && s.fadeLeft, `at the end: ${JSON.stringify(s)}`);
 });
 
+test("mobile: the Tasks list bar has no scrollbar (swipe)", { mobile: true }, async ({ page }) => {
+	await page.evaluate(() => mountTasks());
+	await page.waitForTimeout(200);
+	const r = await page.evaluate(() => { const bar = document.querySelector(".ch-tasks-bar"); return { more: bar.scrollWidth > bar.clientWidth, scrollbar: getComputedStyle(bar).scrollbarWidth }; });
+	eq([r.more, r.scrollbar], [true, "none"], "scrolls, but without a scrollbar");
+});
 };

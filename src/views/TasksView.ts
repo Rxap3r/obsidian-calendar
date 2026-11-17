@@ -10,7 +10,7 @@ import { confirmAction } from "../modals/ConfirmModal";
 import { deleteTaskList } from "../modals/confirmations";
 import { OmniView } from "./OmniView";
 import { renderTaskRow } from "./tasks/taskRow";
-import { scrollArrows } from "./scrollArrows";
+import { sideScroll } from "./sideScroll";
 import { VIEW_TYPE_TASKS } from "./viewTypes";
 
 /** Below this width the list navigation becomes a scrollable bar above the tasks. */
@@ -22,7 +22,7 @@ export class TasksView extends OmniView {
 	selected: string = "today";
 	private rootEl!: HTMLElement;
 	private narrow = false;
-	private stopArrows: (() => void) | null = null;
+	private stopScroll: (() => void) | null = null;
 	private collapsedSubtasks = new Set<string>();
 	/** "Show older" was clicked in the Done list / section (reset when another list is selected). */
 	private showOlder = false;
@@ -72,7 +72,7 @@ export class TasksView extends OmniView {
 	}
 
 	async onClose() {
-		this.stopArrows?.();
+		this.stopScroll?.();
 		this.contentEl.empty();
 	}
 
@@ -108,14 +108,13 @@ export class TasksView extends OmniView {
 			return;
 		}
 
-		this.stopArrows?.();
-		this.stopArrows = null;
+		this.stopScroll?.();
+		this.stopScroll = null;
 		if (this.narrow) {
-			// The list bar scrolls sideways: arrows when not all lists fit, and the mouse wheel scrolls it (desktop sidebar).
-			const wrap = this.rootEl.createDiv({ cls: "ch-tasks-bar-wrap" });
-			const bar = wrap.createDiv({ cls: "ch-tasks-bar" });
+			// The list bar scrolls sideways: a thin scrollbar and the mouse wheel on desktop, swiping on the phone.
+			const bar = this.rootEl.createDiv({ cls: "ch-tasks-bar" });
 			this.renderNav(bar);
-			this.stopArrows = scrollArrows(wrap, bar, "More lists");
+			this.stopScroll = sideScroll(bar);
 		} else {
 			this.renderNav(this.rootEl.createDiv({ cls: "ch-tasks-nav" }));
 		}

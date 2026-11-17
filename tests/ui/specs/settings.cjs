@@ -117,7 +117,7 @@ test("settings: every period setting offers the same standard choices", {}, asyn
 	eq(r["Delete completed tasks after"][0], "Never", "Never first");
 });
 
-test("desktop: settings tab bar – no arrows when everything fits; arrows beside, not over the tabs", {}, async ({ page }) => {
+test("desktop: settings tab bar – a thin scrollbar only when the tabs don't fit", {}, async ({ page }) => {
 	// Like Obsidian: the settings content is rendered before the window has its width.
 	await page.evaluate(() => {
 		const m = document.getElementById("main"); m.innerHTML = "";
@@ -125,22 +125,23 @@ test("desktop: settings tab bar – no arrows when everything fits; arrows besid
 		tab.display(); host.appendChild(tab.containerEl);
 	});
 	await page.waitForTimeout(100);
+	const state = () => page.evaluate(() => {
+		const bar = document.querySelector(".ch-settings-tabs");
+		return { more: bar.scrollWidth > bar.clientWidth, fade: bar.classList.contains("ch-more-right"), arrows: document.querySelectorAll(".ch-tabs-arrow").length };
+	});
 	await page.evaluate(() => (document.getElementById("settings-host").style.width = "900px"));
 	await page.waitForTimeout(150);
-	const wide = await page.evaluate(() => [...document.querySelectorAll(".ch-tabs-arrow")].map((a) => getComputedStyle(a).display));
-	eq(wide, ["none", "none"], "wide window: no arrows");
+	eq(await state(), { more: false, fade: false, arrows: 0 }, "wide window: nothing to scroll, no fade");
+	await page.locator("#settings-host").screenshot({ path: path.join(SHOTS, "settings-tabs-wide.png") });
 	await page.evaluate(() => (document.getElementById("settings-host").style.width = "300px"));
 	await page.waitForTimeout(150);
-	const narrow = await page.evaluate(() => {
-		const bar = document.querySelector(".ch-settings-tabs").getBoundingClientRect();
-		const next = document.querySelector(".ch-tabs-next"); const n = next.getBoundingClientRect();
-		return { shown: getComputedStyle(next).display !== "none", beside: n.left >= bar.right - 1 };
-	});
-	eq(narrow, { shown: true, beside: true }, "narrow: right arrow shown, beside the tabs");
+	eq(await state(), { more: true, fade: true, arrows: 0 }, "narrow: scrolls, right edge faded");
+	// The test browser hides all scrollbars, so this checks that ours isn't switched off (Obsidian shows it).
+	eq(await page.evaluate(() => getComputedStyle(document.querySelector(".ch-settings-tabs")).scrollbarWidth !== "none"), true, "scrollbar on");
+	await page.locator("#settings-host").screenshot({ path: path.join(SHOTS, "settings-tabs-narrow.png") });
 	await page.evaluate(() => (document.getElementById("settings-host").style.width = "900px"));
 	await page.waitForTimeout(150);
-	eq(await page.evaluate(() => [...document.querySelectorAll(".ch-tabs-arrow")].map((a) => getComputedStyle(a).display)), ["none", "none"], "widened again: arrows gone");
-	await page.locator("#settings-host").screenshot({ path: path.join(SHOTS, "settings-tabs-wide.png") });
+	eq(await state(), { more: false, fade: false, arrows: 0 }, "widened again");
 });
 
 test("mobile: settings tabs stay on one line and scroll", { mobile: true, width: 340 }, async ({ page }) => {
@@ -149,9 +150,9 @@ test("mobile: settings tabs stay on one line and scroll", { mobile: true, width:
 	const r = await page.evaluate(() => {
 		const bar = document.querySelector(".ch-settings-tabs");
 		return { oneLine: new Set([...bar.children].map((c) => Math.round(c.getBoundingClientRect().top))).size === 1,
-			scrollable: bar.scrollWidth > bar.clientWidth, nextArrow: !document.querySelector(".ch-tabs-next").classList.contains("is-hidden") };
+			scrollable: bar.scrollWidth > bar.clientWidth, fade: bar.classList.contains("ch-more-right"), noScrollbar: getComputedStyle(bar).scrollbarWidth === "none" };
 	});
-	eq(r, { oneLine: true, scrollable: true, nextArrow: true }, "tab bar");
+	eq(r, { oneLine: true, scrollable: true, fade: true, noScrollbar: true }, "tab bar: swipe, no scrollbar");
 });
 
 test("settings: deleting a local calendar with events asks in the plugin's own dialog", {}, async ({ page }) => {

@@ -452,26 +452,28 @@
 	flex: 1; min-width: 0;
 	/* One line; swipe / scroll sideways when the tabs do not fit (mobile). */
 	display: flex; flex-wrap: nowrap; gap: 4px;
-	overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+	overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
 	overscroll-behavior-x: contain;
-	padding-bottom: 6px;
+	padding-bottom: 4px;
 }
-/* Arrow buttons shown at the edge that has more tabs. */
-.ch-tabs-arrow {
-	flex: none; margin-bottom: 6px;
-	width: 28px; height: 28px; min-width: 28px; padding: 0; border-radius: 50%;
-	display: flex; align-items: center; justify-content: center;
-	background: var(--background-primary); border: 1px solid var(--background-modifier-border);
-	box-shadow: var(--shadow-s); color: var(--text-normal); cursor: pointer;
-	transition: opacity 0.15s;
+/*
+ * Bars that scroll sideways (settings tabs, Tasks list bar; views/sideScroll.ts). Desktop: a thin scrollbar underneath
+ * that is always visible (styling it this way also keeps it visible on Macs that hide scrollbars); grab it or use the
+ * mouse wheel. Phone: no scrollbar, swipe. The edge with more fades out.
+ */
+.ch-side-scroll::-webkit-scrollbar { display: block; height: 6px; }
+.ch-side-scroll::-webkit-scrollbar-track { background: transparent; }
+.ch-side-scroll::-webkit-scrollbar-thumb { background: var(--background-modifier-border); border-radius: 3px; }
+.ch-side-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+.is-mobile .ch-side-scroll { scrollbar-width: none; }
+.is-mobile .ch-side-scroll::-webkit-scrollbar { display: none; }
+@media (pointer: coarse) {
+	.ch-side-scroll { scrollbar-width: none; }
+	.ch-side-scroll::-webkit-scrollbar { display: none; }
 }
-.ch-tabs-arrow svg { width: 16px; height: 16px; }
-.ch-tabs-arrow.is-hidden { display: none; }
-.ch-settings-tabs::-webkit-scrollbar { display: none; }
-/* Bars that scroll sideways (settings tabs, Tasks list bar; views/scrollArrows.ts): the edge with more fades out. */
-.ch-scroll-bar.ch-more-right { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
-.ch-scroll-bar.ch-more-left { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }
-.ch-scroll-bar.ch-more-left.ch-more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); }
+.ch-side-scroll.ch-more-right { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
+.ch-side-scroll.ch-more-left { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }
+.ch-side-scroll.ch-more-left.ch-more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); }
 .ch-settings-tab {
 	flex: none; white-space: nowrap;
 	display: inline-flex; align-items: center; gap: 6px;
@@ -544,16 +546,10 @@
 
 /* Narrow (phone, sidebar): the lists become a bar that scrolls sideways. */
 .ch-tasks.ch-narrow { flex-direction: column; }
-.ch-tasks-bar-wrap {
-	display: flex; flex: none; align-items: center; gap: 2px; padding: 0 4px;
-	border-bottom: 1px solid var(--background-modifier-border);
-}
 .ch-tasks-bar {
-	display: flex; flex: 1; min-width: 0; gap: 4px; overflow-x: auto; overflow-y: hidden; padding: 6px 4px;
-	scrollbar-width: none; overscroll-behavior-x: contain;
+	display: flex; flex: none; gap: 4px; overflow-x: auto; overflow-y: hidden; padding: 6px 8px 4px;
+	border-bottom: 1px solid var(--background-modifier-border); overscroll-behavior-x: contain;
 }
-.ch-tasks-bar-wrap .ch-tabs-arrow { margin: 0; width: 24px; height: 24px; min-width: 24px; }
-.ch-tasks-bar::-webkit-scrollbar { display: none; }
 .ch-tasks-bar .ch-tasks-nav-item { width: auto; flex: none; padding: 5px 10px; border-radius: 16px; white-space: nowrap; }
 .ch-tasks-bar .ch-tasks-nav-name { overflow: visible; }
 .ch-tasks-bar .ch-tasks-nav-count { margin-left: 2px; }

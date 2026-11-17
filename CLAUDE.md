@@ -88,7 +88,7 @@ Shared helpers live in one place. Before writing a small helper (error text, plu
 | `views/eventExtras.ts`, `views/linkedNotes.ts` | The event's **Tasks** and **Linked notes** sections (event dialog + read-only details); the shared linked-notes block (also in the task dialog) |
 | `views/eventDraft.ts` | The same sections in the **new-event** dialog: kept in memory, attached on Save (`attachDraft`) to the first saved copy |
 | `modals/DayTasksModal.ts` | The day's tasks, opened from the counter in the calendar |
-| `views/scrollArrows.ts` | Bars that scroll sideways (settings tabs, Tasks list bar): ‹ › arrows when not all fits, faded edges, mouse wheel scrolls sideways |
+| `views/sideScroll.ts` | Bars that scroll sideways (settings tabs, Tasks list bar): faded edges, mouse wheel scrolls sideways; CSS `.ch-side-scroll` gives a thin always-visible scrollbar on desktop, none on phones. Chosen by the maintainer instead of arrow buttons (less space). The UI test browser hides scrollbars, so tests check `scrollbar-width` instead |
 | `views/MiniCalendarView.ts` | Sidebar mini calendar |
 | `views/AgendaBlock.ts` | The `omni-calendar` code block |
 | `views/shared.ts` | Event chips, context menu (incl. linked notes, *Add task…*), open event, the "2/5" task hint, day-cell marking |
