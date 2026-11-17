@@ -1,5 +1,5 @@
 /* Tasks: page, dialog, lists, completed tasks, sidebar. Loaded by tests/ui/run.cjs – see tests/README.md. */
-module.exports = ({ test, expect, eq, shot, path, SHOTS }) => {
+module.exports = ({ test, expect, eq, settle, shot, path, SHOTS }) => {
 
 
 
@@ -21,7 +21,7 @@ const seedTasks = () => page => page.evaluate(async () => {
 test("desktop: tasks page – smart lists, sorting, quick add, tick off", {}, async ({ page }) => {
 	await seedTasks()(page);
 	await page.evaluate(() => mountTasks());
-	await page.waitForTimeout(150);
+	await settle(page);
 	const titles = () => page.$$eval(".ch-tasks-main .ch-tasks-group:not(.ch-tasks-done-group) .ch-task-title", (e) => e.map((x) => x.textContent));
 	const groups = () => page.$$eval(".ch-tasks-main .ch-tasks-group-head > span:first-child", (e) => e.map((x) => x.textContent));
 	// Today: overdue first, then today's tasks by priority
@@ -35,40 +35,40 @@ test("desktop: tasks page – smart lists, sorting, quick add, tick off", {}, as
 	// Quick add into Today
 	await page.fill(".ch-tasks-quick", "Quick one");
 	await page.press(".ch-tasks-quick", "Enter");
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.evaluate(() => plugin.tasks.items.find((t) => t.title === "Quick one")?.date), "2026-11-14", "quick add gets today's date");
 	// Tick off → moves to collapsed Done
 	await page.evaluate(() => [...document.querySelectorAll(".ch-task")].find((x) => x.textContent.includes("Low prio today")).querySelector(".ch-task-checkbox").click());
-	await page.waitForTimeout(150);
+	await settle(page);
 	expect(!(await titles()).includes("Low prio today"), "done task left the open list");
 	eq(await page.$eval(".ch-tasks-done-group .ch-tasks-group-count", (e) => e.textContent).catch(() => null), null, "smart list Today has no Done section (only user lists / All)");
 	// Upcoming: one heading per day
 	await page.click('[data-list="upcoming"]');
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await groups(), ["Today", "Tomorrow", "Thursday, November 19"], "upcoming grouped by day");
 	await shot(page, "tasks-desktop-upcoming");
 	// No date + subtasks inline, All with Done section
 	await page.click('[data-list="nodate"]');
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await titles(), ["Someday"], "no date list");
 	eq(await page.$$eval(".ch-task-sub-title", (e) => e.map((x) => x.textContent)), ["Step one", "Step two"], "subtasks inline");
 	await page.click(".ch-task-sub .ch-task-checkbox >> nth=1");
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.evaluate(() => plugin.tasks.items.find((t) => t.title === "Someday").subtasks.map((s) => s.done)), [true, true], "subtask ticked");
 	await page.click('[data-list="all"]');
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await groups(), ["Overdue", "Today", "Tomorrow", "Thursday, November 19", "Later", "No date", "Done"], "all: groups incl. collapsed Done");
 	eq(await page.evaluate(() => document.querySelector(".ch-tasks-done-group").open), false, "Done collapsed");
 	await page.click('[data-list="done"]');
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await titles(), ["Low prio today"], "done list");
 });
 
 test("desktop: task dialog – priority, date, time range, subtasks, linked notes", {}, async ({ page }) => {
 	await page.evaluate(() => mountTasks());
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.click(".ch-tasks-new");
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.fill(".ch-task-modal .ch-title-input", "Prepare workshop");
 	await page.click(".ch-prio-seg .ch-prio-3");
 	await page.click('.ch-task-quick button:text("Tomorrow")');
@@ -101,12 +101,12 @@ test("desktop: task dialog – priority, date, time range, subtasks, linked note
 	eq(await page.$$eval(".ch-task-link-name", (e) => e.map((x) => x.textContent)), ["Website notes", "Workshop plan"], "links listed in dialog");
 	await page.screenshot({ path: path.join(SHOTS, "task-dialog.png") });
 	await page.evaluate(() => [...document.querySelectorAll(".ch-task-modal .ch-modal-buttons button.mod-cta")].pop().click());
-	await page.waitForTimeout(150);
+	await settle(page);
 	const t = await page.evaluate(() => plugin.tasks.items.find((x) => x.title === "Prepare workshop"));
 	eq([t.priority, t.date, t.start, t.end, t.subtasks.map((s) => s.title), t.links], [3, "2026-11-15", "10:30", "11:45", ["Book room", "Print handouts"], ["Projects/Website notes.md", "Calendar/Workshop plan.md"]], "saved task");
 	// shown in Tomorrow with link chips; chip opens the note
 	await page.click('[data-list="tomorrow"]');
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.$$eval(".ch-task-linkchip", (e) => e.map((x) => x.textContent)), ["Website notes", "Workshop plan"], "link chips");
 	await page.click(".ch-task-linkchip >> nth=0");
 	eq(await page.evaluate(() => window.openedFile), "Projects/Website notes.md", "chip opens note");
@@ -129,7 +129,7 @@ test("tasks: 'Upcoming' range follows the setting", {}, async ({ page }) => {
 	eq(await titles(), ["In 5 days"], "default 7 days");
 	expect((await page.textContent(".ch-tasks-title")).includes("next 7 days"), "range shown in the title");
 	await page.evaluate(() => { plugin.settings.tasksUpcomingDays = 60; plugin.tasks.trigger("changed"); });
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await titles(), ["In 5 days", "Christmas"], "60 days includes 24 Dec");
 	eq(await page.$eval('[data-list="upcoming"] .ch-tasks-nav-count', (e) => e.textContent), "2", "count follows");
 	const opts = await page.evaluate(() => { tab.constructor.tab = "tasks"; tab.display();
@@ -161,7 +161,7 @@ test("tasks: completed tasks – recent only, show older, clear, automatic clean
 	expect(await page.isVisible('.ch-tasks-done-group .ch-tasks-link:text("Show 1 older")'), "show older in section");
 	await page.click(".ch-tasks-done-group .ch-tasks-clear");
 	await page.evaluate(() => [...document.querySelectorAll(".modal .mod-warning")].pop().click());
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.evaluate(() => plugin.tasks.items.map((t) => t.title).sort()), ["Done 400 days ago", "Done today", "Open work"], "clear completed only in this list");
 	// Automatic clean-up
 	const r = await page.evaluate(async () => {
@@ -182,19 +182,19 @@ test("tasks: completed tasks – recent only, show older, clear, automatic clean
 
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {
 	await page.evaluate(() => mountTasks());
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.click('.ch-tasks-nav-head button');
 	await page.fill(".ch-list-modal input:not([type=color])", "Work");
 	await page.evaluate(() => [...document.querySelectorAll(".ch-list-modal .mod-cta")].pop().click());
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.textContent(".ch-tasks-title"), "Work", "new list selected");
 	await page.fill(".ch-tasks-quick", "Write report");
 	await page.press(".ch-tasks-quick", "Enter");
-	await page.waitForTimeout(150);
+	await settle(page);
 	const r = await page.evaluate(() => { const l = plugin.tasks.lists.find((x) => x.name === "Work"); const t = plugin.tasks.items.find((x) => x.title === "Write report"); return { inList: t.listId === l.id, date: t.date ?? null, id: l.id }; });
 	eq([r.inList, r.date], [true, null], "quick add in a list: that list, no date");
 	await page.evaluate((id) => plugin.tasks.removeList(id), r.id);
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.evaluate(() => [plugin.tasks.items.find((x) => x.title === "Write report").listId, document.querySelector(".ch-tasks-title").textContent]), ["tasks", "Today"], "tasks moved to default list, view back to Today");
 	eq(await page.evaluate(() => plugin._data.tasks.lists.map((l) => l.name)), ["Tasks"], "saved in data.json");
 });
@@ -251,21 +251,22 @@ test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mo
 	// Obsidian's mobile theme gives buttons padding and a minimum size – that made the checkboxes oval.
 	await page.addStyleTag({ content: "button { padding: 6px 16px; min-width: 44px; min-height: 36px; }" });
 	await page.evaluate(() => mountTasks());
-	await page.waitForTimeout(200);
+	await settle(page);
 	const box = await page.$eval(".ch-task-checkbox", (e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; });
 	eq(box, [20, 20], "checkbox stays a circle");
 	const r = await page.evaluate(() => {
 		const main = document.querySelector(".ch-tasks-main");
 		return { bar: !!document.querySelector(".ch-tasks-bar"), nav: !!document.querySelector(".ch-tasks-nav"),
-			overflow: main.scrollWidth > main.clientWidth + 1, barScrolls: document.querySelector(".ch-tasks-bar").scrollWidth > document.querySelector(".ch-tasks-bar").clientWidth };
+			overflow: main.scrollWidth > main.clientWidth + 1, barScrolls: document.querySelector(".ch-tasks-bar").scrollWidth > document.querySelector(".ch-tasks-bar").clientWidth,
+			scrollbar: getComputedStyle(document.querySelector(".ch-tasks-bar")).scrollbarWidth };
 	});
-	eq(r, { bar: true, nav: false, overflow: false, barScrolls: true }, "narrow layout");
+	eq(r, { bar: true, nav: false, overflow: false, barScrolls: true, scrollbar: "none" }, "narrow layout; the list bar scrolls by swiping, without a scrollbar");
 	await page.screenshot({ path: path.join(SHOTS, "tasks-mobile.png") });
 	await page.tap('[data-list="nodate"]');
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.textContent(".ch-tasks-title"), "No date", "tap selects list");
 	await page.tap(".ch-task .ch-task-title");
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.evaluate(() => { const m = document.querySelector(".ch-task-modal"); return m && m.scrollWidth <= m.clientWidth + 1; }), true, "dialog opens without sideways overflow");
 	const d = await page.evaluate(() => {
 		const date = document.querySelector(".ch-task-modal .ch-task-date-setting");
@@ -275,7 +276,7 @@ test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mo
 	});
 	eq(d, { labelFits: true, empty: true, hintText: "Select date" }, "date label not cut off, 'Select date' shown while empty");
 	await page.tap('.ch-task-quick button >> text=Today');
-	await page.waitForTimeout(80);
+	await settle(page);
 	const t2 = await page.evaluate(() => {
 		const modal = document.querySelector(".ch-task-modal").getBoundingClientRect();
 		const right = Math.max(...[...document.querySelectorAll(".ch-task-modal .ch-task-time-setting .setting-item-control > *")].map((e) => e.getBoundingClientRect().right));
@@ -318,10 +319,4 @@ test("desktop: Tasks in the sidebar – the list bar has a visible scrollbar and
 	expect(!s.fadeRight && s.fadeLeft, `at the end: ${JSON.stringify(s)}`);
 });
 
-test("mobile: the Tasks list bar has no scrollbar (swipe)", { mobile: true }, async ({ page }) => {
-	await page.evaluate(() => mountTasks());
-	await page.waitForTimeout(200);
-	const r = await page.evaluate(() => { const bar = document.querySelector(".ch-tasks-bar"); return { more: bar.scrollWidth > bar.clientWidth, scrollbar: getComputedStyle(bar).scrollbarWidth }; });
-	eq([r.more, r.scrollbar], [true, "none"], "scrolls, but without a scrollbar");
-});
 };

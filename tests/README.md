@@ -65,15 +65,22 @@ The downloaded test browser is kept in GitHub's Actions cache between runs (not 
 
 ### Writing a new UI test
 
-Each spec file exports `({ test, expect, eq, shot, path, SHOTS }) => { … }` and registers its tests inside:
+Each spec file exports `({ test, expect, eq, settle, shot, path, SHOTS }) => { … }` and registers its tests inside:
 
 ```js
 test("mobile: my feature", { mobile: true }, async ({ page, ctx }) => {
 	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "week"));
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.locator(".ch-tg-col").count(), 7, "columns");
 });
 ```
+
+- **Waiting:** after a click or a change, use `await settle(page)`. It waits until the plugin has redrawn, which is
+  faster than a fixed pause. Keep a real pause (`page.waitForTimeout(…)`) only where the plugin has its own timer:
+  drags, touch gestures (long press 400 ms), scrolling (150 ms) and the sidebar (300 ms).
+- **Desktop and mobile:** test the phone (`{ mobile: true }`) when the layout, tapping or touch matters.
+  If a check doesn't depend on the screen (data, wording, a setting's logic), one test is enough. When both are
+  needed and the phone test checks everything the desktop one does (it taps and checks that it fits), the phone test alone is enough.
 
 Globals in the page:
 - `plugin`, `view` (calendar), `mini` (mini calendar), `tab` (settings tab);

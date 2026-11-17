@@ -1,5 +1,5 @@
 /* Own date/time pickers and the dialog focus rules (tablet keyboard bugs). Loaded by tests/ui/run.cjs – see tests/README.md. */
-module.exports = ({ test, expect, eq, shot, path, SHOTS }) => {
+module.exports = ({ test, expect, eq, settle, shot, path, SHOTS }) => {
 
 test("time picker: typing, list, 12-hour clock, invalid input, phone mode", {}, async ({ page }) => {
 	const r = await page.evaluate(async () => {
@@ -8,7 +8,7 @@ test("time picker: typing, list, 12-hour clock, invalid input, phone mode", {}, 
 	});
 	eq(r, ["10:30", "10:30", "09:00", "09:30", "14:30", "00:00", "12:00", "07:15", null, null, null], "parsing");
 	await page.evaluate(() => { plugin.settings.use24h = false; new TaskModal(plugin, undefined, { date: "2026-11-14" }).open(); });
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.click(".ch-task-start input");
 	eq(await page.$$eval(".ch-time-list [data-value]", (e) => e.length), 96, "96 quarter-hour steps");
 	eq(await page.$eval('.ch-time-list [data-value="14:30"]', (e) => e.textContent), "2:30 PM", "12-hour labels");
@@ -51,7 +51,7 @@ test("mobile: time picker list first, 'Type a time', event dialog keeps duration
 
 test("date picker: month calendar, first day of week, navigation, no date", {}, async ({ page }) => {
 	await page.evaluate(() => { plugin.settings.firstDayOfWeek = 1; new TaskModal(plugin).open(); });
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await page.textContent(".ch-task-date"), "Select date", "empty");
 	await page.click(".ch-task-date button");
 	const r = await page.evaluate(() => {
@@ -77,9 +77,9 @@ test("date picker: month calendar, first day of week, navigation, no date", {}, 
 
 test("mobile: date picker fits on screen; event dialog dates + until", { mobile: true }, async ({ page }) => {
 	await page.evaluate(() => { const { EventModal } = window.__eventMod; new EventModal(plugin, { start: new Date(2026, 10, 14, 10, 0), end: new Date(2026, 10, 14, 11, 0) }).open(); });
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.tap(".ch-event-start-date button");
-	await page.waitForTimeout(80);
+	await settle(page);
 	const box = await page.evaluate(() => { const l = document.querySelector(".ch-date-popup").getBoundingClientRect(); return l.left >= 0 && l.right <= innerWidth && l.top >= 0 && l.bottom <= innerHeight; });
 	eq(box, true, "calendar fully on screen");
 	await page.screenshot({ path: path.join(SHOTS, "date-picker-mobile.png") });
@@ -87,14 +87,14 @@ test("mobile: date picker fits on screen; event dialog dates + until", { mobile:
 	eq(await page.evaluate(() => [document.querySelector(".ch-event-end-date").textContent, document.querySelector(".ch-event-end-time input").value]), ["Fri, Nov 20, 2026", "11:00"], "end date follows the start");
 	// repeat until
 	await page.selectOption(".ch-repeat-row select", "weekly");
-	await page.waitForTimeout(50);
+	await settle(page);
 	await page.evaluate(() => { const s = [...document.querySelectorAll(".setting-item")].find((x) => x.textContent.startsWith("Ends") && x.querySelector("select")).querySelector("select"); s.value = "until"; s.dispatchEvent(new Event("change")); });
 	await page.tap(".ch-until button");
 	await page.tap('.ch-date-nav[aria-label="Next month"]');
 	await page.tap('.ch-date-day[data-date="2026-12-18"]');
 	await page.fill(".ch-title-input", "Weekly");
 	await page.evaluate(() => [...document.querySelectorAll(".ch-modal-buttons button.mod-cta")].pop().click());
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await page.evaluate(() => { const e = plugin.data.events.find((x) => x.title === "Weekly"); return [e.start, e.recurrence?.until]; }), ["2026-11-20T10:00", "2026-12-18"], "saved with picked dates");
 });
 
@@ -107,7 +107,7 @@ test("mobile: picking dates/times never jumps to the title field (no keyboard)",
 		document.addEventListener("focusin", (e) => { if (!e.target.closest(".modal-container")) title().focus(); }, true);
 		setTimeout(() => { title().blur(); title().addEventListener("focus", () => window.titleFocus++); }, 50);
 	});
-	await page.waitForTimeout(120);
+	await settle(page);
 	await page.tap(".ch-task-date button");
 	await page.tap('.ch-date-nav[aria-label="Next month"]');
 	await page.tap('.ch-date-day[data-date="2026-12-03"]');
@@ -116,13 +116,13 @@ test("mobile: picking dates/times never jumps to the title field (no keyboard)",
 	await page.tap(".ch-task-end input");
 	const inside = await page.$eval(".ch-time-list", (e) => !!e.closest(".modal-container"));
 	await page.tap('.ch-time-list [data-value="10:00"]');
-	await page.waitForTimeout(100);
+	await settle(page);
 	const pickFocus = await page.evaluate(() => window.titleFocus);
 	await page.fill(".ch-task-add-sub", "Sub"); await page.press(".ch-task-add-sub", "Enter");
 	await page.evaluate(() => document.activeElement.blur());
 	await page.evaluate(() => (window.titleFocus = 0));
 	await page.tap(".ch-task-sub-row .ch-icon-btn");
-	await page.waitForTimeout(100);
+	await settle(page);
 	const r = await page.evaluate(() => ({ titleFocus: window.titleFocus, active: document.activeElement.className, task: [window.lastModal.task.date, window.lastModal.task.start, window.lastModal.task.end] }));
 	eq([inside, pickFocus, r.titleFocus, r.task], [true, 0, 0, ["2026-12-03", "09:00", "10:00"]], "pop-ups live in the dialog, title never refocused (pickers, subtask delete), values picked");
 	// "Type a time" fully visible
@@ -141,7 +141,7 @@ test("mobile: event dialog – date/time pickers never jump to the title field",
 		document.addEventListener("focusin", (e) => { if (!e.target.closest(".modal-container")) title().focus(); }, true);
 		setTimeout(() => { title().blur(); title().addEventListener("focus", () => window.titleFocus++); }, 50);
 	});
-	await page.waitForTimeout(120);
+	await settle(page);
 	await page.tap(".ch-event-start-date button");
 	await page.tap('.ch-date-nav[aria-label="Next month"]');
 	await page.tap('.ch-date-day[data-date="2026-12-03"]');
@@ -152,7 +152,7 @@ test("mobile: event dialog – date/time pickers never jump to the title field",
 	await page.tap(".ch-event-end-time input");
 	await page.tap('.ch-time-list [data-value="12:00"]');
 	await page.tap(".ch-target-chip >> nth=1");
-	await page.waitForTimeout(100);
+	await settle(page);
 	const r = await page.evaluate(() => ({ titleFocus: window.titleFocus, start: document.querySelector(".ch-event-start-date").textContent, end: document.querySelector(".ch-event-end-date").textContent }));
 	eq(r, { titleFocus: 0, start: "Thu, Dec 3, 2026", end: "Fri, Dec 4, 2026" }, "title never refocused in the event dialog");
 });
@@ -165,7 +165,7 @@ test("mobile: after typing in notes/subtasks, tapping buttons closes the keyboar
 		document.addEventListener("focusin", (e) => { if (!e.target.closest(".modal-container")) title().focus(); }, true);
 		setTimeout(() => { title().blur(); title().addEventListener("focus", () => window.titleFocus++); }, 50);
 	});
-	await page.waitForTimeout(120);
+	await settle(page);
 	const active = () => page.evaluate(() => { const a = document.activeElement; return a.classList.contains("ch-task-modal") ? "dialog" : a.tagName.toLowerCase() + "." + [...a.classList].join("."); });
 	// type in Notes, then pick a date
 	await page.tap(".ch-description-setting textarea");

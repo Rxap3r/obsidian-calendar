@@ -38,10 +38,14 @@ async function open(browser, { mobile = false, width, height } = {}) {
 	await page.clock.setFixedTime(NOW);
 	await page.goto(PAGE);
 	await page.evaluate(([ics, mobile]) => window.boot(ics, { mobile }), [ICS, mobile]);
-	await page.waitForTimeout(150);
+	await settle(page);
 	if (mobile || (width && width < 700)) await page.evaluate(() => (document.getElementById("side").style.display = "none"));
 	return { ctx, page, errors };
 }
+/** Waits until the plugin has redrawn: two animation frames (views redraw in the next frame) plus a short
+ *  moment for the dialogs' 10 ms focus timer. Use it instead of a fixed pause after a click or a change.
+ *  Drags, touch gestures, scrolling and the sidebar have their own timers (150–400 ms): keep real pauses there. */
+const settle = (page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 25)))));
 const shot = (page, name, clip) => page.screenshot({ path: path.join(SHOTS, `${name}.png`), clip });
 
 // Tests live in tests/ui/specs/<topic>.cjs (one file per topic). `npm run test:ui -- tasks` runs a whole topic
@@ -49,7 +53,7 @@ const shot = (page, name, clip) => page.screenshot({ path: path.join(SHOTS, `${n
 const SPECS = path.join(__dirname, "specs");
 for (const f of fs.readdirSync(SPECS).filter((f) => f.endsWith(".cjs")).sort()) {
 	currentFile = f.replace(/\.cjs$/, "");
-	require(path.join(SPECS, f))({ test, expect, eq, shot, path, SHOTS });
+	require(path.join(SPECS, f))({ test, expect, eq, settle, shot, path, SHOTS });
 }
 
 // ======================================================================== runner

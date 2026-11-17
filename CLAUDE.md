@@ -46,7 +46,7 @@ npm test             # build + tests/sync (Node) + tests/ui (headless Chromium) 
 ```
 
 - **Always run `npm test` before committing.** For UI changes, also look at the screenshots in `tests/.out/shots/`
-  and add or extend a test in the matching topic file in `tests/ui/specs/`. Open only that file, to save tokens. Test **desktop and mobile** (`{ mobile: true }`) for any UI change.
+  and add or extend a test in the matching topic file in `tests/ui/specs/`. Open only that file, to save tokens. Test **mobile** (`{ mobile: true }`) when layout, tapping or touch matters; don't add a desktop/mobile pair when the check doesn't depend on the screen (agreed with the maintainer, to keep the test count down). Wait with `settle(page)` instead of fixed pauses, except for drags, touch, scrolling and the sidebar (see `tests/README.md`).
 - **Release:** pushing a tag equal to `manifest.json`'s version (no `v` prefix) runs `.github/workflows/release.yml`,
   which attaches `main.js`, `manifest.json` and `styles.css` to a GitHub release. BRAT installs from that.
 - `main.js` and `dist/` are git-ignored build output.

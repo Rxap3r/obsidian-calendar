@@ -1,12 +1,12 @@
 /* Settings tab: tabs, scroll position, period settings. Loaded by tests/ui/run.cjs – see tests/README.md. */
-module.exports = ({ test, expect, eq, shot, path, SHOTS }) => {
+module.exports = ({ test, expect, eq, settle, shot, path, SHOTS }) => {
 
 test("desktop: settings tabs and calendar menu", {}, async ({ page }) => {
 	await page.evaluate(() => { const m = document.getElementById("main"); m.innerHTML = ""; tab.display(); m.appendChild(tab.containerEl); });
 	const expected = { 0: "New events", 1: "Google & Outlook accounts", 2: "Calendar", 3: "Tasks", 4: "Event notes" };
 	for (let i = 0; i < 5; i++) {
 		await page.locator(".ch-settings-tab").nth(i).click();
-		await page.waitForTimeout(80);
+		await settle(page);
 		const first = await page.$eval(".ch-settings-body .setting-item-heading .setting-item-name", (e) => e.textContent);
 		eq(first, expected[i], `tab ${i} first heading`);
 		await shot(page, `settings-tab-${i}`);
@@ -124,23 +124,23 @@ test("desktop: settings tab bar – a thin scrollbar only when the tabs don't fi
 		const host = document.createElement("div"); host.style.width = "0px"; host.id = "settings-host"; m.appendChild(host);
 		tab.display(); host.appendChild(tab.containerEl);
 	});
-	await page.waitForTimeout(100);
+	await settle(page);
 	const state = () => page.evaluate(() => {
 		const bar = document.querySelector(".ch-settings-tabs");
 		return { more: bar.scrollWidth > bar.clientWidth, fade: bar.classList.contains("ch-more-right") };
 	});
 	await page.evaluate(() => (document.getElementById("settings-host").style.width = "900px"));
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await state(), { more: false, fade: false }, "wide window: nothing to scroll, no fade");
 	await page.locator("#settings-host").screenshot({ path: path.join(SHOTS, "settings-tabs-wide.png") });
 	await page.evaluate(() => (document.getElementById("settings-host").style.width = "300px"));
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await state(), { more: true, fade: true }, "narrow: scrolls, right edge faded");
 	// The test browser hides all scrollbars, so this checks that ours isn't switched off (Obsidian shows it).
 	eq(await page.evaluate(() => getComputedStyle(document.querySelector(".ch-settings-tabs")).scrollbarWidth !== "none"), true, "scrollbar on");
 	await page.locator("#settings-host").screenshot({ path: path.join(SHOTS, "settings-tabs-narrow.png") });
 	await page.evaluate(() => (document.getElementById("settings-host").style.width = "900px"));
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await state(), { more: false, fade: false }, "widened again");
 });
 
@@ -167,16 +167,16 @@ test("settings: deleting a local calendar with events asks in the plugin's own d
 	const before = await state();
 	expect(before[0] && before[1] > 0, "the Work calendar has events");
 	await clickTrash();
-	await page.waitForTimeout(100);
+	await settle(page);
 	const text = await page.evaluate(() => window.lastModal.modalEl.textContent);
 	expect(/Delete calendar/.test(text) && text.includes("Work") && text.includes(`${before[1]} events`), `asks with the number of events: ${text}`);
 	await page.evaluate(() => [...window.lastModal.modalEl.querySelectorAll("button")].find((b) => b.textContent === "Cancel").click());
-	await page.waitForTimeout(100);
+	await settle(page);
 	eq(await state(), before, "Cancel keeps the calendar and its events");
 	await clickTrash();
-	await page.waitForTimeout(100);
+	await settle(page);
 	await page.evaluate(() => [...window.lastModal.modalEl.querySelectorAll("button")].find((b) => b.textContent === "Delete").click());
-	await page.waitForTimeout(150);
+	await settle(page);
 	eq(await state(), [false, 0], "Delete removes the calendar and its events");
 	eq(browserDialogs, 0, "no browser confirm box");
 });
@@ -199,8 +199,8 @@ test("commands keep their ids; 'Refresh' says when calendars failed", {}, async 
 });
 
 
-for (const mobile of [false, true]) {
-	test(`${mobile ? "mobile" : "desktop"}: language of dates – same as Obsidian (default), device, or English`, { mobile }, async ({ page }) => {
+{ // Desktop only: which language the dates use doesn't depend on the screen size.
+	test("desktop: language of dates – same as Obsidian (default), device, or English", {}, async ({ page }) => {
 		const heads = async (setting, obsidianLang) => page.evaluate(([setting, lang]) => {
 			if (lang) localStorage.setItem("language", lang); else localStorage.removeItem("language");
 			plugin.settings.dateLanguage = setting;
@@ -218,10 +218,10 @@ for (const mobile of [false, true]) {
 		expect(forced[1].includes("Wednesday"), `"English" even if Obsidian is German: ${forced}`);
 		const device = await heads("device", "de");
 		expect(device[1].includes("Wednesday"), `"Same as device" → the test browser's language (en-US): ${device}`);
-		if (!mobile) {
+		{
 			// The setting in Display; a broken stored value falls back to the default.
 			await page.evaluate(() => { const m = document.getElementById("main"); m.innerHTML = ""; tab.constructor.tab = "display"; tab.display(); m.appendChild(tab.containerEl); });
-			await page.waitForTimeout(100);
+			await settle(page);
 			const names = await page.evaluate(() => [...document.querySelectorAll(".setting-item-name")].map((n) => n.textContent));
 			expect(names.includes("Language of dates"), "setting shown in Display");
 			eq(await page.evaluate(async () => { plugin._data = { settings: { dateLanguage: "klingon" }, events: [] }; await plugin.loadPluginData(); return plugin.settings.dateLanguage; }), "obsidian", "invalid value → default");
@@ -230,22 +230,23 @@ for (const mobile of [false, true]) {
 }
 
 
-for (const mobile of [false, true]) {
-	test(`${mobile ? "mobile" : "desktop"}: own Microsoft app – the dialog says which sign-in page opens (personal vs company)`, { mobile }, async ({ page }) => {
+{ // Phone only: it checks the same as on desktop, plus that the dialog fits the screen.
+	const mobile = true;
+	test(`mobile: own Microsoft app – the dialog says which sign-in page opens (personal vs company)`, { mobile }, async ({ page }) => {
 		await page.evaluate(() => { const m = document.getElementById("main"); m.innerHTML = ""; tab.constructor.tab = "accounts"; tab.display(); m.appendChild(tab.containerEl); });
-		await page.waitForTimeout(100);
+		await settle(page);
 		await page.locator("button", { hasText: "Connect Outlook / Microsoft 365" }).click();
-		await page.waitForTimeout(100);
+		await settle(page);
 		await page.locator(".ch-signin-modal select").first().selectOption("own");
-		await page.waitForTimeout(100);
+		await settle(page);
 		const hint = () => page.locator(".ch-signin-page-hint").textContent();
 		expect((await hint()).includes("personal accounts") && (await hint()).includes("company or school account? Change"), `personal preselected, and says so: ${await hint()}`);
 		await page.locator(".ch-signin-modal select").nth(1).selectOption("organizations");
-		await page.waitForTimeout(100);
+		await settle(page);
 		expect((await hint()).includes("company or school account (Microsoft 365)"), `company account: ${await hint()}`);
 		expect((await page.locator(".ch-setup-guide summary").textContent()).includes("work/school"), "work/school guide shown");
 		await page.locator(".ch-signin-modal select").nth(1).selectOption("other");
-		await page.waitForTimeout(100);
+		await settle(page);
 		expect(await page.locator(".setting-item-name", { hasText: "Directory (tenant) ID" }).isVisible(), "single organisation asks for the tenant ID");
 		if (mobile) {
 			const w = await page.evaluate(() => document.documentElement.scrollWidth);
