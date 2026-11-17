@@ -4,9 +4,13 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet
+## Not released yet (1.8.3)
 
-- *(nothing yet)*
+- **Events with a time that run into the next day stay in the hour grid.** Before, an event from Monday 09:00 to
+  Tuesday 10:00 was shown in the *all-day* row on both days, labelled 09:00–10:00, as if it were an all-day event.
+  Now the week and day views show a block from 09:00 to the end of Monday (*09:00 →*) and one from the start of Tuesday
+  to 10:00 (*→ 10:00*); days in between are filled (*→*). The name stays visible at the top while you scroll.
+  Only events marked *All day* go into the all-day row.
 
 ## Known bugs
 
