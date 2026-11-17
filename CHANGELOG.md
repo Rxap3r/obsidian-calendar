@@ -4,16 +4,9 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet (1.8.3)
+## Not released yet
 
-- **Events with a time that run into the next day stay in the hour grid.** Before, an event from Monday 09:00 to
-  Tuesday 10:00 was shown in the *all-day* row on both days, labelled 09:00–10:00, as if it were an all-day event.
-  Now the week and day views show a block from 09:00 to the end of Monday (*09:00 →*) and one from the start of Tuesday
-  to 10:00 (*→ 10:00*); days in between are filled (*→*). The name stays visible at the top while you scroll.
-  Only events marked *All day* go into the all-day row.
-- **New setting *Events over several days*** (*Settings → Omni Calendar → Display*): keep them in the hours (default),
-  or show them in the all-day row. In the all-day row they now show their whole span under the name, e.g.
-  *Mon 09:00 – Tue 10:00*, instead of a confusing *09:00–10:00* on each day.
+- *(nothing yet)*
 
 ## Known bugs
 
@@ -23,6 +16,8 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.8.3** – Timed events over several days stay in the hour grid (one block per day) instead of the all-day row;
+  new setting *Events over several days* to show them in the all-day row with their whole span.
 - **1.8.2** – An event's tasks move with the event when it moves to another day; drag to create can continue into the
   next days in the week view.
 - **1.8.1** – Subtasks of event tasks shown in the event dialog; deleting an event deletes its tasks (after asking);
