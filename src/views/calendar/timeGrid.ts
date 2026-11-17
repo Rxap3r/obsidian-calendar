@@ -1,11 +1,11 @@
 import { setIcon } from "obsidian";
 import { CalendarOccurrence } from "../../types";
 import {
-	addDays, dayDiff, formatDate, formatHour, formatTimeRange, isoWeek, isSameDay, MS_DAY, MS_HOUR, onDay, startOfDay,
+	addDays, dayDiff, formatDate, formatHour, formatTimeRange, isoWeek, isSameDay, MS_HOUR, onDay, startOfDay,
 	startOfWeek, toDateKey,
 } from "../../dateUtils";
 import { EventModal } from "../../modals/EventModal";
-import { createChip, occurrenceMenu, openOccurrence, taskHint, tooltip } from "../shared";
+import { createChip, occurrenceMenu, openOccurrence, spansDays, taskHint, timeRangeForDay, tooltip } from "../shared";
 import { CalendarHost } from "./host";
 import { HOUR_HEIGHT, HSCROLL_GUTTER, layoutColumns, minutesAt } from "./layout";
 import { dayTaskCounter, taskBlock, TaskSlot, timedTaskSlots } from "./tasks";
@@ -19,8 +19,12 @@ export function renderTimeGrid(host: CalendarHost, first: Date, days: number, vi
 	const s = plugin.settings;
 	host.setTitle(timeGridTitle(host, first, days));
 	const occs = host.occurrences(first, addDays(first, days));
-	const allDay = occs.filter((o) => o.allDay || o.end.getTime() - o.start.getTime() >= MS_DAY);
-	const timed = occs.filter((o) => !allDay.includes(o));
+	// Only real all-day events go into the all-day row. Timed events stay in the hour grid even when they last
+	// longer than a day: one block per day (e.g. Mon 09:00 → end of day, Tue start of day → 10:00).
+	// (Setting "Events over several days" → all-day row: those go there too, labelled with their whole span.)
+	const inRow = (o: CalendarOccurrence) => o.allDay || (s.multiDayTimed === "allday" && spansDays(o));
+	const allDay = occs.filter(inRow);
+	const timed = occs.filter((o) => !inRow(o));
 	const today = new Date();
 
 	const wrap = host.bodyEl.createDiv({ cls: "ch-timegrid" });
@@ -53,7 +57,7 @@ export function renderTimeGrid(host: CalendarHost, first: Date, days: number, vi
 		// Tasks without a time: one counter for the day.
 		dayTaskCounter(plugin, cell, toDateKey(day), false);
 		for (const o of onDay(allDay, day)) {
-			const chip = createChip(plugin, cell, o, { draggable: true });
+			const chip = createChip(plugin, cell, o, { draggable: true, span: true });
 			if (!isSameDay(o.start, day)) chip.addClass("ch-continued");
 		}
 		cell.addEventListener("dblclick", () => new EventModal(plugin, { start: day, allDay: true }).open());
@@ -156,11 +160,16 @@ function eventBlock(
 	if (occ.readOnly) el.addClass("ch-readonly");
 	if (occ.end < at.now) el.addClass("ch-past");
 	if (height < 36) el.addClass("ch-compact");
-	const title = el.createDiv({ cls: "ch-tg-event-title", text: occ.title });
+	// A block that continues from the day before starts at midnight, above the hours usually on screen:
+	// its name and time stay at the top of the visible area while scrolling (see .ch-tg-continues).
+	const label = segStart > occ.start ? el.createDiv({ cls: "ch-tg-event-label" }) : el;
+	if (label !== el) el.addClass("ch-tg-continues");
+	const title = label.createDiv({ cls: "ch-tg-event-title", text: occ.title });
 	taskHint(plugin, title, occ);
-	el.createDiv({
+	label.createDiv({
 		cls: "ch-tg-event-time",
-		text: `${formatTimeRange(occ.start, occ.end, s.use24h)}${occ.location ? ` · ${occ.location}` : ""}`,
+		// Over several days: "09:00 →" on the first day, "→ 10:00" on the last, "→" in between.
+		text: `${isSameDay(occ.start, new Date(occ.end.getTime() - 1)) ? formatTimeRange(occ.start, occ.end, s.use24h) : timeRangeForDay(occ, at.dayStart, s.use24h)}${occ.location ? ` · ${occ.location}` : ""}`,
 	});
 	el.setAttr("title", tooltip(plugin, occ));
 	el.addEventListener("pointerdown", (e) => e.stopPropagation());

@@ -277,4 +277,59 @@ test("mobile touch: long press, then drag into the next day of the week", { mobi
 	eq(await page.evaluate(() => { const e = plugin.data.events.find((x) => x.title === "Night shift"); return [e.start, e.end]; }), ["2026-11-09T20:00", "2026-11-10T18:15"], "event over two days");
 });
 
+
+for (const mobile of [false, true]) {
+	test(`${mobile ? "mobile" : "desktop"}: timed events over several days stay in the hour grid (not the all-day row)`, { mobile }, async ({ page }) => {
+		await page.evaluate(async () => {
+			const add = (e) => plugin.store.addEvent({ calendarId: "personal", allDay: false, exdates: [], ...e });
+			await add({ title: "Overnight", start: "2026-11-09T09:00", end: "2026-11-10T10:00" });
+			await add({ title: "Conference", start: "2026-11-11T14:00", end: "2026-11-13T12:00" });
+			view.goTo(new Date(2026, 10, 9), "week");
+		});
+		await page.waitForTimeout(250);
+		const r = await page.evaluate(() => {
+			const H = 48;
+			const blocks = (title) => [...document.querySelectorAll(".ch-tg-event")].filter((b) => b.querySelector(".ch-tg-event-title").textContent === title)
+				.map((b) => [b.closest(".ch-tg-col").dataset.date, b.querySelector(".ch-tg-event-time").textContent, Math.round(parseFloat(b.style.top) / H * 4) / 4, Math.round((parseFloat(b.style.height) + 2) / H * 4) / 4]);
+			return {
+				allDayRow: [...document.querySelectorAll(".ch-tg-allday-cell .ch-chip")].map((c) => c.textContent).filter((t) => /Overnight|Conference/.test(t)),
+				overnight: blocks("Overnight"), conference: blocks("Conference"),
+			};
+		});
+		eq(r.allDayRow, [], "not in the all-day row");
+		eq(r.overnight, [["2026-11-09", "09:00 →", 9, 15], ["2026-11-10", "→ 10:00", 0, 10]], "Mon 09:00 → end of day, Tue start of day → 10:00");
+		eq(r.conference.map((b) => [b[0], b[1]]), [["2026-11-11", "14:00 →"], ["2026-11-12", "→"], ["2026-11-13", "→ 12:00"]], "a block on each day, labels");
+		eq(r.conference[1].slice(2), [0, 24], "the day in between is filled");
+		await page.evaluate(() => { document.querySelector(".ch-grid-scroll").scrollTop = 7 * 48; });
+		await page.waitForTimeout(100);
+		await shot(page, `${mobile ? "mobile-" : ""}week-multiday-timed`);
+	});
+}
+
+
+for (const mobile of [false, true]) {
+	test(`${mobile ? "mobile" : "desktop"}: setting – events over several days in the all-day row, labelled with their whole span`, { mobile }, async ({ page }) => {
+		await page.evaluate(async () => {
+			const add = (e) => plugin.store.addEvent({ calendarId: "personal", allDay: false, exdates: [], ...e });
+			await add({ title: "Overnight", start: "2026-11-09T09:00", end: "2026-11-10T10:00" });
+			await add({ title: "Late show", start: "2026-11-11T20:00", end: "2026-11-12T00:00" }); // ends at midnight: one day only
+			plugin.settings.multiDayTimed = "allday";
+			view.goTo(new Date(2026, 10, 9), "week");
+		});
+		await page.waitForTimeout(250);
+		const r = await page.evaluate(() => ({
+			row: [...document.querySelectorAll(".ch-tg-allday-cell .ch-chip")].filter((c) => /Overnight|Late show/.test(c.textContent))
+				.map((c) => [c.closest(".ch-tg-allday-cell") === document.querySelectorAll(".ch-tg-allday-cell")[0] ? "Mon" : "Tue", c.querySelector(".ch-chip-span")?.textContent ?? null, c.querySelector(".ch-chip-title").textContent]),
+			grid: [...document.querySelectorAll(".ch-tg-event-title")].map((t) => t.firstChild.textContent).filter((t) => /Overnight|Late show/.test(t)),
+		}));
+		eq(r.row, [["Mon", "Mon 09:00 – Tue 10:00", "Overnight"], ["Tue", "Mon 09:00 – Tue 10:00", "Overnight"]], "all-day row, whole span on both days");
+		eq(r.grid, ["Late show"], "an event ending at midnight stays a normal block");
+		await shot(page, `${mobile ? "mobile-" : ""}week-multiday-allday-row`);
+		// Back to the default: in the hours.
+		await page.evaluate(() => { plugin.settings.multiDayTimed = "grid"; plugin.store.notify(); });
+		await page.waitForTimeout(200);
+		eq(await page.locator(".ch-tg-allday-cell .ch-chip", { hasText: "Overnight" }).count(), 0, "default: not in the all-day row");
+	});
+}
+
 };

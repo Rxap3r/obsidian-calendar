@@ -284,9 +284,12 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Where we stopped (keep this section up to date at the end of a session)
 
-- **Released:** 1.8.0 (PR #28) and 1.8.1 (PR #29) were merged by the maintainer. **1.8.2** (tasks move with their event,
-  drag-to-create across days, cached test browser in the GitHub check) is in a pull request; once it is merged, the next
-  change on `dev-branch` needs a new version number.
+- **Released:** 1.8.0 (PR #28), 1.8.1 (PR #29) and 1.8.2 (PR #30) were merged by the maintainer. **1.8.3** is in a
+  pull request; once it is merged, the next change on `dev-branch` needs a new version number.
+- **In 1.8.3:** timed events over several days stay in the hour grid (one block
+  per day, sticky label), instead of the all-day row. See *Not released yet* in `CHANGELOG.md`.
+  Plus the setting `multiDayTimed` (Display → *Events over several days*): "grid" (default) or "allday" (all-day row,
+  chip with the whole span "Mon 09:00 – Tue 10:00" on a second line; `spanLabel`/`spansDays` in `views/shared.ts`).
 - **Waiting for the maintainer to test on desktop and phone:** creating a Google/Outlook event with tasks in the new-event
   dialog (relies on the real service returning the new id); moving events with tasks between Obsidian and Google;
   multi-day drag to create; tasks following a moved event.

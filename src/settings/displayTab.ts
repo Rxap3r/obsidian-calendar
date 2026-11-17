@@ -40,6 +40,18 @@ export function displayTab(ctx: SettingsContext, el: HTMLElement) {
 			await ctx.save();
 		})
 	);
+	new Setting(el)
+		.setName("Events over several days")
+		.setDesc("Week and day view: where events with a time that run into the next day go (e.g. Monday 09:00 – Tuesday 10:00). All-day events always use the all-day row.")
+		.addDropdown((d) =>
+			d
+				.addOptions({ grid: "In the hours, one block per day", allday: "In the all-day row, with start and end" })
+				.setValue(s.multiDayTimed)
+				.onChange(async (v) => {
+					s.multiDayTimed = v === "allday" ? "allday" : "grid";
+					await ctx.save();
+				})
+		);
 	numberSetting(ctx, el, "Scroll to hour", "Where week and day views start (0–23).", s.scrollToHour, 0, 23, (v) => (s.scrollToHour = v));
 	numberSetting(ctx, el, "Default event length (minutes)", "", s.defaultEventDuration, 5, 1440, (v) => (s.defaultEventDuration = v));
 	periodSetting(ctx, el, "Agenda length", "How many days the Agenda view shows.", s.agendaDays, {}, 1, 365, (v) => (s.agendaDays = v));

@@ -99,8 +99,8 @@ export function createChip(
 	plugin: OmniCalendarPlugin,
 	parent: HTMLElement,
 	occ: CalendarOccurrence,
-	/** showTime: start time; with `day` it shows the range ("10:00–11:30") for that day. */
-	opts: { showTime?: boolean; draggable?: boolean; day?: Date } = {}
+	/** showTime: start time; with `day` it shows the range ("10:00–11:30") for that day; `span`: the whole span of a multi-day event. */
+	opts: { showTime?: boolean; draggable?: boolean; day?: Date; span?: boolean } = {}
 ): HTMLElement {
 	const chip = parent.createDiv({ cls: "ch-chip" });
 	chip.style.setProperty("--ch-event-color", occ.color);
@@ -108,11 +108,15 @@ export function createChip(
 	if (occ.readOnly) chip.addClass("ch-readonly");
 	if (occ.end < new Date()) chip.addClass("ch-past");
 	if (!occ.allDay) chip.createSpan({ cls: "ch-chip-dot" });
-	if (opts.showTime && !occ.allDay) {
+	const span = opts.span && spansDays(occ);
+	if (span) chip.addClass("ch-chip-multiday");
+	if (opts.showTime && !occ.allDay && !span) {
 		chip.createSpan({ cls: "ch-chip-time", text: opts.day ? timeRangeForDay(occ, opts.day, plugin.settings.use24h) : formatTime(occ.start, plugin.settings.use24h) });
 	}
 	chip.createSpan({ cls: "ch-chip-title", text: occ.title });
 	taskHint(plugin, chip, occ);
+	// Multi-day event in the all-day row: its whole span on a second line, so it never reads like "09:00–10:00" each day.
+	if (span) chip.createSpan({ cls: "ch-chip-span", text: spanLabel(occ, plugin.settings.use24h) });
 	chip.setAttr("title", tooltip(plugin, occ));
 	chip.addEventListener("click", (e) => {
 		e.stopPropagation();
@@ -160,6 +164,17 @@ export function taskHint(plugin: OmniCalendarPlugin, parent: HTMLElement, occ: C
 /** Local or writable remote events that are not part of a recurring series can be dragged. */
 export function canDrag(occ: CalendarOccurrence): boolean {
 	return !occ.readOnly && !occ.recurring && (!!occ.eventId || !!occ.remote);
+}
+
+/** The whole span of a timed event over several days, with weekdays: "Mon 09:00 – Tue 10:00". */
+export function spanLabel(occ: CalendarOccurrence, use24h: boolean): string {
+	const at = (d: Date) => `${d.toLocaleDateString(undefined, { weekday: "short" })} ${formatTime(d, use24h)}`;
+	return `${at(occ.start)} – ${at(occ.end)}`;
+}
+
+/** A timed event whose end falls on a later day than its start (an end at midnight belongs to the day before). */
+export function spansDays(occ: CalendarOccurrence): boolean {
+	return !occ.allDay && !isSameDay(occ.start, new Date(occ.end.getTime() - 1));
 }
 
 /**

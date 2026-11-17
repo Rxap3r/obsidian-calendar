@@ -154,6 +154,11 @@ export interface OmniCalendarSettings {
 	refreshIntervalMinutes: number;
 	agendaDays: number;
 	sidebarUpcomingDays: number;
+	/**
+	 * Week / day view: where events with a time that run over several days go. "grid": one block per day in the hour
+	 * grid (09:00 →, → 10:00). "allday": in the all-day row, labelled with the whole span ("Mon 09:00 – Tue 10:00").
+	 */
+	multiDayTimed: "grid" | "allday";
 	/** Which sidebar the calendar is placed in by the toggle commands. */
 	sidebarSide: "left" | "right";
 	/**
