@@ -310,7 +310,9 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
   - subtasks on event tasks are shown in the event dialog (not forbidden);
   - event tasks go to the default task list; no list picker in the event's quick add (would be clutter);
   - tasks of a deleted event are deleted with it.
-- **1.9.0 (details view step a, PR #34) was merged.** On `dev-branch`, not released: **1.9.1** – setting *Language of
+- **1.9.0 (details view step a, PR #34) was merged. 1.9.1 is in a pull request**; once it is merged, the next change on
+  `dev-branch` needs a new version number. 1.9.1 also reworked the sign-in guide (README *Troubleshooting sign-in*;
+  the maintainer's company account needs admin consent by company policy, ICS publishing is disabled there). 1.9.1 – setting *Language of
   dates* (`dateLanguage`: obsidian / device / en). All date formatting must use `formatDate` or `dateLang()` from
   `dateUtils.ts`, never `toLocaleDateString(undefined, …)`. Next: step b (progress log), then c, then 1.10 (repeating).
   Tests: the UI test setup starts with `clickOpens = "edit"` (most tests drive the edit dialogs); `specs/details.cjs`

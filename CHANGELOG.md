@@ -4,26 +4,9 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet (1.9.1)
+## Not released yet
 
-- **New setting *Language of dates*** (*Settings → Omni Calendar → Display*). Weekday and month names used to follow
-  the device's language, so a German device showed *Mi., 18. Nov.* next to the plugin's English words. Now they follow
-  **Obsidian's language** by default (*Settings → General → Language*); you can also choose *Same as this device* or *English*.
-- **More help for your own Microsoft app registration:** the setup guides (sign-in dialog and README) now explain the
-  most common Microsoft error codes (AADSTS700016, 50011, 7000218, 65001) and the *requestedAccessTokenVersion* message,
-  and warn that the redirect address belongs under *Mobile and desktop applications*, not *Web*. *unauthorized_client*
-  for a personal account is now explained correctly: the app doesn't allow personal accounts (the account type in
-  Azure must not stay at its preselected value).
-- **The Microsoft sign-in dialog says which sign-in page will open** (with your own app registration): personal
-  accounts (Outlook.com, Hotmail) or company/school accounts, with a pointer to *Which Microsoft account?*. *Personal*
-  is preselected there, which was easy to miss with a company account.
-- **Company accounts and "Need admin approval":** the work/school guide now recommends a single-organisation app
-  (Microsoft no longer lets ordinary users approve new multi-tenant apps by default) and explains where an admin grants
-  approval once, or how to see the calendar read-only via ICS if IT says no.
-- **Cleaner sign-in guide (README):** a "Which method?" table for your own app registration, the steps per method, and
-  one new **Troubleshooting sign-in** section: Google problems, all Microsoft error messages in one table (they used to be
-  listed twice), and *Company or school accounts* – admin approval, what to ask IT, and read-only alternatives when IT
-  says no (ICS link, or a calendar file saved from classic Outlook into the vault). The sign-in dialog's guides match.
+- *(nothing yet)*
 
 ## Known bugs
 
@@ -33,6 +16,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.9.1** – Setting *Language of dates* (follows Obsidian's language by default); the Microsoft sign-in dialog says
+  which sign-in page opens; a cleaner sign-in guide with a troubleshooting section, incl. company accounts that need
+  an admin's approval.
 - **1.9.0** – Details view for events and tasks: clicking opens a read-only view with quick actions and *Edit notes*;
   *Edit* opens the dialog. New setting *Clicking an event or task opens* (details or edit dialog).
 - **1.8.5** – Tracked events show their tasks' progress and ask about open tasks when ticked off; the Tasks list bar
