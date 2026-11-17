@@ -766,6 +766,12 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
   - a small "📝 3" hint in the task list;
   - entries can be corrected or deleted (the original time stays);
   - maybe the same log for events later; tasks first.
+- **Undecided idea: a progress log on events** (not sure yet whether it fits). Today a *tracked* event (*Track as task*)
+  has no log, because clicking it opens the event. Two ways, if it's wanted:
+  - **small:** only tracked events, the log in the event's details view (stored on the hidden tracking task).
+    *Stop tracking* would then have to ask before deleting the entries;
+  - **bigger:** a log on every event, stored per event like linked notes. Better to pick one way and not build both.
+  - Repeating events only after 1.10.
 
 **Planned with the details view: "Create note" for tasks (maintainer's idea)**
 - Like for events: **right-click a task → Create note**, plus a button in the task dialog and the details view.

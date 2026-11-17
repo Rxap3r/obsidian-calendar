@@ -263,6 +263,9 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - it's separate from subtasks;
     - also confirmed: adding entries in the details view (no Edit needed), a "📝 n" hint in lists, edit/delete of entries
       (the original time stays). Tasks first; the same log for events maybe later.
+    - **Undecided (maintainer not sure it fits – don't build unless asked):** a log on events. Small way: only tracked
+      events (log on the `self` task, shown in `EventDetailsModal`; `setTracked(false)` deletes that task, so it must ask
+      first). Bigger way: a log on every event, stored per `eventKey` like `eventLinks`. Pick one, not both (README roadmap).
     - Store them in the task (e.g. `log: { at: number; text: string }[]`) and validate in `normalizeTaskData`.
   - **"Create note" for tasks (with the details view):** the same as for events (`notes.ts` `createEventNote`).
     - It lives in the right-click menu, the task dialog and the details view.
