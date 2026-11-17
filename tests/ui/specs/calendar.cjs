@@ -332,4 +332,72 @@ for (const mobile of [false, true]) {
 	});
 }
 
+
+test("desktop: drag an event's top or bottom edge to change its start or end (also into the next day)", {}, async ({ page }) => {
+	await page.evaluate(async () => {
+		await plugin.store.addEvent({ calendarId: "personal", allDay: false, exdates: [], title: "Overnight", start: "2026-11-09T09:00", end: "2026-11-10T10:00" });
+		window.updates = [];
+		plugin.store.updateRemote = async (o, i) => window.updates.push([o.remote.id, i.start.getHours(), i.end.getHours()]);
+		view.goTo(new Date(2026, 10, 9), "week");
+	});
+	await page.waitForTimeout(250);
+	await page.evaluate(() => { document.querySelector(".ch-grid-scroll").scrollTop = 7 * 48; });
+	await page.waitForTimeout(100);
+	const H = 48;
+	const ev = (title, i = 0) => page.locator(".ch-tg-event", { hasText: title }).nth(i);
+	const dragEdge = async (title, edge, dx, dy, i = 0) => {
+		const b = await ev(title, i).locator(`.ch-tg-resize-${edge}`).boundingBox();
+		const x = b.x + b.width / 2, y = b.y + b.height / 2;
+		await page.mouse.move(x, y);
+		await page.mouse.down();
+		await page.mouse.move(x + dx, y + dy, { steps: 8 });
+		await page.waitForTimeout(60);
+		const preview = await page.evaluate(() => document.querySelector(".ch-resize-preview .ch-tg-selection-time")?.textContent ?? null);
+		await page.mouse.up();
+		await page.waitForTimeout(150);
+		return preview;
+	};
+	const stored = (title) => page.evaluate((t) => { const e = plugin.data.events.find((x) => x.title === t); return [e.start, e.end]; }, title);
+	// Saturday's "Design review" 10:00–11:30: end one hour later, then start half an hour earlier.
+	eq(await dragEdge("Design review", "end", 0, H), "10:00 – 12:30", "preview while dragging the end");
+	eq(await stored("Design review"), ["2026-11-14T10:00", "2026-11-14T12:30"], "end moved");
+	eq(await page.locator(".modal").count(), 0, "no dialog opened");
+	await dragEdge("Design review", "start", 0, -H / 2);
+	eq(await stored("Design review"), ["2026-11-14T09:30", "2026-11-14T12:30"], "start moved");
+	// Overnight Mon 09:00 – Tue 10:00: the end is on Tuesday's block; drag it into Wednesday, 2 hours earlier.
+	const colW = (await page.locator(".ch-tg-col").first().boundingBox()).width;
+	eq(await page.locator(".ch-tg-event", { hasText: "Overnight" }).nth(0).locator(".ch-tg-resize-end").count(), 0, "first day: no end edge");
+	eq(await page.locator(".ch-tg-event", { hasText: "Overnight" }).nth(1).locator(".ch-tg-resize-start").count(), 0, "last day: no start edge");
+	eq(await dragEdge("Overnight", "end", colW, -2 * H, 1), "Mon 09:00 – Wed 08:00", "preview over three days");
+	eq(await stored("Overnight"), ["2026-11-09T09:00", "2026-11-11T08:00"], "end on Wednesday");
+	// Google event: saved to Google. Repeating local event: no edges.
+	await page.evaluate(() => view.goTo(new Date(2026, 10, 15), "week"));
+	await page.waitForTimeout(200);
+	await dragEdge("Dentist", "end", 0, H);
+	eq(await page.evaluate(() => window.updates), [["g1", 14, 16]], "Google event updated");
+	eq(await page.locator(".ch-tg-event", { hasText: "Standup" }).first().locator(".ch-tg-resize").count(), 0, "repeating event: no edges");
+	// The edge can't go past the other edge: at least 15 minutes remain.
+	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "week"));
+	await page.waitForTimeout(200);
+	await dragEdge("Overlapping call", "end", 0, -3 * H);
+	eq(await stored("Overlapping call"), ["2026-11-14T11:00", "2026-11-14T11:15"], "at least 15 minutes");
+});
+
+test("mobile: drag an event's bottom edge with the finger", { mobile: true }, async ({ page, ctx }) => {
+	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "day"));
+	await page.waitForTimeout(250);
+	await page.evaluate(() => { document.querySelector(".ch-grid-scroll").scrollTop = 8 * 48; });
+	await page.waitForTimeout(100);
+	const cdp = await ctx.newCDPSession(page);
+	const touch = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+	const b = await page.locator(".ch-tg-event", { hasText: "Design review" }).locator(".ch-tg-resize-end").boundingBox();
+	const x = b.x + b.width / 2, y = b.y + b.height / 2;
+	await touch("touchStart", x, y);
+	for (let i = 1; i <= 6; i++) { await touch("touchMove", x, y + i * 8); await page.waitForTimeout(15); }
+	await page.screenshot({ path: path.join(SHOTS, "mobile-resize-event.png") });
+	await touch("touchEnd"); await page.waitForTimeout(200);
+	eq(await page.evaluate(() => { const e = plugin.data.events.find((x) => x.title === "Design review"); return [e.start, e.end]; }), ["2026-11-14T10:00", "2026-11-14T12:30"], "end one hour later");
+	eq(await page.evaluate(() => [document.querySelectorAll(".modal").length, document.querySelectorAll(".ch-tg-selection").length]), [0, 0], "no dialog, no new-event selection");
+});
+
 };

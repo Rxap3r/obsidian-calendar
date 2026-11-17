@@ -1,7 +1,8 @@
 import type OmniCalendarPlugin from "../../main";
-import { addDays, addMinutes, formatDate, formatTime, formatTimeRange, isSameDay, MS_MIN, parseLocal, startOfDay } from "../../dateUtils";
+import { addMinutes, MS_MIN, startOfDay } from "../../dateUtils";
+import { columnAt, columnDay, drawRange } from "./ranges";
 import { EventModal } from "../../modals/EventModal";
-import { HOUR_HEIGHT, SNAP_MIN } from "./layout";
+import { SNAP_MIN } from "./layout";
 
 /** Touch: hold this long before dragging selects a time range. */
 const LONG_PRESS_MS = 400;
@@ -64,28 +65,8 @@ export class SlotSelection {
 			/** One selection block per day the range touches (only days shown in this view). */
 			const draw = () => {
 				ghosts.forEach((g) => g.remove());
-				ghosts = [];
 				const { start, end } = range();
-				for (const c of dayColumns(col)) {
-					const dayStart = parseLocal(c.dataset.date ?? "");
-					const dayEnd = addDays(dayStart, 1);
-					if (end <= dayStart || start >= dayEnd) continue;
-					const a = start > dayStart ? start : dayStart;
-					const b = end < dayEnd ? end : dayEnd;
-					const top = (a.getTime() - dayStart.getTime()) / MS_MIN / 60 * HOUR_HEIGHT;
-					const height = (b.getTime() - a.getTime()) / MS_MIN / 60 * HOUR_HEIGHT;
-					const g = c.createDiv({ cls: "ch-tg-selection" });
-					g.style.setProperty("--ch-event-color", this.newEventColor());
-					g.style.top = `${top}px`;
-					g.style.height = `${height}px`;
-					g.toggleClass("ch-compact", height < 34);
-					if (!ghosts.length) {
-						// The first block carries the label.
-						g.createDiv({ cls: "ch-tg-selection-time", text: this.rangeLabel(start, end) });
-						g.createDiv({ cls: "ch-tg-selection-title", text: "New event" });
-					} else g.addClass("ch-continued");
-					ghosts.push(g);
-				}
+				ghosts = drawRange(col, start, end, { color: this.newEventColor(), title: "New event", use24h: this.plugin.settings.use24h });
 			};
 			const cleanup = () => {
 				window.removeEventListener("pointermove", move);
@@ -110,7 +91,7 @@ export class SlotSelection {
 				}
 				// The day column under the pointer (the nearest one when it is beside the grid).
 				const target = columnAt(col, e.clientX);
-				const at = addMinutes(parseLocal(target.dataset.date ?? ""), minutesFromY(e.clientY) + SNAP_MIN);
+				const at = addMinutes(columnDay(target), minutesFromY(e.clientY) + SNAP_MIN);
 				if (at.getTime() !== endAt.getTime()) {
 					endAt = at;
 					moved = true;
@@ -151,15 +132,6 @@ export class SlotSelection {
 		});
 	}
 
-	/** "12:00 – 13:30", or with weekdays when the range ends on another day: "Mon 12:00 – Tue 06:00". */
-	private rangeLabel(start: Date, end: Date): string {
-		const use24h = this.plugin.settings.use24h;
-		// An end at midnight still belongs to the start day.
-		if (isSameDay(start, new Date(end.getTime() - 1))) return formatTimeRange(start, end, use24h);
-		const at = (d: Date) => `${formatDate(d, { weekday: "short" })} ${formatTime(d, use24h)}`;
-		return `${at(start)} – ${at(end)}`;
-	}
-
 	/** Colour of the first calendar new events are saved to, for the selection block. */
 	private newEventColor(): string {
 		const s = this.plugin.settings;
@@ -168,18 +140,3 @@ export class SlotSelection {
 	}
 }
 
-/** All day columns of the grid this column belongs to (one in the day view, seven in the week view). */
-function dayColumns(col: HTMLElement): HTMLElement[] {
-	return Array.from(col.parentElement?.querySelectorAll<HTMLElement>(".ch-tg-col") ?? [col]);
-}
-
-/** The day column at this horizontal position; beside the grid, the first or last column. */
-function columnAt(col: HTMLElement, x: number): HTMLElement {
-	const cols = dayColumns(col);
-	for (const c of cols) {
-		const r = c.getBoundingClientRect();
-		if (x >= r.left && x < r.right) return c;
-	}
-	const first = cols[0].getBoundingClientRect();
-	return x < first.left ? cols[0] : cols[cols.length - 1];
-}

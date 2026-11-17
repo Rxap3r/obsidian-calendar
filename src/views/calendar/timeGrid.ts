@@ -9,6 +9,7 @@ import { createChip, occurrenceMenu, openOccurrence, spansDays, taskHint, timeRa
 import { CalendarHost } from "./host";
 import { HOUR_HEIGHT, HSCROLL_GUTTER, layoutColumns, minutesAt } from "./layout";
 import { dayTaskCounter, taskBlock, TaskSlot, timedTaskSlots } from "./tasks";
+import { justResized, resizeHandles } from "./eventResize";
 
 /**
  * Week / day view: a time grid for `days` days starting at `first`. When only `visible` days fit,
@@ -175,7 +176,7 @@ function eventBlock(
 	el.addEventListener("pointerdown", (e) => e.stopPropagation());
 	el.addEventListener("click", (e) => {
 		e.stopPropagation();
-		openOccurrence(plugin, occ);
+		if (!justResized()) openOccurrence(plugin, occ);
 	});
 	el.addEventListener("contextmenu", (e) => {
 		e.preventDefault();
@@ -183,6 +184,8 @@ function eventBlock(
 		occurrenceMenu(plugin, occ, e);
 	});
 	host.drag.grabbable(el, occ, segStart);
+	// Drag the top / bottom edge to change the start / end.
+	resizeHandles(plugin, col, el, occ, at);
 }
 
 /**

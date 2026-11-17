@@ -83,7 +83,7 @@ Shared helpers live in one place. Before writing a small helper (error text, plu
 | `views/OmniView.ts` | Base of the three views: `queueRender`, `inSidebar` |
 | `views/viewTypes.ts` | The view type ids |
 | `views/CalendarView.ts` | Calendar / day planner, the frame only: toolbar, navigation, filter, responsive layout switch |
-| `views/calendar/` | What the calendar draws: `month.ts` (grid + compact grid), `timeGrid.ts` (week/day, sideways-scrolling week), `agenda.ts`, `eventDrag.ts` (drag & drop of events **and tasks** + preview), `slotSelection.ts` (press/drag to create, touch gestures), `layout.ts` (sizes, overlapping events and tasks), `tasks.ts` (tasks in the calendar: time blocks, the per-day counter ☐ 3), `host.ts` (what they need from the view) |
+| `views/calendar/` | What the calendar draws: `month.ts` (grid + compact grid), `timeGrid.ts` (week/day, sideways-scrolling week), `agenda.ts`, `eventDrag.ts` (drag & drop of events **and tasks** + preview), `eventResize.ts` (drag an event's top / bottom edge), `slotSelection.ts` (press/drag to create, touch gestures), `ranges.ts` (range previews across day columns), `layout.ts` (sizes, overlapping events and tasks), `tasks.ts` (tasks in the calendar: time blocks, the per-day counter ☐ 3), `host.ts` (what they need from the view) |
 | `eventLinks.ts` | `eventKey(occ)`: the stable key that tasks and linked notes of an event are stored under (`local:<id>`, `local:<id>@<date>` for one repeat, `<calendar>:<remote id>`, ICS occurrence key) |
 | `views/eventExtras.ts`, `views/linkedNotes.ts` | The event's **Tasks** and **Linked notes** sections (event dialog + read-only details); the shared linked-notes block (also in the task dialog) |
 | `views/eventDraft.ts` | The same sections in the **new-event** dialog: kept in memory, attached on Save (`attachDraft`) to the first saved copy |
@@ -284,9 +284,10 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Where we stopped (keep this section up to date at the end of a session)
 
-- **Released:** 1.8.0 (PR #28), 1.8.1 (PR #29) and 1.8.2 (PR #30) were merged by the maintainer. **1.8.3** is in a
-  pull request; once it is merged, the next change on `dev-branch` needs a new version number.
-- **In 1.8.3:** timed events over several days stay in the hour grid (one block
+- **Released:** 1.8.0 (PR #28), 1.8.1 (PR #29), 1.8.2 (PR #30) and 1.8.3 (PR #31) were merged by the maintainer.
+- **On `dev-branch`, not released:** version **1.8.4** – resize events by dragging their top / bottom edge
+  (`views/calendar/eventResize.ts`; the range preview helpers shared with drag-to-create are in `views/calendar/ranges.ts`).
+- **In 1.8.3 (released):** timed events over several days stay in the hour grid (one block
   per day, sticky label), instead of the all-day row. See *Not released yet* in `CHANGELOG.md`.
   Plus the setting `multiDayTimed` (Display → *Events over several days*): "grid" (default) or "allday" (all-day row,
   chip with the whole span "Mon 09:00 – Tue 10:00" on a second line; `spanLabel`/`spansDays` in `views/shared.ts`).

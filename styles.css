@@ -147,6 +147,13 @@
 	line-height: 1.25;
 }
 .ch-tg-event:hover { z-index: 3; box-shadow: var(--shadow-s); }
+/* Top / bottom edge of an event block: drag to change the start / end (eventResize.ts). Taller on touch screens. */
+.ch-tg-resize { position: absolute; left: 0; right: 0; height: 6px; cursor: ns-resize; z-index: 2; touch-action: none; }
+.ch-tg-resize-start { top: 0; }
+.ch-tg-resize-end { bottom: 0; }
+.is-mobile .ch-tg-resize, .ch-tg-resize:hover { height: 10px; }
+.ch-tg-event.ch-resizing { opacity: 0.35; }
+.ch-tg-event.ch-tg-continues .ch-tg-resize-end { bottom: 0; }
 /* Continued from the day before: the label sticks to the top of the visible hours. "clip" (unlike "hidden") still cuts the
    text at the block's edges but lets the label stick to the scrolling grid. */
 .ch-tg-event.ch-tg-continues { overflow: clip; }
