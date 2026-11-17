@@ -5,7 +5,7 @@ import { PRIORITY_NAMES } from "../../tasks";
 import { addDays, formatDate, parseLocal, toDateKey } from "../../dateUtils";
 import { TaskModal } from "../../modals/TaskModal";
 import { confirmAction } from "../../modals/ConfirmModal";
-import { noteName, openLinkedNote, openTaskEvent, taskTimeLabel, toggleDone } from "./helpers";
+import { noteChips, noteName, openLinkedNote, openTaskEvent, taskTimeLabel, toggleDone } from "./helpers";
 import { openOccurrence } from "../shared";
 import { openTask } from "./openTask";
 import { entryCount } from "./progressLog";
@@ -110,24 +110,24 @@ export function renderTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t
 				void store.setSubtaskDone(t.id, s.id, !s.done);
 			};
 			sr.createSpan({ cls: "ch-task-sub-title", text: s.title });
+			// Kept small on purpose: a ≡ icon for a description, a note icon for linked notes (details view shows them).
+			if (plugin.settings.tasksNoteExtras && s.description) setIcon(sr.createSpan({ cls: "ch-task-meta-icon ch-sub-has-desc", attr: { "aria-label": s.description, title: s.description } }), "align-left");
+			if (plugin.settings.tasksNoteExtras && s.links.length) {
+				const n = sr.createEl("a", { cls: "ch-task-meta-icon ch-sub-has-notes", attr: { "aria-label": s.links.length === 1 ? `Open note: ${noteName(s.links[0])}` : `${s.links.length} linked notes`, title: s.links.map(noteName).join(", ") } });
+				setIcon(n, "file-text");
+				n.onclick = (e) => {
+					e.stopPropagation();
+					// One note opens directly; several are listed in the details view.
+					if (s.links.length === 1) void openLinkedNote(plugin, s.links[0]);
+					else new TaskDetailsModal(plugin, t).open();
+				};
+			}
 			sr.onclick = (e) => e.stopPropagation();
 		}
 	}
 
 	// Linked notes as small clickable chips.
-	if (t.links.length) {
-		const links = row.createDiv({ cls: "ch-task-linkchips" });
-		for (const path of t.links) {
-			const chip = links.createEl("a", { cls: "ch-task-linkchip", attr: { title: path } });
-			setIcon(chip.createSpan({ cls: "ch-task-meta-icon" }), "file-text");
-			chip.appendText(noteName(path));
-			chip.onclick = (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				void openLinkedNote(plugin, path);
-			};
-		}
-	}
+	noteChips(plugin, row, t.links);
 
 	// A tracked event is edited as an event (its title, day and time come from there).
 	row.onclick = () => openTask(plugin, t);
@@ -158,6 +158,7 @@ export function taskMenu(plugin: OmniCalendarPlugin, t: Task, e: MouseEvent) {
 	menu.addItem((i) => i.setTitle(t.done ? "Mark as not done" : "Mark as done").setIcon("check").onClick(() => void store.setDone(t.id, !t.done)));
 	menu.addItem((i) => i.setTitle("Show details").setIcon("info").onClick(() => new TaskDetailsModal(plugin, t).open()));
 	menu.addItem((i) => i.setTitle("Edit…").setIcon("pencil").onClick(() => new TaskModal(plugin, t).open()));
+	if (plugin.settings.tasksNoteExtras) menu.addItem((i) => i.setTitle(plugin.hasTaskNote(t) ? "Open note" : "Create note").setIcon("file-plus").onClick(() => void plugin.createNoteForTask(t)));
 	menu.addSeparator();
 	when("Today", "sun", toDateKey(today));
 	when("Tomorrow", "sunrise", toDateKey(addDays(today, 1)));

@@ -199,10 +199,14 @@ export interface OmniCalendarSettings {
 	tasksInMiniCalendar: boolean;
 	/** Progress log of tasks (details view + "📝 n" hint in lists). Off hides it; entries are kept. */
 	tasksProgressLog: boolean;
+	/** "Create note" on tasks and subtasks, subtask descriptions and subtask notes (1.9.3). Off hides them; nothing is deleted. */
+	tasksNoteExtras: boolean;
 	/** @deprecated replaced by sidebarView (migrated on load). */
 	sidebarOnStartup?: SidebarView;
 	notesFolder: string;
 	noteTemplate: string;
+	/** Template of "Create note" on tasks and subtasks (1.9.3). */
+	taskNoteTemplate: string;
 	defaultCalendarId: string;
 	/** Calendars new events are saved to by default (local and/or Google / Outlook). */
 	defaultTargets: string[];
@@ -237,6 +241,10 @@ export interface Subtask {
 	id: string;
 	title: string;
 	done: boolean;
+	/** Short optional description (1.9.3). Longer content belongs in a note. */
+	description?: string;
+	/** Vault paths of linked notes (1.9.3). Never parsed or modified. */
+	links: string[];
 }
 
 export interface Task {

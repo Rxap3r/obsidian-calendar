@@ -82,7 +82,7 @@ function fakeWorkspace() {
 			on: () => ({}),
 			getAbstractFileByPath: (p: string) => notes.find((n) => n.path === p) ?? null,
 			getMarkdownFiles: () => notes,
-			create: async (p: string) => { const f = new TFile(p); notes.push(f); return f; },
+			create: async (p: string, d = "") => { const f = new TFile(p); notes.push(f); ((window as any).createdNotes ??= {})[p] = d; return f; },
 			createFolder: async () => {},
 		},
 		secretStorage: {

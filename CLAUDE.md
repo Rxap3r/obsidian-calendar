@@ -263,8 +263,11 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
     - it's separate from subtasks;
     - also confirmed: adding entries in the details view (no Edit needed), a "📝 n" hint in lists, edit/delete of entries
       (the original time stays). Tasks first; the same log for events maybe later.
+    - **Undecided (maintainer not sure it fits – don't build unless asked):** a log on events. Small way: only tracked
+      events (log on the `self` task, shown in `EventDetailsModal`; `setTracked(false)` deletes that task, so it must ask
+      first). Bigger way: a log on every event, stored per `eventKey` like `eventLinks`. Pick one, not both (README roadmap).
     - Store them in the task (e.g. `log: { at: number; text: string }[]`) and validate in `normalizeTaskData`.
-  - **"Create note" for tasks (with the details view):** the same as for events (`notes.ts` `createEventNote`).
+  - **"Create note" for tasks (with the details view) – ✅ on `dev-branch` for 1.9.3:** the same as for events (`notes.ts` `createEventNote`).
     - It lives in the right-click menu, the task dialog and the details view.
     - Name: "YYYY-MM-DD Title" (or the title only if the task has no date), in `notesFolder`.
     - The note is added to `links` and opened; an existing note just opens ("Open note").
@@ -295,14 +298,15 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Where we stopped (keep this section up to date at the end of a session)
 
-**State:** everything up to **1.9.1** is merged and released (tags 1.8.0 … 1.9.1, PRs #28–#35). **1.9.2** (progress log
-for tasks = details view step b, setting `tasksProgressLog`) is in a PR from `dev-branch`; once it is merged and tagged,
-*Not released yet* is empty and the **next change needs 1.9.3** (or 1.10.0 for a bigger feature – ask if unsure).
+**State:** everything up to **1.9.2** is merged and released (tags 1.8.0 … 1.9.2, PRs #28–#36). **1.9.3** (details view
+step c – "Create note" for tasks and subtasks, subtask notes and descriptions, `taskNoteTemplate`, switch `tasksNoteExtras`)
+is in a PR from `dev-branch`; once it is merged and tagged, the **next change needs 1.9.4** (or 1.10.0 for repeating
+tasks – the next roadmap step is a bigger feature, so 1.10.0 is likely).
 
 **Next on the roadmap (agreed order):**
-1. **Step c** – "Create note" for tasks and subtasks, linked notes per subtask, short subtask descriptions.
-2. **1.10** – repeating tasks, tasks on repeating events per repeat, *Track as task* for repeats.
-3. Later: reminders and notifications (README roadmap), then the "Other ideas".
+1. **1.10** – repeating tasks, tasks on repeating events per repeat, *Track as task* for repeats.
+2. Later: reminders and notifications (README roadmap), then the "Other ideas".
+3. Undecided: a progress log on events (see the roadmap note above; only if the maintainer asks).
 
 **Still to be tested by the maintainer on real devices** (only covered by the automated tests so far): creating a
 Google/Outlook event with tasks in the new-event dialog (needs the real service to return the new id); moving events
@@ -324,6 +328,14 @@ events that continue from the previous day; *Language of dates* with Obsidian in
   checked in `normalizeTaskData`; `TaskStore.addLog/editLog/removeLog`); shown in `TaskDetailsModal` only (not the edit
   dialog), "📝 n" in `taskRow.ts`. Setting `tasksProgressLog` (Tasks tab, on by default; the maintainer asked for a switch
   so it isn't overwhelming) hides both, deletes nothing. Enter sends on desktop, the button on phones.
+- 1.9.3: step c. `createTaskNote` / `taskNotePath` in `notes.ts` (template `taskNoteTemplate`, placeholders title, task,
+  subtask, date, time, list, priority, notes); `plugin.createNoteForTask(t, sub?, link?)` / `hasTaskNote`. `Subtask` has
+  `links: string[]` + `description?` (checked in `normalizeTaskData`; `upsert` fills missing `links`); link rename/delete
+  covers subtasks (`linkOwners`). Task dialog: ≡ button per subtask (`ch-sub-extra-btn`) opens description + notes – this
+  replaced the "add description" link of the design; its *Create note* saves the task first. Details view: grey
+  description, chips, ⋯ menu (`views/tasks/subtaskNotes.ts`). Lists: ≡ and note icons only (`taskRow.ts`).
+  Switch `tasksNoteExtras` (Tasks tab, on by default; the maintainer asked for it because it may confuse some people)
+  hides all of step c incl. the Notes tab's task template; task-level linked notes (1.7) stay; nothing is deleted.
 - 1.9.1: setting `dateLanguage` (all date formatting via `formatDate` / `dateLang()` in `dateUtils.ts`, never
   `toLocaleDateString(undefined, …)`); Microsoft sign-in hint for which page opens; README *Troubleshooting sign-in*.
 

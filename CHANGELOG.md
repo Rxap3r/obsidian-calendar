@@ -16,6 +16,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.9.3** – *Create note* for tasks and subtasks (right-click menu, task dialog, details view), with its own task note
+  template; short descriptions and linked notes for subtasks (≡ button in the dialog, grey text and chips in the details
+  view, small icons in the lists). New switch *Tasks → Create note and subtask details* hides all of it (deletes nothing).
 - **1.9.2** – Progress log for tasks: dated updates in a task's details view (Enter or the send button), added at the
   bottom, can be corrected (original time kept) or deleted; "📝 3" in the lists. New setting *Tasks → Progress log* hides it
   (deletes nothing).

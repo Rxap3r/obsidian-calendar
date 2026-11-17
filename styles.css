@@ -844,3 +844,24 @@
 .ch-log-send { flex: none; padding: 4px 10px; display: inline-flex; align-items: center; }
 .ch-log-send svg { width: 15px; height: 15px; }
 .ch-task-has-log { font-size: 0.9em; }
+
+/* ---------------------------------------------------------------- notes and descriptions of subtasks (1.9.3) */
+/* Task lists: only small icons. */
+.ch-task-sub .ch-sub-has-desc, .ch-task-sub .ch-sub-has-notes { color: var(--text-faint); display: inline-flex; }
+.ch-task-sub .ch-sub-has-notes { cursor: pointer; }
+.ch-task-sub .ch-sub-has-notes:hover { color: var(--text-normal); }
+/* Details view: description in small grey text, notes as chips, a ⋯ button. */
+.ch-details-subtasks .ch-event-subtask { align-items: flex-start; }
+.ch-details-subtask-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ch-details-subtask-desc { font-size: 0.85em; color: var(--text-muted); white-space: pre-wrap; word-break: break-word; }
+.ch-details-subtasks .ch-event-subtask-title { white-space: normal; word-break: break-word; }
+.ch-task-linkchips.ch-details-subtask-notes { margin: 3px 0 2px 0; }
+.ch-subtask-more { flex: none; }
+/* Task dialog: ≡ opens description + notes under the subtask. */
+.ch-task-sub-item { display: flex; flex-direction: column; }
+.ch-sub-extra-btn { color: var(--text-faint); }
+.ch-sub-extra-btn.has-content { color: var(--interactive-accent); }
+.ch-sub-extra-btn.is-active { background: var(--background-modifier-hover); }
+.ch-task-sub-extra { margin: 4px 0 6px 26px; padding-left: 8px; border-left: 2px solid var(--background-modifier-border); }
+.ch-task-modal .ch-sub-desc { display: block; width: 100%; max-width: none; box-sizing: border-box; resize: vertical; font: inherit; font-size: 0.9em; }
+.ch-task-sub-extra .ch-task-section-head { border-top: none; margin-top: 2px; padding: 4px 0 2px; font-weight: normal; font-size: 0.85em; color: var(--text-muted); }

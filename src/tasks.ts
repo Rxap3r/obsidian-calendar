@@ -45,12 +45,16 @@ export function normalizeTaskData(raw: unknown): TaskData {
 			date: /^\d{4}-\d{2}-\d{2}$/.test(t.date ?? "") ? t.date : undefined,
 			start: /^\d{2}:\d{2}$/.test(t.start ?? "") ? t.start : undefined,
 			end: /^\d{2}:\d{2}$/.test(t.end ?? "") ? t.end : undefined,
-			subtasks: (Array.isArray(t.subtasks) ? t.subtasks : []).filter((s) => s && typeof s.id === "string").map((s) => ({ id: s.id, title: String(s.title ?? ""), done: !!s.done })),
+			subtasks: (Array.isArray(t.subtasks) ? t.subtasks : []).filter((s) => s && typeof s.id === "string").map((s) => ({
+				id: s.id, title: String(s.title ?? ""), done: !!s.done,
+				...(typeof s.description === "string" && s.description.trim() ? { description: s.description.trim() } : {}),
+				links: stringList(s.links),
+			})),
 			done: !!t.done,
 			// A done task without a completion time counts from now (so a clean-up can't delete it at once).
 			completedAt: typeof t.completedAt === "number" ? t.completedAt : t.done ? Date.now() : undefined,
 			createdAt: typeof t.createdAt === "number" ? t.createdAt : Date.now(),
-			links: (Array.isArray(t.links) ? t.links : []).filter((p) => typeof p === "string"),
+			links: stringList(t.links),
 			event: normalizeEventLink(t.event),
 			log: normalizeLog(t.log),
 		}));
@@ -62,6 +66,11 @@ export function normalizeTaskData(raw: unknown): TaskData {
 }
 
 /** A task's event link, or undefined when it is incomplete. */
+/** Note paths: strings only. */
+function stringList(raw: unknown): string[] {
+	return (Array.isArray(raw) ? raw : []).filter((p): p is string => typeof p === "string");
+}
+
 /** Progress log entries: valid ones only, oldest first; undefined when there are none. */
 function normalizeLog(raw: unknown): TaskLogEntry[] | undefined {
 	if (!Array.isArray(raw)) return undefined;
@@ -283,6 +292,7 @@ export class TaskStore extends Events {
 		if (!task.date) task.start = undefined;
 		if (!task.start) task.end = undefined;
 		if (task.end && task.start && task.end <= task.start) task.end = undefined;
+		for (const sub of task.subtasks) sub.links ??= [];
 		const i = this.items.findIndex((t) => t.id === task.id);
 		if (i >= 0) this.items[i] = task;
 		else this.items.push(task);
@@ -411,13 +421,38 @@ export class TaskStore extends Events {
 
 	// ------------------------------------------------------------------ linked notes
 
-	/** A note was renamed / moved: keep the links. Returns true if something changed. */
+	/** Everything that has linked notes: tasks and their subtasks. */
+	private *linkOwners(): Generator<{ links: string[] }> {
+		for (const t of this.items) {
+			yield t;
+			yield* t.subtasks;
+		}
+	}
+
+	/** Link a note to a task, or to one of its subtasks (no duplicates). */
+	async addLink(taskId: string, path: string, subId?: string) {
+		const t = this.get(taskId);
+		const owner = subId ? t?.subtasks.find((x) => x.id === subId) : t;
+		if (!owner || owner.links.includes(path)) return;
+		owner.links.push(path);
+		await this.save();
+	}
+
+	/** Replace the linked notes of a subtask. */
+	async setSubtaskLinks(taskId: string, subId: string, links: string[]) {
+		const s = this.get(taskId)?.subtasks.find((x) => x.id === subId);
+		if (!s) return;
+		s.links = links;
+		await this.save();
+	}
+
+	/** A note was renamed / moved: keep the links (of tasks and subtasks). Returns true if something changed. */
 	renameLink(oldPath: string, newPath: string): boolean {
 		let changed = false;
-		for (const t of this.items) {
-			const i = t.links.indexOf(oldPath);
+		for (const owner of this.linkOwners()) {
+			const i = owner.links.indexOf(oldPath);
 			if (i >= 0) {
-				t.links[i] = newPath;
+				owner.links[i] = newPath;
 				changed = true;
 			}
 		}
@@ -428,12 +463,12 @@ export class TaskStore extends Events {
 		return changed;
 	}
 
-	/** A note was deleted: drop its links. */
+	/** A note was deleted: drop its links (of tasks and subtasks). */
 	removeLink(path: string): boolean {
 		let changed = false;
-		for (const t of this.items) {
-			if (t.links.includes(path)) {
-				t.links = t.links.filter((p) => p !== path);
+		for (const owner of this.linkOwners()) {
+			if (owner.links.includes(path)) {
+				owner.links = owner.links.filter((p) => p !== path);
 				changed = true;
 			}
 		}
@@ -520,5 +555,5 @@ export function dayTitle(date: string, today = startOfDay(new Date())): string {
 
 /** Subtask helper for the dialog. */
 export function newSubtask(title: string): Subtask {
-	return { id: uid(), title, done: false };
+	return { id: uid(), title, done: false, links: [] };
 }

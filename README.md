@@ -219,6 +219,18 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   - Today / Tomorrow / Next week / No date;
   - priority;
   - delete.
+- **Notes for tasks and subtasks** (new in **1.9.3**):
+  - **Create note** makes a note for a task, named `YYYY-MM-DD Task title.md` (just the title when the task has no date) in
+    the notes folder. It's added to the task's linked notes and opened; once it exists, the button says **Open note**.
+    You find it in the task's right-click menu, in the task dialog (*Linked notes*) and in the details view.
+  - **Subtasks** can have their own notes and a **short description** (a line or two; longer things belong in a note).
+    In the task dialog, the small **≡** button next to a subtask opens its description, its linked notes and *Create note*
+    (named `YYYY-MM-DD Task – Subtask.md`). In the details view, the description is shown in small grey text under the
+    subtask, its notes as small chips, and the **⋯** button offers *Create note*, *Link note…* and removing a link.
+    In the task lists you only see small icons: ≡ for a description, a note icon that opens the subtask's note.
+  - The text of new task notes comes from *Settings → Omni Calendar → Notes → Task note template*.
+  - Don't need it? *Settings → Omni Calendar → Tasks → Create note and subtask details* hides all of this (Create note,
+    subtask descriptions and subtask notes). Turning it off deletes nothing; the task's own linked notes stay.
 - **Progress log** (new in **1.9.2**): in a task's details there's a **Progress log** section. Type what you did or what
   happened and press **Enter** (on a phone: the send button). Each entry is saved with its **date and time**, like a sticky
   note; new entries go **below** the older ones, so the history reads top to bottom. It's separate from subtasks: subtasks
@@ -295,7 +307,6 @@ the heading opens the Tasks page. Turn it off in *Settings → Omni Calendar →
 Tasks are stored with your local events in the plugin's `data.json`, so they sync the same way (see [Where data is stored](#where-data-is-stored)).
 
 Coming next (see the [roadmap](#roadmap-ideas)):
-- *Create note* and short descriptions for tasks and subtasks (the next step of the details view);
 - **1.10:** repeating tasks, and tasks on repeating events that repeat with them.
 
 ## Which connection method should I use?
@@ -594,6 +605,7 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 | | Tasks in sidebar | Shows the Tasks page in the sidebar (same side as the calendar), independent of mini calendar / day planner |
 | | Done section in lists | Collapsed "Done" section in your lists and *All* |
 | | Progress log | Dated updates on a task in its details view, "📝 3" in the lists (on by default). Off only hides it |
+| | Create note and subtask details | *Create note* on tasks and subtasks, descriptions and notes on subtasks (on by default). Off only hides them |
 | | Upcoming list | How far ahead the "Upcoming" list looks: standard periods (default 7 days) or custom |
 | | Tasks in the calendar | Timed tasks as light blocks in Week/Day, one counter per day for the others (on by default) |
 | | Completed tasks in the calendar | *Struck through* (default) or *Hidden* |
@@ -603,6 +615,7 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 | | Default priority / Default list | Used for new tasks |
 | | Lists | Rename, recolour, add or delete task lists ("Tasks" is the default list and can't be deleted) |
 | **Notes** | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
+| | Task note template | What goes in notes made with *Create note* on a task or subtask (placeholders listed in the setting). Shown while *Create note and subtask details* is on |
 
 **Periods ("how long / how far" settings):** they all offer the **same standard choices**: *7 days, 2 weeks, 30 days, 60 days, 90 days, 6 months, 1 year*. A few add their own extras (*Never*, *Hidden*, *Tomorrow only*, *Everything*, *Same as agenda length*). And they all have **Custom…**. It shows a number and a unit (days, weeks, months, years), for example *2 years* or *200 days*. Values over the maximum are limited, and the field then shows the value that is used.
 
@@ -742,7 +755,7 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 - The mini calendar gets a small **"Tasks today"** section.
 - **Linked notes on events:** the same as on tasks, for local and Google/Outlook events. For Google/Outlook events the links are stored only in Obsidian. The existing single "Create note" becomes one of the linked notes, and older events with a note keep it.
 
-**Version 1.9: details view for events and tasks – in steps (step a ✅ in 1.9.0: the view, Edit notes, quick actions, the setting; step b ✅ in 1.9.2: progress log; next: c) notes and descriptions for tasks and subtasks)**
+**Version 1.9: details view for events and tasks – in steps (step a ✅ in 1.9.0: the view, Edit notes, quick actions, the setting; step b ✅ in 1.9.2: progress log; step c ✅ in 1.9.3: notes and descriptions for tasks and subtasks)**
 - **Clicking** an event or task opens a **large read-only view** by default, instead of the edit dialog. Nothing can be changed by accident.
   - **Event:** title, date/time, calendar, location, description, linked notes, and its tasks (with "2/5").
   - **Task:** title, date/time range, list, priority, notes, subtasks, linked notes, and its event.
@@ -766,8 +779,14 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
   - a small "📝 3" hint in the task list;
   - entries can be corrected or deleted (the original time stays);
   - maybe the same log for events later; tasks first.
+- **Undecided idea: a progress log on events** (not sure yet whether it fits). Today a *tracked* event (*Track as task*)
+  has no log, because clicking it opens the event. Two ways, if it's wanted:
+  - **small:** only tracked events, the log in the event's details view (stored on the hidden tracking task).
+    *Stop tracking* would then have to ask before deleting the entries;
+  - **bigger:** a log on every event, stored per event like linked notes. Better to pick one way and not build both.
+  - Repeating events only after 1.10.
 
-**Planned with the details view: "Create note" for tasks (maintainer's idea)**
+**"Create note" for tasks (maintainer's idea) – ✅ done in 1.9.3** (in the task dialog, the "add description" link became a small ≡ button per subtask that opens its description and notes)
 - Like for events: **right-click a task → Create note**, plus a button in the task dialog and the details view.
 - It creates a note named after the date and the task (e.g. *2026-11-24 Prepare workshop*, or just the title without a date) in the notes folder.
 - The note is automatically added to the task's **linked notes** and opened. If it already exists, it just opens ("Open note").
