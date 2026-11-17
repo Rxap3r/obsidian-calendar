@@ -1,7 +1,7 @@
 import { EventRef, Modal, Setting, setIcon } from "obsidian";
 import type OmniCalendarPlugin from "../main";
 import { Task } from "../types";
-import { dayTitle, PRIORITY_NAMES } from "../tasks";
+import { dayTitle, PRIORITY_NAMES, subtaskExtrasOn } from "../tasks";
 import { formatDate, parseLocal } from "../dateUtils";
 import { keepFocusOnTap } from "../pickers";
 import { EventModal } from "./EventModal";
@@ -115,7 +115,7 @@ export class TaskDetailsModal extends Modal {
 				cb.onclick = () => void store.setSubtaskDone(t.id, st.id, !st.done);
 				const body = row.createDiv({ cls: "ch-details-subtask-body" });
 				body.createSpan({ cls: "ch-event-subtask-title", text: st.title });
-				if (!plugin.settings.tasksNoteExtras) continue;
+				if (!subtaskExtrasOn(plugin.settings)) continue;
 				// Short description in small grey text; linked notes as chips (1.9.3).
 				if (st.description) body.createDiv({ cls: "ch-details-subtask-desc", text: st.description });
 				noteChips(plugin, body, st.links, "ch-details-subtask-notes");

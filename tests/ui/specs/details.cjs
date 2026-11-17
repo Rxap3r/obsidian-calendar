@@ -218,12 +218,16 @@ test("desktop: details view – subtask description and notes, ⋯ menu, Create 
 	await settle(page);
 	eq(await page.evaluate(() => plugin.tasks.items.find((x) => x.title === "Move flat").links), ["Calendar/2026-11-14 Move flat.md"], "task note linked");
 	expect((await page.locator(".ch-task-details .ch-create-note-btn").textContent()).includes("Open note"), "button now says Open note");
-	// The setting off: no description, subtask notes, ⋯ or Create note in the view.
-	await page.evaluate(() => { plugin.settings.tasksNoteExtras = false; plugin.tasks.trigger("changed"); });
+	// Subtask switch off: no description, subtask notes or ⋯; the task's Create note stays.
+	const counts = () => Promise.all([".ch-details-subtask-desc", ".ch-details-subtask-notes", ".ch-subtask-more", ".ch-task-details .ch-create-note-btn"].map((c) => page.locator(c).count()));
+	await page.evaluate(() => { plugin.settings.tasksSubtaskExtras = false; plugin.tasks.trigger("changed"); });
 	await settle(page);
-	eq([".ch-details-subtask-desc", ".ch-details-subtask-notes", ".ch-subtask-more", ".ch-task-details .ch-create-note-btn"].map(() => 0),
-		await Promise.all([".ch-details-subtask-desc", ".ch-details-subtask-notes", ".ch-subtask-more", ".ch-task-details .ch-create-note-btn"].map((c) => page.locator(c).count())), "all hidden when off");
+	eq(await counts(), [0, 0, 0, 1], "subtask part hidden, task's button stays");
 	eq(await page.locator(".ch-details-subtasks .ch-event-subtask").count(), 2, "subtasks themselves still shown");
+	// Main switch off: the task's button goes too.
+	await page.evaluate(() => { plugin.settings.tasksSubtaskExtras = true; plugin.settings.tasksNoteExtras = false; plugin.tasks.trigger("changed"); });
+	await settle(page);
+	eq(await counts(), [0, 0, 0, 0], "all hidden when the main switch is off");
 });
 
 test("mobile: details view by tapping – event and task, Edit notes", { mobile: true }, async ({ page }) => {

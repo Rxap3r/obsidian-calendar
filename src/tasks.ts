@@ -1,6 +1,6 @@
 import { Events } from "obsidian";
 import type OmniCalendarPlugin from "./main";
-import { SmartListId, Subtask, Task, TaskData, TaskEventLink, TaskList, TaskLogEntry, TaskPriority } from "./types";
+import { OmniCalendarSettings, SmartListId, Subtask, Task, TaskData, TaskEventLink, TaskList, TaskLogEntry, TaskPriority } from "./types";
 import type { EventNow } from "./store";
 import { addDays, dateLang, dayDiff, MS_DAY, parseLocal, startOfDay, timeKeyToMinutes, toDateKey, uid } from "./dateUtils";
 
@@ -25,6 +25,11 @@ export interface TaskGroup {
 	/** Shown collapsed (the Done section). */
 	collapsed?: boolean;
 	overdue?: boolean;
+}
+
+/** Subtask descriptions and notes are shown: their own switch, and the main "Create note for tasks" switch. */
+export function subtaskExtrasOn(s: OmniCalendarSettings): boolean {
+	return s.tasksNoteExtras && s.tasksSubtaskExtras;
 }
 
 /** Bring stored task data into a valid shape (missing fields, removed lists, …). */

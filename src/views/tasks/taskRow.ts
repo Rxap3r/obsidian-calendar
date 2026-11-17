@@ -1,7 +1,7 @@
 import { Menu, setIcon } from "obsidian";
 import type OmniCalendarPlugin from "../../main";
 import { Task, TaskPriority } from "../../types";
-import { PRIORITY_NAMES } from "../../tasks";
+import { PRIORITY_NAMES, subtaskExtrasOn } from "../../tasks";
 import { addDays, formatDate, parseLocal, toDateKey } from "../../dateUtils";
 import { TaskModal } from "../../modals/TaskModal";
 import { confirmAction } from "../../modals/ConfirmModal";
@@ -111,8 +111,8 @@ export function renderTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t
 			};
 			sr.createSpan({ cls: "ch-task-sub-title", text: s.title });
 			// Kept small on purpose: a ≡ icon for a description, a note icon for linked notes (details view shows them).
-			if (plugin.settings.tasksNoteExtras && s.description) setIcon(sr.createSpan({ cls: "ch-task-meta-icon ch-sub-has-desc", attr: { "aria-label": s.description, title: s.description } }), "align-left");
-			if (plugin.settings.tasksNoteExtras && s.links.length) {
+			if (subtaskExtrasOn(plugin.settings) && s.description) setIcon(sr.createSpan({ cls: "ch-task-meta-icon ch-sub-has-desc", attr: { "aria-label": s.description, title: s.description } }), "align-left");
+			if (subtaskExtrasOn(plugin.settings) && s.links.length) {
 				const n = sr.createEl("a", { cls: "ch-task-meta-icon ch-sub-has-notes", attr: { "aria-label": s.links.length === 1 ? `Open note: ${noteName(s.links[0])}` : `${s.links.length} linked notes`, title: s.links.map(noteName).join(", ") } });
 				setIcon(n, "file-text");
 				n.onclick = (e) => {

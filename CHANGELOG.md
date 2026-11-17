@@ -4,9 +4,11 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet
+## Not released yet (1.9.4)
 
-- *(nothing yet)*
+- The switch for *Create note* is now two switches in *Settings → Omni Calendar → Tasks*: **Create note for tasks** (turns
+  off notes for tasks and subtasks) and, under it, **Notes and descriptions on subtasks** (turns off only the subtask
+  part, so subtasks stay simple while tasks keep *Create note*). Your current setting is kept; nothing is deleted.
 
 ## Known bugs
 

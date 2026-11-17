@@ -298,10 +298,10 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Where we stopped (keep this section up to date at the end of a session)
 
-**State:** everything up to **1.9.2** is merged and released (tags 1.8.0 … 1.9.2, PRs #28–#36). **1.9.3** (details view
+**State:** everything up to **1.9.3** is merged and released (tags 1.8.0 … 1.9.3, PRs #28–#37). **1.9.3** (details view
 step c – "Create note" for tasks and subtasks, subtask notes and descriptions, `taskNoteTemplate`, switch `tasksNoteExtras`)
-is in a PR from `dev-branch`; once it is merged and tagged, the **next change needs 1.9.4** (or 1.10.0 for repeating
-tasks – the next roadmap step is a bigger feature, so 1.10.0 is likely).
+is merged and released (PR #37, tag 1.9.3). `dev-branch` carries **1.9.4** (not released yet): the step c switch split
+in two (`tasksNoteExtras` = main "Create note for tasks", `tasksSubtaskExtras` = "Notes and descriptions on subtasks").
 
 **Next on the roadmap (agreed order):**
 1. **1.10** – repeating tasks, tasks on repeating events per repeat, *Track as task* for repeats.
@@ -334,8 +334,10 @@ events that continue from the previous day; *Language of dates* with Obsidian in
   covers subtasks (`linkOwners`). Task dialog: ≡ button per subtask (`ch-sub-extra-btn`) opens description + notes – this
   replaced the "add description" link of the design; its *Create note* saves the task first. Details view: grey
   description, chips, ⋯ menu (`views/tasks/subtaskNotes.ts`). Lists: ≡ and note icons only (`taskRow.ts`).
-  Switch `tasksNoteExtras` (Tasks tab, on by default; the maintainer asked for it because it may confuse some people)
-  hides all of step c incl. the Notes tab's task template; task-level linked notes (1.7) stay; nothing is deleted.
+  Switches (Tasks tab, both on by default; the maintainer asked for them because it may confuse some people):
+  `tasksNoteExtras` "Create note for tasks" = main switch, off hides all of step c incl. the Notes tab's task template;
+  `tasksSubtaskExtras` "Notes and descriptions on subtasks" (1.9.4, shown under it) hides only the subtask part. Check
+  with `subtaskExtrasOn(settings)` (both on). Task-level linked notes (1.7) stay; nothing is deleted.
 - 1.9.1: setting `dateLanguage` (all date formatting via `formatDate` / `dateLang()` in `dateUtils.ts`, never
   `toLocaleDateString(undefined, …)`); Microsoft sign-in hint for which page opens; README *Troubleshooting sign-in*.
 
