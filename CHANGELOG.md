@@ -11,7 +11,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
   **Obsidian's language** by default (*Settings → General → Language*); you can also choose *Same as this device* or *English*.
 - **More help for your own Microsoft app registration:** the setup guides (sign-in dialog and README) now explain the
   most common Microsoft error codes (AADSTS700016, 50011, 7000218, 65001) and the *requestedAccessTokenVersion* message,
-  and warn that the redirect address belongs under *Mobile and desktop applications*, not *Web*.
+  and warn that the redirect address belongs under *Mobile and desktop applications*, not *Web*. *unauthorized_client*
+  for a personal account is now explained correctly: the app doesn't allow personal accounts (the account type in
+  Azure must not stay at its preselected value).
 
 ## Known bugs
 

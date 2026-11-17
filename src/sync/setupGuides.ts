@@ -66,7 +66,7 @@ export const MS_PERSONAL_GUIDE: SetupGuide = {
 	steps: [
 		"Sign up at azure.microsoft.com/free with your Outlook.com account (skip if you already have Azure).",
 		"Open portal.azure.com → search “App registrations” → New registration.",
-		"Name: anything. Supported account types: “Personal Microsoft accounts only” (or “… organizational directory and personal Microsoft accounts”).",
+		"Name: anything. Supported account types: “Personal Microsoft accounts only” (or “… organizational directory and personal Microsoft accounts”). Important: this is NOT the preselected option – changing it later is fiddly.",
 		"Redirect URI: platform “Public client/native (mobile & desktop)”, value http://localhost → Register. (Adding it later under Authentication → Add a platform: choose “Mobile and desktop applications”, not “Web”.)",
 		"API permissions → Add a permission → Microsoft Graph → Delegated → Calendars.ReadWrite → Add permissions.",
 		"Overview → copy the Application (client) ID into the field below and click “Sign in with Microsoft”.",
@@ -74,11 +74,11 @@ export const MS_PERSONAL_GUIDE: SetupGuide = {
 	problems: [
 		"No directory / cannot create app registrations → finish the Azure sign-up (step 1).",
 		"AADSTS50020 “account does not exist in tenant” → the app does not allow personal accounts; change Supported account types under Authentication.",
-		"“unauthorized_client” → the redirect URI must be platform “Public client/native” with value exactly http://localhost.",
+		"“unauthorized_client” (“not enabled for consumers”) → the app doesn't allow personal accounts. Easiest: create a new app registration and choose “Personal Microsoft accounts only” (step 3). Otherwise see the next point. Less often, the redirect URI isn't platform “Public client/native” with value exactly http://localhost.",
 		"AADSTS700016 “application … was not found in the directory” → the client ID is wrong or incomplete, or the account type chosen below doesn't match the app's Supported account types.",
 		"AADSTS50011 “redirect URI … does not match” → the redirect URI must be exactly http://localhost (not https, not 127.0.0.1, no slash at the end).",
 		"AADSTS7000218 “must contain client_assertion or client_secret” → the redirect URI was added under platform “Web”; remove it there and add it under “Mobile and desktop applications”.",
-		"“Property api.requestedAccessTokenVersion is invalid” when allowing personal accounts → open the app's Manifest, set \"requestedAccessTokenVersion\": 2, save, then change Supported account types again.",
+		"“Property api.requestedAccessTokenVersion is invalid” when allowing personal accounts → open the app's Manifest, in the \"api\" section change \"requestedAccessTokenVersion\": null to 2, save, then change Supported account types again (or simply create a new app registration with personal accounts).",
 	],
 };
 
