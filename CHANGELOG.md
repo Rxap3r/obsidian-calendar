@@ -9,6 +9,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 - **New setting *Language of dates*** (*Settings → Omni Calendar → Display*). Weekday and month names used to follow
   the device's language, so a German device showed *Mi., 18. Nov.* next to the plugin's English words. Now they follow
   **Obsidian's language** by default (*Settings → General → Language*); you can also choose *Same as this device* or *English*.
+- **More help for your own Microsoft app registration:** the setup guides (sign-in dialog and README) now explain the
+  most common Microsoft error codes (AADSTS700016, 50011, 7000218, 65001) and the *requestedAccessTokenVersion* message,
+  and warn that the redirect address belongs under *Mobile and desktop applications*, not *Web*.
 
 ## Known bugs
 

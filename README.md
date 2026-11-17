@@ -399,7 +399,7 @@ The steps are also shown in the sign-in dialog. Click a method below to expand i
 
 1. Open [entra.microsoft.com](https://entra.microsoft.com) (or [portal.azure.com](https://portal.azure.com)) with your work account → *App registrations* → **New registration**.
 2. Name: anything. **Supported account types:** *Accounts in this organizational directory only* (single tenant) or *Accounts in any organizational directory*.
-3. **Redirect URI:** platform **Public client/native (mobile & desktop)**, value `http://localhost` → **Register**.
+3. **Redirect URI:** platform **Public client/native (mobile & desktop)**, value `http://localhost` → **Register**. (If you add it later under *Authentication* → *Add a platform*, choose **Mobile and desktop applications**, not *Web*.)
 4. *API permissions* → *Add a permission* → *Microsoft Graph* → *Delegated permissions* → tick **Calendars.ReadWrite** → *Add permissions*. (`offline_access` is requested automatically at sign-in.)
 5. On the *Overview* page, copy the **Application (client) ID**. For a single-tenant app, also copy the **Directory (tenant) ID**.
 6. In Obsidian: **Connect Outlook / Microsoft 365** → *Use my own app registration (advanced)* → paste the client ID → account type **Work or school only**, or **Other (tenant ID)** for a single-tenant app → **Sign in with Microsoft**.
@@ -407,6 +407,9 @@ The steps are also shown in the sign-in dialog. Click a method below to expand i
 **Common problems**
 - *"Need admin approval"* → your organisation requires an administrator to consent. Send the app's client ID to IT and ask them to *Grant admin consent* for Calendars.ReadWrite.
 - *AADSTS50194 / "not configured as a multi-tenant application"* → choose **Other (tenant ID)** and enter your Directory (tenant) ID.
+- *AADSTS700016 / "Application … was not found in the directory"* → the client ID is wrong or incomplete, or the account type chosen in Obsidian doesn't match the app's *Supported account types*.
+- *AADSTS50011 / "redirect URI … does not match"* → the redirect URI must be exactly `http://localhost` (not `https`, not `127.0.0.1`, no `/` at the end).
+- *AADSTS7000218 / "must contain client_assertion or client_secret"* → the redirect URI was added under platform **Web**. Remove it there and add it under **Mobile and desktop applications** (*Authentication* → *Add a platform*).
 
 </details>
 
@@ -427,7 +430,7 @@ though, and a personal account doesn't have one on its own. You get a directory 
 1. Sign up at [azure.microsoft.com/free](https://azure.microsoft.com/free) with your Outlook.com account (skip this if you already have Azure). This creates your directory.
 2. Open [portal.azure.com](https://portal.azure.com) → search **App registrations** → **New registration**.
 3. Name: anything. **Supported account types:** **Personal Microsoft accounts only**, or *Accounts in any organizational directory and personal Microsoft accounts*.
-4. **Redirect URI:** platform **Public client/native (mobile & desktop)**, value `http://localhost` → **Register**.
+4. **Redirect URI:** platform **Public client/native (mobile & desktop)**, value `http://localhost` → **Register**. (If you add it later under *Authentication* → *Add a platform*, choose **Mobile and desktop applications**, not *Web*.)
 5. *API permissions* → *Add a permission* → *Microsoft Graph* → *Delegated* → **Calendars.ReadWrite** → *Add permissions*.
 6. Copy the **Application (client) ID** from the *Overview* page.
 7. In Obsidian: **Connect Outlook / Microsoft 365** → *Use my own app registration (advanced)* → paste the client ID → account type **Personal** → **Sign in with Microsoft** → sign in with your Outlook.com account and **Accept**.
@@ -436,6 +439,10 @@ though, and a personal account doesn't have one on its own. You get a directory 
 - *"You can't create app registrations"* or no directory shown → the Azure sign-up (step 1) isn't finished.
 - *AADSTS50020 / "account does not exist in tenant"* → the app was registered for organisational accounts only. Change *Supported account types* to include personal accounts (*Authentication* page), or re-register.
 - *"unauthorized_client"* → the redirect URI platform isn't **Public client/native**, or the value isn't exactly `http://localhost`.
+- *AADSTS700016 / "Application … was not found in the directory"* → the client ID is wrong or incomplete, or the account type chosen in Obsidian doesn't match the app's *Supported account types*.
+- *AADSTS50011 / "redirect URI … does not match"* → the redirect URI must be exactly `http://localhost` (not `https`, not `127.0.0.1`, no `/` at the end).
+- *AADSTS7000218 / "must contain client_assertion or client_secret"* → the redirect URI was added under platform **Web**. Remove it there and add it under **Mobile and desktop applications** (*Authentication* → *Add a platform*).
+- *"Property api.requestedAccessTokenVersion is invalid"* when you change *Supported account types* to include personal accounts → open the app's **Manifest**, set `"requestedAccessTokenVersion": 2`, save, and change the account types again.
 
 </details>
 
