@@ -50,6 +50,7 @@ export function normalizePluginData(loaded: Partial<PluginData> | null | undefin
 	if (!["month", "week", "day", "agenda"].includes(settings.sidebarCalendarMode)) settings.sidebarCalendarMode = "day";
 	if (!["mini", "close", "keep"].includes(settings.sidebarOnExpand)) settings.sidebarOnExpand = "mini";
 	if (settings.multiDayTimed !== "allday") settings.multiDayTimed = "grid";
+	if (settings.clickOpens !== "edit") settings.clickOpens = "details";
 	if (typeof settings.sidebarAfterClose !== "string") settings.sidebarAfterClose = "";
 	settings.sidebarUpcomingDays = days(settings.sidebarUpcomingDays, -1, 365, DEFAULT_SETTINGS.sidebarUpcomingDays);
 

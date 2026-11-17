@@ -159,6 +159,8 @@ export interface OmniCalendarSettings {
 	 * grid (09:00 →, → 10:00). "allday": in the all-day row, labelled with the whole span ("Mon 09:00 – Tue 10:00").
 	 */
 	multiDayTimed: "grid" | "allday";
+	/** What clicking an event or task opens: the read-only details view (1.9+, default) or the edit dialog. */
+	clickOpens: "details" | "edit";
 	/** Which sidebar the calendar is placed in by the toggle commands. */
 	sidebarSide: "left" | "right";
 	/**

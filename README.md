@@ -89,7 +89,7 @@ follows, so it never pops back unexpectedly. Commands can be given hotkeys in *S
 - **On touch screens:** swipe scrolls as usual, **tap** an empty slot to create an event there, and **press and hold** (about half a second), then drag, to select a time range (also into the next day, in the week view).
 - **Change the length:** drag the **bottom edge** of an event in week/day view to change when it ends, or the **top edge** to change when it starts (the pointer shows ↕). It snaps to 15 minutes and shows the new time while you drag. For an event over several days, the start is on its first day and the end on its last day; you can drag the end into another day. Works with the finger too, and for the same events as drag and drop.
 - **Drag and drop:** drag a local, non-recurring event to another day (month view) or another time (week/day view) to move it. In week/day view a preview block shows exactly where the event will land, with its new time; it snaps to 15 minutes.
-- **Click an event** to edit it. For an external event this shows its details instead. **Right-click an event** for a menu with *Edit*, the event's linked notes, *Create/Open note*, *Link note…*, *Add task…*, *Duplicate*, *Delete this occurrence* and *Delete*.
+- **Click an event** to see its **details** (new in **1.9**): calendar, date and time, location, description, its tasks and linked notes. Nothing changes by accident; the **Edit** button opens the edit dialog. In the details you can still tick off its tasks, open or link notes, and use **Edit notes** to change only the description (saved to Google / Outlook too). Prefer the old way? *Settings → Omni Calendar → Display → Clicking an event or task opens → Edit dialog directly*. **Right-click an event** for a menu with *Show details*, *Edit*, the event's linked notes, *Create/Open note*, *Link note…*, *Add task…*, *Duplicate*, *Delete this occurrence* and *Delete*.
 
 **Adapts to its width** (handy in a sidebar):
 - In a narrow view (phone, sidebar), *Month* becomes a **compact month grid**, like phone calendar apps. Events show as small coloured bars with short titles, or as dots when it is very narrow. **Tap a day** to list its events below the grid. Tap the day heading there, or double-tap a day, to open it in Day view. *Week* still covers the **whole week** but shows only as many days as fit (e.g. 3). **Swipe left or right** (or scroll sideways, or tap the **‹ ›** arrows) to move day by day. It snaps to each day, and the hour labels stay in place. A small **week bar** under the day headers highlights which days are on screen, and a soft shadow marks the edge that continues. The arrows jump a whole week, and the view opens with today (or the chosen day) first.
@@ -212,7 +212,8 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   - Done shows only tasks completed in the **last 30 days** (setting). Older ones are behind **Show older**; nothing is lost.
   - **Clear completed** under the Done list (or a list's Done section) deletes completed tasks by hand, after asking.
   - **Automatic clean-up** (off by default): *Settings → Omni Calendar → Tasks → Delete completed tasks after* (Never by default, or one of the standard periods, or custom).
-- **Click a task** to edit it. **Right-click** it for quick actions:
+- **Click a task** to see its **details** (new in **1.9**): date and time, list, priority, its event, notes, subtasks and linked notes. Tick off the task or its subtasks and change the notes (**Edit notes**) right there; **Edit** opens the task dialog. (With *Edit dialog directly*, a click opens the dialog as before.) **Right-click** it for quick actions:
+  - show details / edit;
   - done / not done;
   - Today / Tomorrow / Next week / No date;
   - priority;
@@ -240,7 +241,7 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   next to *Event* detaches the task (the task stays).
 - Works for local, **Google, Outlook and subscribed (ICS)** events. These tasks are kept **only in Obsidian**.
 - On a **repeating event**, tasks belong to the repeat you clicked (e.g. only the meeting on 14 Nov).
-  Tasks that repeat with the event are planned for 1.9.
+  Tasks that repeat with the event are planned for 1.10.
 - **A new event** can get its tasks (and linked notes) right away in its dialog. They are attached when you click
   *Save*; *Cancel* forgets them. Saved to several calendars, they go with **one** copy, the first calendar in *Save to*
   (the dialog says which). A new repeating event gets them on its first repeat. *Create note* is offered once the event is saved.
@@ -261,7 +262,7 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   because they often have their own day. When you tick off the event while some are still open, you're asked whether to
   mark them as done too (*Only the event* / *Mark all as done*).
 - Works for local, Google, Outlook and ICS events; the "done" mark is kept only in Obsidian. Deleting the event removes it.
-- Not yet for repeating events (each repeat ticked off separately comes with 1.9). Switch it off again in the dialog or with
+- Not yet for repeating events (each repeat ticked off separately comes with 1.10). Switch it off again in the dialog or with
   right-click → *Stop tracking as task*.
 
 **Tasks in the calendar** (new in **1.8**):
@@ -286,8 +287,8 @@ the heading opens the Tasks page. Turn it off in *Settings → Omni Calendar →
 Tasks are stored with your local events in the plugin's `data.json`, so they sync the same way (see [Where data is stored](#where-data-is-stored)).
 
 Coming next (see the [roadmap](#roadmap-ideas)):
-- the **details view** for events and tasks (with the progress log and *Create note* for tasks);
-- **1.9:** repeating tasks, and tasks on repeating events that repeat with them.
+- the **progress log** for tasks, then *Create note* and short descriptions for tasks and subtasks (the next steps of the details view);
+- **1.10:** repeating tasks, and tasks on repeating events that repeat with them.
 
 ## Which connection method should I use?
 
@@ -516,6 +517,7 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 | **Google & Outlook** | Accounts | Connect, reconnect, sign out, rename or remove accounts. Show or hide each of an account's calendars and set its colour and name |
 | **Display** | Default view | The view used when the calendar page opens |
 | | First day of the week | Sunday through Saturday |
+| | Clicking an event or task opens | *Details view* (default) or *Edit dialog directly*. Right-click always offers both |
 | | 24-hour clock | `14:00` vs `2pm` |
 | | Show week numbers | ISO week numbers in the month view, sidebar and narrow layouts |
 | | Events over several days | Week/day view: timed events that run into the next day as one block per day in the hours (default), or in the all-day row with their whole span (*Mon 09:00 – Tue 10:00*) |
@@ -677,7 +679,7 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 - The mini calendar gets a small **"Tasks today"** section.
 - **Linked notes on events:** the same as on tasks, for local and Google/Outlook events. For Google/Outlook events the links are stored only in Obsidian. The existing single "Create note" becomes one of the linked notes, and older events with a note keep it.
 
-**Planned with 1.8 (or right after it): details view for events and tasks**
+**Version 1.9: details view for events and tasks – in steps (step a ✅ in 1.9.0: the view, Edit notes, quick actions, the setting; next: b) progress log, c) notes and descriptions for tasks and subtasks)**
 - **Clicking** an event or task opens a **large read-only view** by default, instead of the edit dialog. Nothing can be changed by accident.
   - **Event:** title, date/time, calendar, location, description, linked notes, and its tasks (with "2/5").
   - **Task:** title, date/time range, list, priority, notes, subtasks, linked notes, and its event.
@@ -724,9 +726,9 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 - In the calendar it is **not shown twice**: the event gets a small tick circle and is struck through once done.
 - It follows the event (title, day) and is deleted with it, like event tasks. Works for Google/Outlook/ICS events too;
   the "done" mark is kept only in Obsidian.
-- Repeating events (tick off each repeat separately) come with step 3 (1.9).
+- Repeating events (tick off each repeat separately) come with step 3 (1.10).
 
-**Step 3 – version 1.9: repeating**
+**Step 3 – version 1.10: repeating** (renumbered: 1.9 became the details view)
 - **Repeating tasks**, each occurrence ticked off separately. A repeating task stays **one** task: each completed occurrence is only a small "done on …" entry, not a copy, so Done doesn't fill up with duplicates.
 - **Tasks on repeating events:** the event's task list works as a template, and each occurrence has its own ticks. Ticking one off on 14 Nov doesn't tick it off on 21 Nov.
 
@@ -750,7 +752,6 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
 
 - CalDAV write support (iCloud, Fastmail, Nextcloud, …)
 - Editing the repeat rule of Google / Outlook series
-- Resize events by dragging their edge
 - Daily-notes integration (open or create the daily note from a day)
 
 ## License

@@ -21,6 +21,18 @@ export function displayTab(ctx: SettingsContext, el: HTMLElement) {
 				await ctx.save();
 			})
 	);
+	new Setting(el)
+		.setName("Clicking an event or task opens")
+		.setDesc("The details view shows everything without changing anything by accident; its Edit button opens the dialog. Right-click (long-press) always offers Edit.")
+		.addDropdown((d) =>
+			d
+				.addOptions({ details: "Details view", edit: "Edit dialog directly" })
+				.setValue(s.clickOpens)
+				.onChange(async (v) => {
+					s.clickOpens = v === "edit" ? "edit" : "details";
+					await ctx.save();
+				})
+		);
 	new Setting(el).setName("First day of the week").addDropdown((d) => {
 		["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].forEach((n, i) => d.addOption(String(i), n));
 		d.setValue(String(s.firstDayOfWeek)).onChange(async (v) => {

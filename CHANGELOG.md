@@ -16,6 +16,8 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.9.0** – Details view for events and tasks: clicking opens a read-only view with quick actions and *Edit notes*;
+  *Edit* opens the dialog. New setting *Clicking an event or task opens* (details or edit dialog).
 - **1.8.5** – Tracked events show their tasks' progress and ask about open tasks when ticked off; the Tasks list bar
   in the sidebar and the settings tab bar scroll with a thin scrollbar and the mouse wheel on desktop.
 - **1.8.4** – Change how long an event lasts by dragging its top or bottom edge in the week and day views (also into

@@ -3,7 +3,7 @@ import type OmniCalendarPlugin from "../../main";
 import { Task } from "../../types";
 import { addMinutes, MS_HOUR, parseLocal, timeKeyToMinutes } from "../../dateUtils";
 import { DayTasksModal } from "../../modals/DayTasksModal";
-import { TaskModal } from "../../modals/TaskModal";
+import { openTask } from "../tasks/openTask";
 import { taskMenu } from "../tasks/taskRow";
 import { taskTimeLabel } from "../tasks/helpers";
 import { CalendarHost } from "./host";
@@ -85,7 +85,7 @@ export function taskBlock(
 	el.addEventListener("pointerdown", (e) => e.stopPropagation());
 	el.addEventListener("click", (e) => {
 		e.stopPropagation();
-		new TaskModal(plugin, t).open();
+		openTask(plugin, t);
 	});
 	el.addEventListener("contextmenu", (e) => {
 		e.preventDefault();

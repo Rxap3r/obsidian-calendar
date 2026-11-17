@@ -745,6 +745,22 @@
 .ch-event-done { opacity: 0.6; }
 .ch-track-setting { border-top: 1px solid var(--background-modifier-border); margin-top: 10px; }
 
+/* ---------------------------------------------------------------- details view (1.9) */
+.ch-details-notes { margin-bottom: 12px; }
+.ch-details-notes-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.ch-details-label { font-weight: 600; }
+.ch-details-edit-notes { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85em; height: auto; padding: 2px 8px; }
+.ch-details-edit-notes .ch-btn-icon svg { width: 13px; height: 13px; }
+.ch-details-notes-empty { text-align: left; font-size: 0.9em; padding: 2px 0; }
+.ch-details-notes-field { display: block; width: 100%; max-width: none; box-sizing: border-box; resize: vertical; font: inherit; }
+.ch-details-notes-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.ch-task-details-title { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 1.15em; font-weight: 600; }
+.ch-task-details-title .ch-task-checkbox { margin: 0; }
+.ch-task-details-name { min-width: 0; word-break: break-word; }
+.ch-task-details-title.is-done .ch-task-details-name { text-decoration: line-through; color: var(--text-muted); }
+.ch-details-subtasks { margin-left: 4px; }
+.ch-details .ch-task-prio { font-weight: 600; letter-spacing: 0; }
+
 /* ---------------------------------------------------------------- our own time picker (same on every device) */
 .ch-timefield { position: relative; display: inline-flex; flex: 1 1 100px; max-width: 140px; min-width: 0; }
 .ch-timefield-input { width: 100%; max-width: none !important; min-width: 0; box-sizing: border-box; cursor: pointer; font-variant-numeric: tabular-nums; }

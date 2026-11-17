@@ -99,6 +99,9 @@ function fakeWorkspace() {
 	await plugin.onload();
 
 	// ---- fixtures
+	// Most tests drive the edit dialogs by clicking events / tasks; the details-view tests (details.cjs) switch
+	// "Clicking opens" back to its default, the details view.
+	plugin.settings.clickOpens = "edit";
 	plugin.settings.sources.push({ id: "work", name: "Work", color: "#2f9e44", type: "local", enabled: true });
 	const ext = { id: "ics1", name: "Subscribed (ICS)", color: "#e8590c", type: "ics", enabled: true, url: "" };
 	plugin.settings.sources.push(ext);

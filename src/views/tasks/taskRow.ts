@@ -7,6 +7,8 @@ import { TaskModal } from "../../modals/TaskModal";
 import { confirmAction } from "../../modals/ConfirmModal";
 import { noteName, openLinkedNote, openTaskEvent, taskTimeLabel, toggleDone } from "./helpers";
 import { openOccurrence } from "../shared";
+import { openTask } from "./openTask";
+import { TaskDetailsModal } from "../../modals/TaskDetailsModal";
 
 export interface TaskRowOptions {
 	/** Show the task's date (in groups that mix several days: Overdue, Later, Done). */
@@ -125,7 +127,7 @@ export function renderTaskRow(plugin: OmniCalendarPlugin, parent: HTMLElement, t
 	}
 
 	// A tracked event is edited as an event (its title, day and time come from there).
-	row.onclick = () => (t.event?.self ? void openTaskEvent(plugin, t, (occ) => openOccurrence(plugin, occ)) : new TaskModal(plugin, t).open());
+	row.onclick = () => openTask(plugin, t);
 	row.addEventListener("contextmenu", (e) => {
 		e.preventDefault();
 		taskMenu(plugin, t, e);
@@ -151,6 +153,7 @@ export function taskMenu(plugin: OmniCalendarPlugin, t: Task, e: MouseEvent) {
 	const when = (title: string, icon: string, date: string | undefined) =>
 		menu.addItem((i) => i.setTitle(title).setIcon(icon).onClick(() => void store.update(t.id, { date })));
 	menu.addItem((i) => i.setTitle(t.done ? "Mark as not done" : "Mark as done").setIcon("check").onClick(() => void store.setDone(t.id, !t.done)));
+	menu.addItem((i) => i.setTitle("Show details").setIcon("info").onClick(() => new TaskDetailsModal(plugin, t).open()));
 	menu.addItem((i) => i.setTitle("Edit…").setIcon("pencil").onClick(() => new TaskModal(plugin, t).open()));
 	menu.addSeparator();
 	when("Today", "sun", toDateKey(today));

@@ -4,6 +4,7 @@ import { compareTasks } from "../tasks";
 import { TaskModal } from "../modals/TaskModal";
 import { taskMenu } from "./tasks/taskRow";
 import { taskTimeLabel, toggleDone } from "./tasks/helpers";
+import { openTask } from "./tasks/openTask";
 import {
 	addDays, addMonths, formatDate, formatTime, isoWeek, isSameDay, MS_MIN, onDay, startOfDay, startOfMonth,
 	startOfWeek, toDateKey, weekdayNames,
@@ -193,7 +194,7 @@ export class MiniCalendarView extends OmniView {
 		row.createSpan({ cls: "ch-mini-task-title", text: t.title });
 		const when = t.date && t.date < today ? "overdue" : taskTimeLabel(t);
 		if (when) row.createSpan({ cls: `ch-mini-task-when${when === "overdue" ? " ch-overdue" : ""}`, text: when });
-		row.onclick = () => new TaskModal(this.plugin, t).open();
+		row.onclick = () => openTask(this.plugin, t);
 		row.oncontextmenu = (e) => {
 			e.preventDefault();
 			taskMenu(this.plugin, t, e);
