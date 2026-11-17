@@ -53,6 +53,9 @@ npm test             # build + tests/sync (Node) + tests/ui (headless Chromium) 
 - **GitHub check** (`.github/workflows/ci.yml`): every push builds and runs both test suites. Playwright is installed there only for
   the run; it is not in `package.json`. The downloaded browser is kept in GitHub's Actions cache (version `1.63.0`, set in two
   places in `ci.yml`). After pushing, check that the run passed (Actions tab / `actions_list`), not only the local run.
+- **Testing before release:** the maintainer tests after merging and releasing; fixes then go out as the next patch.
+  A downloadable test build per push was offered and declined. (Note: builds made outside the release workflow have no
+  built-in Google sign-in, so Google quick sign-in accounts can't refresh with them.)
 - **UI tests run one at a time on purpose.** Running them in parallel was discussed and the maintainer declined it
   (fear of false failures); don't bring it back unless asked. Tests that type into a dialog must wait ~100 ms after
   opening it (the dialog focuses the title first), and drag tests must wait until the grid has stopped scrolling.
