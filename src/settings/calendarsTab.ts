@@ -2,7 +2,7 @@ import { Notice, Setting } from "obsidian";
 import { CalendarSource } from "../types";
 import { nextColor } from "../defaults";
 import { confirmAction } from "../modals/ConfirmModal";
-import { uid } from "../dateUtils";
+import { dateLang, uid } from "../dateUtils";
 import { plural } from "../util";
 import { info, numberSetting, SettingsContext, sourceControls } from "./controls";
 
@@ -148,7 +148,7 @@ function icsRow(ctx: SettingsContext, el: HTMLElement, src: CalendarSource) {
 	let desc = "Not loaded yet";
 	if (status?.loading) desc = "Loading…";
 	else if (status?.error) desc = `⚠ ${status.error}`;
-	else if (status?.lastFetched) desc = `✓ ${status.eventCount ?? 0} events · updated ${new Date(status.lastFetched).toLocaleTimeString()}`;
+	else if (status?.lastFetched) desc = `✓ ${status.eventCount ?? 0} events · updated ${new Date(status.lastFetched).toLocaleTimeString(dateLang())}`;
 	else if (status?.eventCount !== undefined) desc = `${status.eventCount} events (cached)`;
 
 	const top = new Setting(box).setClass("ch-source-row").setDesc(desc);

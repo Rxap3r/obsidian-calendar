@@ -1,6 +1,6 @@
 import { App, normalizePath, Notice, TFile } from "obsidian";
 import { CalendarOccurrence } from "./types";
-import { formatTime, toDateKey, toTimeKey } from "./dateUtils";
+import { dateLang, formatTime, toDateKey, toTimeKey } from "./dateUtils";
 import { errorMessage } from "./util";
 
 export const DEFAULT_NOTE_TEMPLATE = `---
@@ -36,13 +36,13 @@ export function describeWhen(o: CalendarOccurrence, use24h: boolean): string {
 	const dateOpts: Intl.DateTimeFormatOptions = { weekday: "short", year: "numeric", month: "short", day: "numeric" };
 	if (o.allDay) {
 		const last = new Date(o.end.getTime() - 1);
-		const a = o.start.toLocaleDateString(undefined, dateOpts);
+		const a = o.start.toLocaleDateString(dateLang(), dateOpts);
 		if (toDateKey(last) === toDateKey(o.start)) return `${a} (all day)`;
-		return `${a} – ${last.toLocaleDateString(undefined, dateOpts)} (all day)`;
+		return `${a} – ${last.toLocaleDateString(dateLang(), dateOpts)} (all day)`;
 	}
-	const a = `${o.start.toLocaleDateString(undefined, dateOpts)} ${formatTime(o.start, use24h)}`;
+	const a = `${o.start.toLocaleDateString(dateLang(), dateOpts)} ${formatTime(o.start, use24h)}`;
 	if (toDateKey(o.start) === toDateKey(o.end)) return `${a} – ${formatTime(o.end, use24h)}`;
-	return `${a} – ${o.end.toLocaleDateString(undefined, dateOpts)} ${formatTime(o.end, use24h)}`;
+	return `${a} – ${o.end.toLocaleDateString(dateLang(), dateOpts)} ${formatTime(o.end, use24h)}`;
 }
 
 /** Where "Create note" puts the note of an event occurrence: "<folder>/YYYY-MM-DD Title.md". */

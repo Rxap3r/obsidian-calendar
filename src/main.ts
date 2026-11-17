@@ -15,7 +15,7 @@ import { VIEW_TYPE_CALENDAR, VIEW_TYPE_MINI, VIEW_TYPE_TASKS } from "./views/vie
 import { TaskModal } from "./modals/TaskModal";
 import { EventModal } from "./modals/EventModal";
 import { createEventNote, eventNotePath } from "./notes";
-import { MS_DAY, MS_HOUR, MS_MIN, startOfDay, toDateKey } from "./dateUtils";
+import { applyDateLanguage, MS_DAY, MS_HOUR, MS_MIN, startOfDay, toDateKey } from "./dateUtils";
 
 export default class OmniCalendarPlugin extends Plugin {
 	data!: PluginData;
@@ -118,6 +118,7 @@ export default class OmniCalendarPlugin extends Plugin {
 		this.settings = loaded.data.settings;
 		this.firstRun = loaded.firstRun;
 		this.sidebarViewUnset = loaded.sidebarViewUnset;
+		applyDateLanguage(this.settings.dateLanguage);
 	}
 
 	/** Called by Obsidian when data.json was changed externally (e.g. by Sync). */

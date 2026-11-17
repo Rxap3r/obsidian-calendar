@@ -16,6 +16,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.9.1** – Setting *Language of dates* (follows Obsidian's language by default); the Microsoft sign-in dialog says
+  which sign-in page opens; a cleaner sign-in guide with a troubleshooting section, incl. company accounts that need
+  an admin's approval.
 - **1.9.0** – Details view for events and tasks: clicking opens a read-only view with quick actions and *Edit notes*;
   *Edit* opens the dialog. New setting *Clicking an event or task opens* (details or edit dialog).
 - **1.8.5** – Tracked events show their tasks' progress and ask about open tasks when ticked off; the Tasks list bar

@@ -2,7 +2,7 @@ import { Menu, setIcon } from "obsidian";
 import { deleteEvent } from "../modals/confirmations";
 import type OmniCalendarPlugin from "../main";
 import { CalendarOccurrence } from "../types";
-import { formatTime, formatTimeRange, isSameDay, toDateKey } from "../dateUtils";
+import { dateLang, formatTime, formatTimeRange, isSameDay, toDateKey } from "../dateUtils";
 import { eventKey } from "../eventLinks";
 import { eventNotePath } from "../notes";
 import { eventNowOf } from "../store";
@@ -215,7 +215,7 @@ export function canDrag(occ: CalendarOccurrence): boolean {
 
 /** The whole span of a timed event over several days, with weekdays: "Mon 09:00 – Tue 10:00". */
 export function spanLabel(occ: CalendarOccurrence, use24h: boolean): string {
-	const at = (d: Date) => `${d.toLocaleDateString(undefined, { weekday: "short" })} ${formatTime(d, use24h)}`;
+	const at = (d: Date) => `${d.toLocaleDateString(dateLang(), { weekday: "short" })} ${formatTime(d, use24h)}`;
 	return `${at(occ.start)} – ${at(occ.end)}`;
 }
 
