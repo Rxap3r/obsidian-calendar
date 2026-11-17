@@ -1,4 +1,4 @@
-import { parseLocal, toDateKey } from "../dateUtils";
+import { dateLang, parseLocal, toDateKey } from "../dateUtils";
 import { closeOnOutside, createPopup, placePopup } from "./popup";
 
 export interface DateFieldOptions {
@@ -14,7 +14,7 @@ export interface DateFieldOptions {
 
 /** "Sat, 14 Nov 2026" in the user's language. */
 export function formatDateValue(v: string): string {
-	return parseLocal(v).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+	return parseLocal(v).toLocaleDateString(dateLang(), { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 }
 
 /**
@@ -79,7 +79,7 @@ export class DateField {
 		p.empty();
 		const head = p.createDiv({ cls: "ch-date-head" });
 		const prev = head.createEl("button", { cls: "ch-date-nav", text: "‹", attr: { "aria-label": "Previous month", type: "button" } });
-		head.createDiv({ cls: "ch-date-title", text: this.month.toLocaleDateString(undefined, { month: "long", year: "numeric" }) });
+		head.createDiv({ cls: "ch-date-title", text: this.month.toLocaleDateString(dateLang(), { month: "long", year: "numeric" }) });
 		const next = head.createEl("button", { cls: "ch-date-nav", text: "›", attr: { "aria-label": "Next month", type: "button" } });
 		prev.onclick = () => this.shift(-1);
 		next.onclick = () => this.shift(1);
@@ -88,7 +88,7 @@ export class DateField {
 		const fdw = this.opts.firstDayOfWeek;
 		for (let i = 0; i < 7; i++) {
 			const d = new Date(2026, 1, 1 + ((fdw + i) % 7)); // 1 Feb 2026 is a Sunday
-			grid.createDiv({ cls: "ch-date-wd", text: d.toLocaleDateString(undefined, { weekday: "narrow" }) });
+			grid.createDiv({ cls: "ch-date-wd", text: d.toLocaleDateString(dateLang(), { weekday: "narrow" }) });
 		}
 		const first = new Date(this.month);
 		const offset = (first.getDay() - fdw + 7) % 7;

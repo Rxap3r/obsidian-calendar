@@ -161,6 +161,8 @@ export interface OmniCalendarSettings {
 	multiDayTimed: "grid" | "allday";
 	/** What clicking an event or task opens: the read-only details view (1.9+, default) or the edit dialog. */
 	clickOpens: "details" | "edit";
+	/** Language of dates, weekday and month names: Obsidian's language (default), the device's, or English. */
+	dateLanguage: "obsidian" | "device" | "en";
 	/** Which sidebar the calendar is placed in by the toggle commands. */
 	sidebarSide: "left" | "right";
 	/**

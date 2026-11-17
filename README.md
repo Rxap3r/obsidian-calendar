@@ -518,6 +518,7 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 | **Display** | Default view | The view used when the calendar page opens |
 | | First day of the week | Sunday through Saturday |
 | | Clicking an event or task opens | *Details view* (default) or *Edit dialog directly*. Right-click always offers both |
+| | Language of dates | Weekday and month names: *Same as Obsidian* (default, follows *Settings → General → Language*), *Same as this device*, or *English*. The plugin's own words stay English |
 | | 24-hour clock | `14:00` vs `2pm` |
 | | Show week numbers | ISO week numbers in the month view, sidebar and narrow layouts |
 | | Events over several days | Week/day view: timed events that run into the next day as one block per day in the hours (default), or in the all-day row with their whole span (*Mon 09:00 – Tue 10:00*) |

@@ -2,7 +2,7 @@ import { Events } from "obsidian";
 import type OmniCalendarPlugin from "./main";
 import { SmartListId, Subtask, Task, TaskData, TaskEventLink, TaskList, TaskPriority } from "./types";
 import type { EventNow } from "./store";
-import { addDays, dayDiff, MS_DAY, parseLocal, startOfDay, timeKeyToMinutes, toDateKey, uid } from "./dateUtils";
+import { addDays, dateLang, dayDiff, MS_DAY, parseLocal, startOfDay, timeKeyToMinutes, toDateKey, uid } from "./dateUtils";
 
 export const DEFAULT_TASK_LIST: TaskList = { id: "tasks", name: "Tasks", color: "#7c5cff" };
 
@@ -474,7 +474,7 @@ export function dayTitle(date: string, today = startOfDay(new Date())): string {
 	if (diff === 0) return "Today";
 	if (diff === 1) return "Tomorrow";
 	if (diff === -1) return "Yesterday";
-	return d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+	return d.toLocaleDateString(dateLang(), { weekday: "long", day: "numeric", month: "long" });
 }
 
 /** Subtask helper for the dialog. */

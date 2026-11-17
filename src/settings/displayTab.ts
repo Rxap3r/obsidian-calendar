@@ -1,6 +1,7 @@
 import { Setting } from "obsidian";
 import { SidebarView, ViewMode } from "../types";
 import { numberSetting, periodSetting, SettingsContext } from "./controls";
+import { applyDateLanguage } from "../dateUtils";
 
 /** Readable names of Obsidian's built-in sidebar tabs (used when a saved tab is not open right now). */
 const CORE_TAB_NAMES: Record<string, string> = {
@@ -40,6 +41,20 @@ export function displayTab(ctx: SettingsContext, el: HTMLElement) {
 			await ctx.save();
 		});
 	});
+	new Setting(el)
+		.setName("Language of dates")
+		.setDesc("Weekday and month names, e.g. “Wednesday, 18 November”. Same as Obsidian follows Settings → General → Language.")
+		.addDropdown((d) =>
+			d
+				.addOptions({ obsidian: "Same as Obsidian", device: "Same as this device", en: "English" })
+				.setValue(s.dateLanguage)
+				.onChange(async (v) => {
+					s.dateLanguage = v === "device" || v === "en" ? v : "obsidian";
+					applyDateLanguage(s.dateLanguage);
+					await ctx.save();
+					ctx.plugin.tasks.trigger("changed");
+				})
+		);
 	new Setting(el).setName("24-hour clock").addToggle((t) =>
 		t.setValue(s.use24h).onChange(async (v) => {
 			s.use24h = v;

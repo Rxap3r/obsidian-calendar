@@ -122,15 +122,44 @@ export function formatHour(h: number, use24h: boolean): string {
 	return `${h % 12 || 12} ${ap}`;
 }
 
+/**
+ * The language dates, weekday and month names are written in (setting "Language of dates"). `undefined` = the device's.
+ * Set by the plugin on load and when the setting changes (`applyDateLanguage`).
+ */
+let dateLocale: string | undefined;
+
+/**
+ * "obsidian": the language chosen in Obsidian (Settings → General → Language). Obsidian keeps it in localStorage under
+ * "language" (not an official API; English, its default, is stored as nothing). "device": the system language.
+ */
+export function applyDateLanguage(setting: "obsidian" | "device" | "en") {
+	if (setting === "device") dateLocale = undefined;
+	else if (setting === "en") dateLocale = "en";
+	else {
+		let lang: string | null = null;
+		try {
+			lang = window.localStorage.getItem("language");
+		} catch {
+			/* not available */
+		}
+		dateLocale = lang || "en";
+	}
+}
+
+/** The language for `toLocaleDateString` and friends (undefined = device). */
+export function dateLang(): string | undefined {
+	return dateLocale;
+}
+
 export function formatDate(d: Date, opts: Intl.DateTimeFormatOptions): string {
-	return d.toLocaleDateString(undefined, opts);
+	return d.toLocaleDateString(dateLocale, opts);
 }
 
 export function weekdayNames(firstDay: number, style: "short" | "narrow" | "long" = "short"): string[] {
 	const base = new Date(2024, 0, 7); // a Sunday
 	const names: string[] = [];
 	for (let i = 0; i < 7; i++) {
-		names.push(addDays(base, (firstDay + i) % 7).toLocaleDateString(undefined, { weekday: style }));
+		names.push(addDays(base, (firstDay + i) % 7).toLocaleDateString(dateLocale, { weekday: style }));
 	}
 	return names;
 }

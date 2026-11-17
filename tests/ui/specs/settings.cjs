@@ -198,4 +198,35 @@ test("commands keep their ids; 'Refresh' says when calendars failed", {}, async 
 	eq(r.tasksOff, false, "task commands are hidden while tasks are off");
 });
 
+
+for (const mobile of [false, true]) {
+	test(`${mobile ? "mobile" : "desktop"}: language of dates – same as Obsidian (default), device, or English`, { mobile }, async ({ page }) => {
+		const heads = async (setting, obsidianLang) => page.evaluate(([setting, lang]) => {
+			if (lang) localStorage.setItem("language", lang); else localStorage.removeItem("language");
+			plugin.settings.dateLanguage = setting;
+			__dateMod.applyDateLanguage(setting);
+			view.goTo(new Date(2026, 10, 14), "month");
+			const sel = document.querySelector(".ch-month-head .ch-weekday") ? ".ch-month-head .ch-weekday" : ".ch-mc-head .ch-mc-dow";
+			return [document.querySelector(sel).textContent, __dateMod.formatDate(new Date(2026, 10, 18), { weekday: "long", month: "long" })];
+		}, [setting, obsidianLang]);
+		eq(await page.evaluate(() => plugin.settings.dateLanguage), "obsidian", "default: same as Obsidian");
+		const de = await heads("obsidian", "de");
+		expect(/^Mo/.test(de[0]) && de[1].includes("Mittwoch") && de[1].includes("November"), `Obsidian in German → German dates: ${de}`);
+		const en = await heads("obsidian", null);
+		expect(/^Mon/.test(en[0]) && en[1].includes("Wednesday"), `Obsidian in English (stored as nothing) → English: ${en}`);
+		const forced = await heads("en", "de");
+		expect(forced[1].includes("Wednesday"), `"English" even if Obsidian is German: ${forced}`);
+		const device = await heads("device", "de");
+		expect(device[1].includes("Wednesday"), `"Same as device" → the test browser's language (en-US): ${device}`);
+		if (!mobile) {
+			// The setting in Display; a broken stored value falls back to the default.
+			await page.evaluate(() => { const m = document.getElementById("main"); m.innerHTML = ""; tab.constructor.tab = "display"; tab.display(); m.appendChild(tab.containerEl); });
+			await page.waitForTimeout(100);
+			const names = await page.evaluate(() => [...document.querySelectorAll(".setting-item-name")].map((n) => n.textContent));
+			expect(names.includes("Language of dates"), "setting shown in Display");
+			eq(await page.evaluate(async () => { plugin._data = { settings: { dateLanguage: "klingon" }, events: [] }; await plugin.loadPluginData(); return plugin.settings.dateLanguage; }), "obsidian", "invalid value → default");
+		}
+	});
+}
+
 };

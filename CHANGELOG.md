@@ -4,9 +4,11 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet
+## Not released yet (1.9.1)
 
-- *(nothing yet)*
+- **New setting *Language of dates*** (*Settings → Omni Calendar → Display*). Weekday and month names used to follow
+  the device's language, so a German device showed *Mi., 18. Nov.* next to the plugin's English words. Now they follow
+  **Obsidian's language** by default (*Settings → General → Language*); you can also choose *Same as this device* or *English*.
 
 ## Known bugs
 
