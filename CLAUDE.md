@@ -299,3 +299,8 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
   - event tasks go to the default task list; no list picker in the event's quick add (would be clutter);
   - tasks of a deleted event are deleted with it.
 - **Next planned feature:** the details view for events and tasks (see Roadmap above and the README roadmap), then 1.9.
+- **New idea from the maintainer, timing not decided:** "Track as task" for events (README roadmap, before step 3).
+  Off by default, per event (dialog checkbox + menu). Proposed design: an event task marked as *the event itself*
+  (e.g. a flag on `task.event`), shown in task lists with the event's time, **not** drawn as an extra task block in the
+  calendar (the event gets a tick circle / is struck through when done); follows and is deleted with the event via the
+  existing 1.8 machinery. Repeating events only with 1.9. Suggested to the maintainer as 1.8.5 (single events) or with the details view.

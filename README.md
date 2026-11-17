@@ -704,6 +704,16 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
   - **Details view:** the description in small grey text under the subtask;
   - **Task dialog:** a small "add description" link per subtask opens a field only when needed (no big text boxes by default).
 
+**Idea (maintainer): "Track as task" for events – not scheduled yet**
+- Sometimes an event itself is something to tick off. A checkbox **Track as task** in the event dialog (and in the
+  right-click menu) turns it on for that one event. **Off by default**, so the task lists don't fill up with every event.
+- The event then appears in the task lists like a task (with its time and a small calendar icon) and can be ticked off there.
+- In the calendar it is **not shown twice**: the event gets a small tick circle and is struck through once done.
+- It follows the event (title, day) and is deleted with it, like event tasks. Works for Google/Outlook/ICS events too;
+  the "done" mark is kept only in Obsidian.
+- Repeating events (tick off each repeat separately) come with step 3 (1.9).
+- Proposed timing: a small release on its own (single events), or together with the details view.
+
 **Step 3 – version 1.9: repeating**
 - **Repeating tasks**, each occurrence ticked off separately. A repeating task stays **one** task: each completed occurrence is only a small "done on …" entry, not a copy, so Done doesn't fill up with duplicates.
 - **Tasks on repeating events:** the event's task list works as a template, and each occurrence has its own ticks. Ticking one off on 14 Nov doesn't tick it off on 21 Nov.
