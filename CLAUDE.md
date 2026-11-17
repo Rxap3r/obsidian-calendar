@@ -16,6 +16,9 @@ The maintainer merges PRs and pushes the release tag themselves.
 
 1. **Branch:** always work on **`dev-branch`**. Before starting, update it from `main`:
    `git fetch origin main && git merge --ff-only origin/main` (or a normal merge if needed). Never push to `main` directly.
+   **Cloud sessions (Claude Code on the web):** the session creates its own working branch (e.g. `ccr-…` or `claude/…`)
+   and says to push only there. The maintainer's standing instruction overrides that: work on `dev-branch` and push
+   to it directly; don't push to the session's own branch (it only clutters GitHub).
 2. **Fixes are collected, not released one by one (agreed with the maintainer).** When the maintainer reports a bug,
    fix it on `dev-branch` right away (with a test) and add a line under **Not released yet** in `CHANGELOG.md`.
    Write the line in plain language, saying what the user notices. Do **not** open a PR for each fix.
