@@ -231,8 +231,8 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   - The text of new task notes comes from *Settings → Omni Calendar → Notes → Task note template*.
   - Don't need all of it? Two switches in *Settings → Omni Calendar → Tasks*:
     - **Create note for tasks** – the main switch. Off hides *Create note* on tasks **and** everything on subtasks.
-    - **Notes and descriptions on subtasks** (shown under it) – off keeps subtasks plain: no ≡ button, description,
-      subtask notes or ⋯, while tasks keep *Create note*.
+    - **Notes and descriptions on subtasks** (shown under it) – **off by default**, so subtasks stay plain: no ≡ button,
+      description, subtask notes or ⋯, while tasks keep *Create note*. Turn it on to use the subtask part described above.
 
     Turning them off deletes nothing; the task's own linked notes stay.
 - **Progress log** (new in **1.9.2**): in a task's details there's a **Progress log** section. Type what you did or what
@@ -610,7 +610,7 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 | | Done section in lists | Collapsed "Done" section in your lists and *All* |
 | | Progress log | Dated updates on a task in its details view, "📝 3" in the lists (on by default). Off only hides it |
 | | Create note for tasks | *Create note* on tasks (on by default). Off also turns off the subtask part below. Only hides, deletes nothing |
-| | Notes and descriptions on subtasks | Descriptions, linked notes and *Create note* on subtasks (on by default; shown while *Create note for tasks* is on) |
+| | Notes and descriptions on subtasks | Descriptions, linked notes and *Create note* on subtasks (**off** by default; shown while *Create note for tasks* is on) |
 | | Upcoming list | How far ahead the "Upcoming" list looks: standard periods (default 7 days) or custom |
 | | Tasks in the calendar | Timed tasks as light blocks in Week/Day, one counter per day for the others (on by default) |
 | | Completed tasks in the calendar | *Struck through* (default) or *Hidden* |

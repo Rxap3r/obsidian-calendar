@@ -121,7 +121,7 @@ test("data: event notes are migrated, event links and task events checked on loa
 	eq(r.events, [[["Inbox.md"], false], [["A.md", "B.md"], false]], "notePath → links (≤ 1.7)");
 	eq(r.links, { "gcal:g1": ["Inbox.md"] }, "event links: duplicates, empty and broken entries dropped");
 	eq(r.tasks, [{ key: "local:e1", title: "Old", date: "2026-11-14" }, null], "task event links checked");
-	eq(r.fresh, [{}, true, true, true, true, true, true], "defaults");
+	eq(r.fresh, [{}, true, true, true, true, true, false], "defaults (subtask notes and descriptions off)");
 });
 
 };

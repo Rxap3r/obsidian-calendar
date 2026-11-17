@@ -8,7 +8,8 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 - The switch for *Create note* is now two switches in *Settings → Omni Calendar → Tasks*: **Create note for tasks** (turns
   off notes for tasks and subtasks) and, under it, **Notes and descriptions on subtasks** (turns off only the subtask
-  part, so subtasks stay simple while tasks keep *Create note*). Your current setting is kept; nothing is deleted.
+  part, so subtasks stay simple while tasks keep *Create note*). The subtask switch is **off by default**: turn it on to
+  see subtask descriptions and notes again (anything you already added is kept, nothing is deleted).
 
 ## Known bugs
 

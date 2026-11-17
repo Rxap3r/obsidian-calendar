@@ -248,6 +248,7 @@ test("desktop: tasks in the sidebar – button opens the Tasks page with the sam
 
 test("desktop: notes for tasks and subtasks – Create note (menu, dialog), subtask description, template, rename/delete", {}, async ({ page }) => {
 	await page.evaluate(async () => {
+		plugin.settings.tasksSubtaskExtras = true; // off by default
 		await plugin.tasks.upsert(plugin.tasks.draft({ title: "Fix the bike", date: "2026-11-14", notes: "Chain is rusty",
 			subtasks: [{ id: "s1", title: "Buy chain", done: false }] }));
 		await mountTasks();
@@ -380,7 +381,12 @@ test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mo
 	});
 	eq(t2, { timeFits: true, date: "Sat, Nov 14, 2026" }, "time row fits inside the dialog; chosen date shown");
 	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile-date.png") });
-	// Subtask ≡: description and notes open under the subtask and fit the phone.
+	// Subtask ≡ (switch on; off by default): description and notes open under the subtask and fit the phone.
+	eq(await page.locator(".ch-sub-extra-btn").count(), 0, "no ≡ by default");
+	await page.evaluate(() => { plugin.settings.tasksSubtaskExtras = true; });
+	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).tap();
+	await page.tap(".ch-task .ch-task-title");
+	await settle(page);
 	await page.locator(".ch-sub-extra-btn").first().tap();
 	await settle(page);
 	const ex = await page.evaluate(() => {

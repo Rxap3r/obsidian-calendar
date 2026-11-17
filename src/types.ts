@@ -201,7 +201,7 @@ export interface OmniCalendarSettings {
 	tasksProgressLog: boolean;
 	/** "Create note" on tasks – main switch: off also turns off the subtask part (1.9.3). Off hides; nothing is deleted. */
 	tasksNoteExtras: boolean;
-	/** Subtask descriptions, subtask notes and "Create note" on subtasks (1.9.4). Only counts while tasksNoteExtras is on. */
+	/** Subtask descriptions, subtask notes and "Create note" on subtasks (1.9.4). Only counts while tasksNoteExtras is on. Off by default (maintainer's choice). */
 	tasksSubtaskExtras: boolean;
 	/** @deprecated replaced by sidebarView (migrated on load). */
 	sidebarOnStartup?: SidebarView;

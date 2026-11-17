@@ -336,7 +336,8 @@ events that continue from the previous day; *Language of dates* with Obsidian in
   description, chips, ⋯ menu (`views/tasks/subtaskNotes.ts`). Lists: ≡ and note icons only (`taskRow.ts`).
   Switches (Tasks tab, both on by default; the maintainer asked for them because it may confuse some people):
   `tasksNoteExtras` "Create note for tasks" = main switch, off hides all of step c incl. the Notes tab's task template;
-  `tasksSubtaskExtras` "Notes and descriptions on subtasks" (1.9.4, shown under it) hides only the subtask part. Check
+  `tasksSubtaskExtras` "Notes and descriptions on subtasks" (1.9.4, shown under it, **off by default** – maintainer's
+  choice; tests that use it switch it on) hides only the subtask part. Check
   with `subtaskExtrasOn(settings)` (both on). Task-level linked notes (1.7) stay; nothing is deleted.
 - 1.9.1: setting `dateLanguage` (all date formatting via `formatDate` / `dateLang()` in `dateUtils.ts`, never
   `toLocaleDateString(undefined, …)`); Microsoft sign-in hint for which page opens; README *Troubleshooting sign-in*.

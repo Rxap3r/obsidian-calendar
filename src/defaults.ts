@@ -41,7 +41,7 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	tasksInMiniCalendar: true,
 	tasksProgressLog: true,
 	tasksNoteExtras: true,
-	tasksSubtaskExtras: true,
+	tasksSubtaskExtras: false,
 	notesFolder: "Calendar",
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,
 	taskNoteTemplate: DEFAULT_TASK_NOTE_TEMPLATE,

@@ -66,7 +66,7 @@ export function tasksTab(ctx: SettingsContext, el: HTMLElement) {
 	if (s.tasksNoteExtras) {
 		new Setting(el)
 			.setName("Notes and descriptions on subtasks")
-			.setDesc("A short description, linked notes and “Create note” for each subtask. Off keeps subtasks simple; nothing is deleted.")
+			.setDesc("A short description, linked notes and “Create note” for each subtask. Off (the default) keeps subtasks simple; nothing is deleted.")
 			.setClass("ch-sub-setting")
 			.addToggle((t) =>
 				t.setValue(s.tasksSubtaskExtras).onChange(async (v) => {

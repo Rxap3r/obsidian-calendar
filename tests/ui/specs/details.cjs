@@ -192,6 +192,7 @@ test("desktop: progress log – add (Enter and button), oldest first, edit keeps
 test("desktop: details view – subtask description and notes, ⋯ menu, Create note for the task", {}, async ({ page }) => {
 	await detailsMode(page);
 	await page.evaluate(async () => {
+		plugin.settings.tasksSubtaskExtras = true; // off by default
 		await plugin.tasks.upsert(plugin.tasks.draft({ title: "Move flat", date: "2026-11-14",
 			subtasks: [{ id: "a", title: "Book van", done: false, description: "Saturday morning", links: ["Inbox.md"] }, { id: "b", title: "Boxes", done: false, links: [] }] }));
 		await mountTasks();
