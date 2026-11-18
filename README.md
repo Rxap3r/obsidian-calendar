@@ -836,9 +836,18 @@ A to-do system that lives **inside Omni Calendar**: tasks are created in the plu
   the "done" mark is kept only in Obsidian.
 - Repeating events (tick off each repeat separately) come with step 3 (1.10).
 
-**Step 3 – version 1.10: repeating** (renumbered: 1.9 became the details view)
-- **Repeating tasks**, each occurrence ticked off separately. A repeating task stays **one** task: each completed occurrence is only a small "done on …" entry, not a copy, so Done doesn't fill up with duplicates.
-- **Tasks on repeating events:** the event's task list works as a template, and each occurrence has its own ticks. Ticking one off on 14 Nov doesn't tick it off on 21 Nov.
+**Step 3 – version 1.10: repeating** (renumbered: 1.9 became the details view). Agreed design, built in **three steps**:
+1. **Repeating tasks.**
+   - **Repeat options:** the same as for events (daily, weekly, monthly, yearly, custom; ends never / on a date / after a number of times).
+   - A repeating task stays **one** task: ticking it off moves it to its next date, and each completed occurrence is only a
+     small "done on …" entry, not a copy, so Done doesn't fill up with duplicates.
+   - **Each date is separate:** subtasks are ticked off per date (the next date starts with them unticked), and the
+     **progress log** and **notes** belong to each date, not to the whole series.
+   - **Calendar:** shows every future date, like repeating events, but kept light (e.g. the faint task style, no extra
+     clutter in the day counter).
+2. **Tasks on repeating events:** the event's task list works as a template, and each occurrence has its own ticks.
+   Ticking one off on 14 Nov doesn't tick it off on 21 Nov.
+3. **Track as task for repeating events:** each repeat is ticked off on its own.
 
 **Later, maybe:**
 - **Microsoft To Do** sync: lists map 1:1. It needs an extra permission (`Tasks.ReadWrite`) and signing in once more.

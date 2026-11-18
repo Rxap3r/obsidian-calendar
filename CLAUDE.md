@@ -283,7 +283,14 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
       - dialog: an "add description" link that opens a small field on demand.
 
       Longer content belongs in a note.
-  - **1.10 (was 1.9):** repeating tasks, per-occurrence tasks on repeating events, *Track as task* for repeats. A repeating task stays ONE item; completed occurrences are small "done on date" entries, not copies (agreed, to keep Done uncluttered).
+  - **1.10 (was 1.9) – agreed design, build in 3 steps (maintainer: don't start until asked):**
+    1. **Repeating tasks:** the **same repeat options as events** (daily/weekly/monthly/yearly/custom, ends never / on date /
+       after n). A repeating task stays ONE item; ticking it off moves it to the next date; completed occurrences are small
+       "done on date" entries, not copies (keeps Done uncluttered). **Per date, separate:** subtask ticks (the next date
+       starts unticked), **progress log** and **notes** belong to each occurrence. **Calendar shows every future occurrence**
+       (like repeating events) but **kept light** (faint task style, no extra clutter in the day counter).
+    2. **Tasks on repeating events:** the event's tasks work as a template; each occurrence has its own ticks.
+    3. ***Track as task* for repeating events:** each repeat ticked off on its own.
   - **Completed tasks (1.7.5):**
     - Done shows the last `tasksDoneVisibleDays` (default 30, -1 = everything), with "Show older";
     - "Clear completed";
@@ -300,9 +307,9 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Where we stopped (keep this section up to date at the end of a session)
 
-**State:** everything up to **1.9.4** is merged and released (tags 1.8.0 … 1.9.4, PRs #28–#38). **1.9.5** (unlocking the
-calendar always asks first: icon, ribbon menu, command) is in a PR from `dev-branch`; once merged and tagged, the next
-change needs **1.9.6**, or **1.10.0** for repeating tasks. 1.9.4 contains: the step c switch split
+**State:** everything up to **1.9.5** is merged and released (tags 1.8.0 … 1.9.5, PRs #28–#39). `dev-branch` = `main`,
+*Not released yet* is empty. The next change needs **1.9.6** (fixes), or **1.10.0** for repeating tasks. 1.9.5: unlocking the
+calendar always asks first (icon, ribbon menu, command). 1.9.4 contains: the step c switch split
 in two (`tasksNoteExtras` = main "Create note for tasks", `tasksSubtaskExtras` = "Notes and descriptions on subtasks");
 switch `tasksOnEvents` ("Tasks on events": event Tasks section, *Add task…*, "2/5", tracked-event progress and the
 "mark open tasks done?" question; off → untimed event tasks count in the day counter; check with `eventTasksOn(s)`);
@@ -318,7 +325,8 @@ icon right of the view title (clear when locked, faint when not; click locks; un
 ribbon menu and command – maintainer's choice).
 
 **Next on the roadmap (agreed order):**
-1. **1.10** – repeating tasks, tasks on repeating events per repeat, *Track as task* for repeats.
+1. **1.10** – repeating tasks, tasks on repeating events per repeat, *Track as task* for repeats. Design agreed (see
+   *Roadmap → 1.10*), three steps; **wait for the maintainer's go** before starting.
 2. Later: reminders and notifications (README roadmap), then the "Other ideas".
 3. Undecided: a progress log on events (see the roadmap note above; only if the maintainer asks).
 
