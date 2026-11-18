@@ -36,40 +36,8 @@ export function eventExtras(
 					t.setValue(!!plugin.tasks.tracked(key)).onChange((v) => void plugin.tasks.setTracked(key, eventNowOf(occ.title, occ.start, occ.end, occ.allDay), v))
 				);
 		}
-		const wrap = container.createDiv({ cls: "ch-event-tasks" });
-		const head = wrap.createDiv({ cls: "ch-task-section-head" });
-		head.createSpan({ text: "Tasks" });
-		const progress = head.createSpan({ cls: "ch-event-tasks-progress" });
-		const list = wrap.createDiv({ cls: "ch-event-task-list" });
-		// Subtasks are shown under their task (folded away with a click on "1/3"), like on the Tasks page.
-		const folded = new Set<string>();
-		const add = wrap.createEl("input", { type: "text", cls: "ch-input ch-event-task-add", attr: { placeholder: "+ Add a task (Enter)" } });
-		add.addEventListener("keydown", (e) => {
-			if (e.key !== "Enter") return;
-			e.preventDefault();
-			const title = add.value.trim();
-			if (!title) return;
-			add.value = "";
-			void plugin.tasks.upsert(plugin.tasks.draft({ title, date: day, event: { key, title: occ.title, date: day } }));
-		});
-		const render = () => {
-			list.empty();
-			const tasks = plugin.tasks.forEvent(key);
-			const done = tasks.filter((t) => t.done).length;
-			progress.setText(tasks.length ? `${done}/${tasks.length}` : "");
-			for (const t of tasks) {
-				eventTaskRow(plugin, list, t, day, {
-					folded: folded.has(t.id),
-					toggle: () => {
-						if (!folded.delete(t.id)) folded.add(t.id);
-						render();
-					},
-				});
-			}
-		};
-		render();
-		const ref = plugin.tasks.on("changed", render);
-		stops.push(() => plugin.tasks.offref(ref));
+		// The event's own tasks (setting "Tasks on events"; "Track as task" above stays either way).
+		if (plugin.settings.tasksOnEvents) stops.push(eventTaskSection(plugin, container, key, day, occ.title));
 	}
 
 	const notes = container.createDiv({ cls: "ch-event-notes" });
@@ -137,4 +105,42 @@ function eventTaskRow(
 		};
 		sr.createSpan({ cls: "ch-event-subtask-title", text: st.title });
 	}
+}
+
+/** The event's tasks: list (tick off, open), progress "2/5", quick add. Returns a function that stops listening. */
+function eventTaskSection(plugin: OmniCalendarPlugin, container: HTMLElement, key: string, day: string, eventTitle: string): () => void {
+	const wrap = container.createDiv({ cls: "ch-event-tasks" });
+	const head = wrap.createDiv({ cls: "ch-task-section-head" });
+	head.createSpan({ text: "Tasks" });
+	const progress = head.createSpan({ cls: "ch-event-tasks-progress" });
+	const list = wrap.createDiv({ cls: "ch-event-task-list" });
+	// Subtasks are shown under their task (folded away with a click on "1/3"), like on the Tasks page.
+	const folded = new Set<string>();
+	const add = wrap.createEl("input", { type: "text", cls: "ch-input ch-event-task-add", attr: { placeholder: "+ Add a task (Enter)" } });
+	add.addEventListener("keydown", (e) => {
+		if (e.key !== "Enter") return;
+		e.preventDefault();
+		const title = add.value.trim();
+		if (!title) return;
+		add.value = "";
+		void plugin.tasks.upsert(plugin.tasks.draft({ title, date: day, event: { key, title: eventTitle, date: day } }));
+	});
+	const render = () => {
+		list.empty();
+		const tasks = plugin.tasks.forEvent(key);
+		const done = tasks.filter((t) => t.done).length;
+		progress.setText(tasks.length ? `${done}/${tasks.length}` : "");
+		for (const t of tasks) {
+			eventTaskRow(plugin, list, t, day, {
+				folded: folded.has(t.id),
+				toggle: () => {
+					if (!folded.delete(t.id)) folded.add(t.id);
+					render();
+				},
+			});
+		}
+	};
+	render();
+	const ref = plugin.tasks.on("changed", render);
+	return () => plugin.tasks.offref(ref);
 }

@@ -65,7 +65,9 @@ export function renderMonth(host: CalendarHost) {
 					host.goTo(day, "day");
 				};
 			}
-			cell.addEventListener("dblclick", () => new EventModal(plugin, { start: day }).open());
+			cell.addEventListener("dblclick", () => {
+				if (!plugin.lock.locked) new EventModal(plugin, { start: day }).open();
+			});
 			host.drag.dropTarget(cell, day);
 		}
 	}

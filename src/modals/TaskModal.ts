@@ -1,7 +1,7 @@
 import { Modal, Notice, Setting, setIcon } from "obsidian";
 import type OmniCalendarPlugin from "../main";
 import { Task, TaskPriority } from "../types";
-import { PRIORITY_NAMES, newSubtask } from "../tasks";
+import { PRIORITY_NAMES, newSubtask, subtaskExtrasOn } from "../tasks";
 import { addDays, toDateKey } from "../dateUtils";
 import { confirmAction } from "./ConfirmModal";
 import { linkedNotesBlock } from "../views/linkedNotes";
@@ -204,7 +204,7 @@ export class TaskModal extends Modal {
 			txt.value = s.title;
 			txt.addEventListener("input", () => (s.title = txt.value));
 			// ≡ opens the subtask's description and notes on demand (kept closed, so the dialog stays short).
-			const extras = this.plugin.settings.tasksNoteExtras;
+			const extras = subtaskExtrasOn(this.plugin.settings);
 			const open = extras && this.openSubs.has(s.id);
 			const more = row.createEl("button", { cls: "ch-icon-btn ch-sub-extra-btn", attr: { "aria-label": "Description and notes", "aria-expanded": String(open) } });
 			more.toggleClass("has-content", !!s.description || s.links.length > 0);

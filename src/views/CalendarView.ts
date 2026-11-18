@@ -190,6 +190,34 @@ export class CalendarView extends OmniView implements CalendarHost {
 		(this.leaf as any).updateHeader?.();
 	}
 
+	/**
+	 * The lock icon right of the view's title ("Calendar 🔒"): clear when locked, faint when not; a click locks, or asks
+	 * before unlocking. Obsidian has no official place next to the title, so it goes into Obsidian's own header
+	 * (`.view-header-title-container`); if that isn't there (e.g. a sidebar tab without a title line), there's no icon –
+	 * the menu entry and the command still work.
+	 */
+	private updateLockIcon() {
+		const container = this.containerEl.querySelector(".view-header-title-container");
+		if (!container) return;
+		let icon = container.querySelector<HTMLElement>(".ch-lock-indicator");
+		if (!icon) {
+			icon = container.createEl("button", { cls: "ch-lock-indicator clickable-icon" });
+			icon.addEventListener("click", (e) => {
+				e.stopPropagation();
+				void this.plugin.lock.toggle(true);
+			});
+			// Right after the title text.
+			container.querySelector(".view-header-title")?.after(icon);
+		}
+		const locked = this.plugin.lock.locked;
+		icon.toggleClass("is-locked", locked);
+		icon.setAttr("aria-label", locked ? "Calendar locked: no dragging or creating by tapping. Click to unlock." : "Lock the calendar against accidental changes");
+		icon.empty();
+		setIcon(icon, locked ? "lock" : "lock-open");
+		// Older icon sets call the open lock "unlock".
+		if (!locked && !icon.querySelector("svg")) setIcon(icon, "unlock");
+	}
+
 	/** Sidebar → open the full page in the main area. Main area → move this calendar into the sidebar. */
 	private async toggleLocation() {
 		if (this.plugin.sidebar.contains(this.leaf)) {
@@ -235,6 +263,7 @@ export class CalendarView extends OmniView implements CalendarHost {
 
 	render() {
 		if (!this.bodyEl) return;
+		this.updateLockIcon();
 		const keepScroll = this.bodyEl.querySelector(".ch-grid-scroll");
 		if (keepScroll) this.scrollTop = keepScroll.scrollTop;
 

@@ -180,6 +180,69 @@ test("tasks: completed tasks – recent only, show older, clear, automatic clean
 	eq(k, [0, 1], "done task without completion time not deleted at once");
 });
 
+test("desktop: customize automatic lists – drag to reorder, eye to hide, the Tasks page follows; off = usual order", {}, async ({ page }) => {
+	await seedTasks()(page);
+	const showSettings = () => page.evaluate(() => { tab.constructor.tab = "tasks"; const m = document.getElementById("main"); m.innerHTML = ""; tab.display(); m.appendChild(tab.containerEl); });
+	await showSettings();
+	eq(await page.locator(".ch-sortable").count(), 0, "no list editor while customizing is off");
+	await page.locator(".setting-item", { hasText: "Customize automatic lists" }).locator(".checkbox-container").click();
+	await settle(page);
+	const names = () => page.locator(".ch-sortable-row .ch-sortable-name").allTextContents();
+	eq(await names(), ["Today", "Tomorrow", "Upcoming", "Overdue", "No date", "All", "Done"], "usual order to start with");
+	// Drag "All" by its handle above "Today".
+	const handle = await page.locator(".ch-sortable-row", { hasText: "All" }).locator(".ch-sortable-handle").boundingBox();
+	const first = await page.locator(".ch-sortable-row").first().boundingBox();
+	await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+	await page.mouse.down();
+	for (let y = handle.y; y > first.y; y -= 12) await page.mouse.move(handle.x + 4, y);
+	await page.mouse.move(handle.x + 4, first.y + 3);
+	await page.mouse.up();
+	await settle(page);
+	eq(await names(), ["All", "Today", "Tomorrow", "Upcoming", "Overdue", "No date", "Done"], "All moved to the top");
+	// The eye hides "Tomorrow" (still in the editor, shown as hidden).
+	await page.locator(".ch-sortable-row", { hasText: "Tomorrow" }).locator(".ch-sortable-eye").click();
+	await settle(page);
+	eq(await page.locator(".ch-sortable-row.is-hidden .ch-sortable-name").allTextContents(), ["Tomorrow"], "shown as hidden");
+	await shot(page, "settings-list-order");
+	eq(await page.evaluate(() => [plugin.settings.tasksListOrder, plugin.settings.tasksHiddenLists]), [["all", "today", "tomorrow", "upcoming", "overdue", "nodate", "done"], ["tomorrow"]], "saved");
+	// The Tasks page: that order, without Tomorrow; an open hidden list falls back to the first visible one.
+	const smart = ["today", "tomorrow", "upcoming", "overdue", "nodate", "all", "done"];
+	const nav = () => page.locator(".ch-tasks-nav-item[data-list]").evaluateAll((els, smart) => els.map((e) => e.dataset.list).filter((id) => smart.includes(id)), smart);
+	await page.evaluate(async () => { await mountTasks(); tasksView.select("tomorrow"); });
+	await settle(page);
+	eq(await nav(), ["all", "today", "upcoming", "overdue", "nodate", "done"], "page follows the order, Tomorrow hidden");
+	expect((await page.textContent(".ch-tasks-title")).startsWith("All"), "hidden list → the first visible one");
+	// Customizing off: usual order, everything shown – the custom order is kept for later.
+	await page.evaluate(() => { plugin.settings.tasksCustomLists = false; plugin.tasks.trigger("changed"); });
+	await settle(page);
+	eq(await nav(), smart, "off: usual order, all shown");
+	eq(await page.evaluate(() => plugin.settings.tasksListOrder[0]), "all", "custom order kept");
+	// Everything hidden: the default list "Tasks".
+	await page.evaluate(() => { plugin.settings.tasksCustomLists = true; plugin.settings.tasksHiddenLists = ["today", "tomorrow", "upcoming", "overdue", "nodate", "all", "done"]; tasksView.render(); });
+	eq(await page.textContent(".ch-tasks-title"), "Tasks", "all hidden → the default list");
+});
+
+test("mobile: automatic lists can be dragged with a finger", { mobile: true }, async ({ page, ctx }) => {
+	await page.evaluate(() => { plugin.settings.tasksCustomLists = true; tab.constructor.tab = "tasks"; const m = document.getElementById("main"); m.innerHTML = ""; tab.display(); m.appendChild(tab.containerEl); });
+	await settle(page);
+	// In the middle of the screen (the test page has a small ribbon stand-in in the bottom-left corner).
+	await page.evaluate(() => document.querySelector(".ch-sortable").scrollIntoView({ block: "center" }));
+	const cdp = await ctx.newCDPSession(page);
+	const touch = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+	const h = await page.locator(".ch-sortable-row", { hasText: "Done" }).locator(".ch-sortable-handle").boundingBox();
+	const top = await page.locator(".ch-sortable-row").nth(1).boundingBox();
+	const x = h.x + h.width / 2;
+	await touch("touchStart", x, h.y + h.height / 2);
+	for (let y = h.y; y > top.y; y -= 10) await touch("touchMove", x, y);
+	await touch("touchMove", x, top.y + 3);
+	await touch("touchEnd");
+	await settle(page);
+	eq(await page.locator(".ch-sortable-row .ch-sortable-name").allTextContents(), ["Today", "Done", "Tomorrow", "Upcoming", "Overdue", "No date", "All"], "Done moved up by finger");
+	const w = await page.evaluate(() => document.documentElement.scrollWidth);
+	expect(w <= 390, `fits the phone: ${w}`);
+	await page.screenshot({ path: path.join(SHOTS, "settings-list-order-mobile.png") });
+});
+
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {
 	await page.evaluate(() => mountTasks());
 	await settle(page);
@@ -248,6 +311,7 @@ test("desktop: tasks in the sidebar – button opens the Tasks page with the sam
 
 test("desktop: notes for tasks and subtasks – Create note (menu, dialog), subtask description, template, rename/delete", {}, async ({ page }) => {
 	await page.evaluate(async () => {
+		plugin.settings.tasksSubtaskExtras = true; // off by default
 		await plugin.tasks.upsert(plugin.tasks.draft({ title: "Fix the bike", date: "2026-11-14", notes: "Chain is rusty",
 			subtasks: [{ id: "s1", title: "Buy chain", done: false }] }));
 		await mountTasks();
@@ -306,26 +370,40 @@ test("desktop: notes for tasks and subtasks – Create note (menu, dialog), subt
 	eq(own, ["Plan trip|Plan trip||||Tasks|Medium|Ideas", "Call – Ask price|Call|Ask price|2026-11-20|09:00–09:30|Tasks|None|max 50"], "own template, no-date name");
 	await page.evaluate(() => { tab.constructor.tab = "notes"; tab.display(); });
 	expect(await page.evaluate(() => [...tab.containerEl.querySelectorAll(".setting-item-name")].some((e) => e.textContent === "Task note template")), "template setting in the Notes tab");
-	// The setting off: everything of this feature is hidden, nothing is deleted.
+	// Subtask switch off: subtasks are just subtasks again; the task keeps "Create note". Nothing is deleted.
 	await page.evaluate(async () => {
 		const t = plugin.tasks.items.find((x) => x.title === "Fix the bike");
 		await plugin.tasks.update(t.id, { subtasks: [{ ...t.subtasks[0], links: ["Inbox.md"] }] });
-		plugin.settings.tasksNoteExtras = false; plugin.tasks.trigger("changed");
+		plugin.settings.tasksSubtaskExtras = false; plugin.tasks.trigger("changed");
 	});
 	await settle(page);
-	eq([await row.locator(".ch-sub-has-desc").count(), await row.locator(".ch-sub-has-notes").count()], [0, 0], "no subtask icons when off");
+	eq([await row.locator(".ch-sub-has-desc").count(), await row.locator(".ch-sub-has-notes").count()], [0, 0], "no subtask icons when the subtask switch is off");
+	await row.locator(".ch-task-title").click({ button: "right" });
+	expect(await page.evaluate(() => window.lastMenu.items.some((i) => i.t === "Open note")), "task menu keeps Open note");
+	await row.locator(".ch-task-title").click();
+	await settle(page);
+	eq([await page.locator(".ch-sub-extra-btn").count(), await page.locator(".ch-task-modal .ch-create-note-btn").count()], [0, 1], "dialog: no ≡, but the task's Create/Open note stays");
+	await page.locator(".ch-modal-buttons button", { hasText: "Save" }).click();
+	await settle(page);
+	eq(await page.evaluate(() => { const s = plugin.tasks.items.find((x) => x.title === "Fix the bike").subtasks[0]; return [s.description, s.links]; }), ["KMC, 11-speed", ["Inbox.md"]], "description and notes kept after saving");
+	// Main switch off: Create note is gone for tasks too, even with the subtask switch on.
+	await page.evaluate(() => { plugin.settings.tasksSubtaskExtras = true; plugin.settings.tasksNoteExtras = false; plugin.tasks.trigger("changed"); });
+	await settle(page);
+	eq(await row.locator(".ch-sub-has-desc").count(), 0, "main switch off also hides the subtask part");
 	await row.locator(".ch-task-title").click({ button: "right" });
 	expect(!(await page.evaluate(() => window.lastMenu.items.some((i) => /note/i.test(i.t)))), "no Create/Open note in the menu");
 	await row.locator(".ch-task-title").click();
 	await settle(page);
 	eq([await page.locator(".ch-sub-extra-btn").count(), await page.locator(".ch-task-modal .ch-create-note-btn").count(), await page.locator(".ch-task-modal .ch-link-note-btn").count()], [0, 0, 1], "dialog: no ≡, no Create note; Link note stays");
-	await page.locator(".ch-modal-buttons button", { hasText: "Save" }).click();
-	await settle(page);
-	eq(await page.evaluate(() => { const s = plugin.tasks.items.find((x) => x.title === "Fix the bike").subtasks[0]; return [s.description, s.links]; }), ["KMC, 11-speed", ["Inbox.md"]], "description and notes kept after saving");
+	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).click();
+	const names = () => page.evaluate(() => [...tab.containerEl.querySelectorAll(".setting-item-name")].map((e) => e.textContent));
 	await page.evaluate(() => { tab.constructor.tab = "tasks"; tab.display(); });
-	expect(await page.evaluate(() => [...tab.containerEl.querySelectorAll(".setting-item-name")].some((e) => e.textContent === "Create note and subtask details")), "switch in the Tasks tab");
-	await page.evaluate(() => { tab.constructor.tab = "notes"; tab.display(); });
-	expect(!(await page.evaluate(() => [...tab.containerEl.querySelectorAll(".setting-item-name")].some((e) => e.textContent === "Task note template"))), "template hidden when off");
+	const offNames = await names();
+	expect(offNames.includes("Create note for tasks") && !offNames.includes("Notes and descriptions on subtasks"), "only the main switch while it's off");
+	await page.evaluate(() => { plugin.settings.tasksNoteExtras = true; tab.display(); });
+	expect((await names()).includes("Notes and descriptions on subtasks"), "subtask switch under it while it's on");
+	await page.evaluate(() => { plugin.settings.tasksNoteExtras = false; tab.constructor.tab = "notes"; tab.display(); });
+	expect(!(await names()).includes("Task note template"), "template hidden when off");
 });
 
 test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mobile: true }, async ({ page }) => {
@@ -366,7 +444,12 @@ test("mobile: tasks page – list bar, no sideways scrolling, dialog fits", { mo
 	});
 	eq(t2, { timeFits: true, date: "Sat, Nov 14, 2026" }, "time row fits inside the dialog; chosen date shown");
 	await page.screenshot({ path: path.join(SHOTS, "task-dialog-mobile-date.png") });
-	// Subtask ≡: description and notes open under the subtask and fit the phone.
+	// Subtask ≡ (switch on; off by default): description and notes open under the subtask and fit the phone.
+	eq(await page.locator(".ch-sub-extra-btn").count(), 0, "no ≡ by default");
+	await page.evaluate(() => { plugin.settings.tasksSubtaskExtras = true; });
+	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).tap();
+	await page.tap(".ch-task .ch-task-title");
+	await settle(page);
 	await page.locator(".ch-sub-extra-btn").first().tap();
 	await settle(page);
 	const ex = await page.evaluate(() => {

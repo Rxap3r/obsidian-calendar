@@ -16,7 +16,7 @@ import { columnAt, columnDay, drawRange } from "./ranges";
 export function resizeHandles(
 	plugin: OmniCalendarPlugin, col: HTMLElement, el: HTMLElement, occ: CalendarOccurrence, at: { dayStart: Date; dayEnd: Date }
 ) {
-	if (!canDrag(occ)) return;
+	if (!canDrag(occ) || plugin.lock.locked) return;
 	if (occ.start >= at.dayStart) handle(plugin, col, el, occ, "start");
 	if (occ.end <= at.dayEnd) handle(plugin, col, el, occ, "end");
 }

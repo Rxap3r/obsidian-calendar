@@ -199,8 +199,18 @@ export interface OmniCalendarSettings {
 	tasksInMiniCalendar: boolean;
 	/** Progress log of tasks (details view + "📝 n" hint in lists). Off hides it; entries are kept. */
 	tasksProgressLog: boolean;
-	/** "Create note" on tasks and subtasks, subtask descriptions and subtask notes (1.9.3). Off hides them; nothing is deleted. */
+	/** "Create note" on tasks – main switch: off also turns off the subtask part (1.9.3). Off hides; nothing is deleted. */
 	tasksNoteExtras: boolean;
+	/** Subtask descriptions, subtask notes and "Create note" on subtasks (1.9.4). Only counts while tasksNoteExtras is on. Off by default (maintainer's choice). */
+	tasksSubtaskExtras: boolean;
+	/** Tasks that belong to an event: the event's Tasks section, "Add task…", the "2/5" hint (1.9.4). Off hides; nothing is deleted. */
+	tasksOnEvents: boolean;
+	/** "Customize automatic lists" (1.9.4): off = all automatic lists in the usual order; on = the order and hidden ones below. */
+	tasksCustomLists: boolean;
+	/** Order of the automatic lists while customizing (all of them, each once). */
+	tasksListOrder: SmartListId[];
+	/** Automatic lists hidden while customizing. */
+	tasksHiddenLists: SmartListId[];
 	/** @deprecated replaced by sidebarView (migrated on load). */
 	sidebarOnStartup?: SidebarView;
 	notesFolder: string;

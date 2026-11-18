@@ -67,7 +67,7 @@ Download `main.js`, `manifest.json` and `styles.css` from the
 | How | What it opens |
 | --- | --- |
 | Ribbon icon 📅 "Omni Calendar" (left bar), **click** (desktop) | The calendar (full page) in the main area |
-| Ribbon icon 📅, **right-click** (desktop) or **tap** (mobile) | Menu: open calendar, show/hide the mini calendar or the day planner in the sidebar, new event, settings |
+| Ribbon icon 📅, **right-click** (desktop) or **tap** (mobile) | Menu: open calendar, show/hide the mini calendar or the day planner in the sidebar, new event, lock / unlock the calendar, settings |
 | Command **Calendar menu** | The same menu. Handy for the mobile toolbar (*Settings → Mobile → Manage toolbar options*) or a hotkey |
 | Command **Omni Calendar: Open calendar** | The calendar (full page) in the main area |
 | Command **Toggle mini calendar in sidebar** | Shows the mini calendar in the sidebar, or hides it if it's already there |
@@ -76,6 +76,16 @@ Download `main.js`, `manifest.json` and `styles.css` from the
 | Button ⤢ / ⇥ in the calendar's toolbar | In the day planner: **open the calendar** (full page). The sidebar then switches to the mini calendar, or, depending on *Settings → Omni Calendar → Display → When the day planner opens the calendar*, closes or keeps the Day planner. In the main area: **move this calendar to the sidebar** |
 
 You never have to drag anything. *Open calendar* always opens in the main area, even if a calendar already sits in a sidebar.
+
+**Lock the calendar** (new in **1.9.4**) against accidental changes, e.g. while scrolling on the phone:
+- **How:** the small **lock icon right of the title** ("Calendar 🔒"), *Lock calendar* in the ribbon menu, or the command
+  **Lock or unlock the calendar** (give it a hotkey if you like).
+- **Locked:** events can't be dragged or resized by their edges, and tapping, dragging or double-clicking on the calendar
+  doesn't create events. Clicking an event still opens it, and you can still change it on purpose with *Edit*. Tasks can't
+  be dragged in the calendar either.
+- **The icon:** a clear lock while locked, a faint open lock while not. Clicking it locks at once; unlocking asks first.
+- **Per device:** the lock is remembered on each device separately, so you can lock your phone and keep editing on your computer.
+- The day planner in the sidebar has no title line, so it shows no icon there, but the lock applies to it too.
 
 **Calendar in the sidebar:** in *Settings → Omni Calendar → **Display** → **Calendar in sidebar***, choose **Off / Mini calendar / Day planner** and the **side**
 (left or right). Changes apply **immediately** and are restored every time Obsidian starts. The toggle commands and the ribbon
@@ -203,6 +213,10 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   - **All:** every open task, grouped by when it's due.
   - **Done.**
   - **My lists:** your own lists, e.g. *Work* or *Home*, each with a colour. "Tasks" is the default list. Click **+** next to *My lists* to add one; right-click a list (or use ⋯) to rename, recolour or delete it. Deleting a list moves its tasks to "Tasks".
+  - **Your own order, fewer lists** (new in **1.9.4**): turn on *Settings → Omni Calendar → Tasks → Customize automatic lists*.
+    A list of the automatic lists appears: **drag** one by its handle (⋮⋮, also with a finger) to move it, e.g. *All* first,
+    and tap the **eye** to hide one you don't use. The Tasks page follows. Turning *Customize* off shows all of them in the
+    usual order again (your order is remembered). No tasks change, and your own lists always show.
 - **Sorting:** inside each group, **priority** first (high → low), then **time** (tasks with a time before tasks without).
 - **Quick add:** type into the field at the top and press **Enter**.
   - In *Today*, *Upcoming* and *Overdue* the task gets today's date; in *Tomorrow*, tomorrow's.
@@ -229,8 +243,12 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
     subtask, its notes as small chips, and the **⋯** button offers *Create note*, *Link note…* and removing a link.
     In the task lists you only see small icons: ≡ for a description, a note icon that opens the subtask's note.
   - The text of new task notes comes from *Settings → Omni Calendar → Notes → Task note template*.
-  - Don't need it? *Settings → Omni Calendar → Tasks → Create note and subtask details* hides all of this (Create note,
-    subtask descriptions and subtask notes). Turning it off deletes nothing; the task's own linked notes stay.
+  - Don't need all of it? Two switches in *Settings → Omni Calendar → Tasks*:
+    - **Create note for tasks** – the main switch. Off hides *Create note* on tasks **and** everything on subtasks.
+    - **Notes and descriptions on subtasks** (shown under it) – **off by default**, so subtasks stay plain: no ≡ button,
+      description, subtask notes or ⋯, while tasks keep *Create note*. Turn it on to use the subtask part described above.
+
+    Turning them off deletes nothing; the task's own linked notes stay.
 - **Progress log** (new in **1.9.2**): in a task's details there's a **Progress log** section. Type what you did or what
   happened and press **Enter** (on a phone: the send button). Each entry is saved with its **date and time**, like a sticky
   note; new entries go **below** the older ones, so the history reads top to bottom. It's separate from subtasks: subtasks
@@ -265,6 +283,9 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
 - **A new event** can get its tasks (and linked notes) right away in its dialog. They are attached when you click
   *Save*; *Cancel* forgets them. Saved to several calendars, they go with **one** copy, the first calendar in *Save to*
   (the dialog says which). A new repeating event gets them on its first repeat. *Create note* is offered once the event is saved.
+- Don't want tasks on events? *Settings → Omni Calendar → Tasks → Tasks on events* (new in **1.9.4**) hides the Tasks
+  section, *Add task…* and the "2/5" progress. The tasks stay in your lists (and without a time they count in the day's ☐ counter
+  again). *Track as task* isn't affected.
 - **Tasks move with their event:** when the event moves to another day (dialog, drag, or in Google/Outlook), its tasks
   move by the same number of days, so they stay on (or the same distance before) the event. Times are kept.
 - **Deleting an event deletes its tasks**, after asking (deleting one repeat deletes only that repeat's tasks).
@@ -604,8 +625,11 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 | **Tasks** | Use tasks | Main switch for everything task-related. Off hides it but deletes nothing |
 | | Tasks in sidebar | Shows the Tasks page in the sidebar (same side as the calendar), independent of mini calendar / day planner |
 | | Done section in lists | Collapsed "Done" section in your lists and *All* |
+| | Tasks on events | Events can have their own tasks: Tasks section, *Add task…*, "2/5" (on by default). Off only hides them |
+| | Customize automatic lists | Off by default. On: drag the automatic lists (Today, Tomorrow, Upcoming, …) into your own order and hide some with the eye |
 | | Progress log | Dated updates on a task in its details view, "📝 3" in the lists (on by default). Off only hides it |
-| | Create note and subtask details | *Create note* on tasks and subtasks, descriptions and notes on subtasks (on by default). Off only hides them |
+| | Create note for tasks | *Create note* on tasks (on by default). Off also turns off the subtask part below. Only hides, deletes nothing |
+| | Notes and descriptions on subtasks | Descriptions, linked notes and *Create note* on subtasks (**off** by default; shown while *Create note for tasks* is on) |
 | | Upcoming list | How far ahead the "Upcoming" list looks: standard periods (default 7 days) or custom |
 | | Tasks in the calendar | Timed tasks as light blocks in Week/Day, one counter per day for the others (on by default) |
 | | Completed tasks in the calendar | *Struck through* (default) or *Hidden* |
@@ -615,7 +639,7 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 | | Default priority / Default list | Used for new tasks |
 | | Lists | Rename, recolour, add or delete task lists ("Tasks" is the default list and can't be deleted) |
 | **Notes** | Notes folder / Note template | Where *Create note* puts notes, and what goes in them |
-| | Task note template | What goes in notes made with *Create note* on a task or subtask (placeholders listed in the setting). Shown while *Create note and subtask details* is on |
+| | Task note template | What goes in notes made with *Create note* on a task or subtask (placeholders listed in the setting). Shown while *Create note for tasks* is on |
 
 **Periods ("how long / how far" settings):** they all offer the **same standard choices**: *7 days, 2 weeks, 30 days, 60 days, 90 days, 6 months, 1 year*. A few add their own extras (*Never*, *Hidden*, *Tomorrow only*, *Everything*, *Same as agenda length*). And they all have **Custom…**. It shows a number and a unit (days, weeks, months, years), for example *2 years* or *200 days*. Values over the maximum are limited, and the field then shows the value that is used.
 
@@ -630,6 +654,7 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 - Create event linked to current note
 - Refresh external calendars
 - Export local events to .ics file
+- Lock or unlock the calendar (no dragging or creating by tapping)
 - Open tasks / Toggle tasks in sidebar / Create new task (only while tasks are turned on)
 
 ## Where data is stored

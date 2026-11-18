@@ -96,7 +96,7 @@ export class EventDrag {
 	 * `segStart` is where the block starts on this day (later than the event's start if it began the day before).
 	 */
 	grabbable(el: HTMLElement, occ: CalendarOccurrence, segStart: Date) {
-		if (!canDrag(occ)) return;
+		if (!canDrag(occ) || this.plugin.lock.locked) return;
 		el.draggable = true;
 		el.addEventListener("dragstart", (e) => {
 			e.dataTransfer?.setData(DRAG_MIME, occ.key);
@@ -117,6 +117,7 @@ export class EventDrag {
 
 	/** Make a task block of the week / day grid draggable to another time or day. */
 	grabbableTask(el: HTMLElement, t: Task, slot: { start: Date; end: Date }) {
+		if (this.plugin.lock.locked) return;
 		el.draggable = true;
 		el.addEventListener("dragstart", (e) => {
 			e.dataTransfer?.setData(TASK_MIME, t.id);

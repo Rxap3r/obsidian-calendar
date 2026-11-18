@@ -61,7 +61,9 @@ export function renderTimeGrid(host: CalendarHost, first: Date, days: number, vi
 			const chip = createChip(plugin, cell, o, { draggable: true, span: true });
 			if (!isSameDay(o.start, day)) chip.addClass("ch-continued");
 		}
-		cell.addEventListener("dblclick", () => new EventModal(plugin, { start: day, allDay: true }).open());
+		cell.addEventListener("dblclick", () => {
+			if (!plugin.lock.locked) new EventModal(plugin, { start: day, allDay: true }).open();
+		});
 		host.drag.dropTarget(cell, day, null, { clearTaskTime: true });
 	}
 

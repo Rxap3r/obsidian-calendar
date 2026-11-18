@@ -1,8 +1,10 @@
 import { Setting } from "obsidian";
 import { nextColor } from "../defaults";
-import { DEFAULT_TASK_LIST, PRIORITY_NAMES } from "../tasks";
+import { DEFAULT_TASK_LIST, PRIORITY_NAMES, SMART_LISTS } from "../tasks";
 import { deleteTaskList } from "../modals/confirmations";
 import { periodSetting, SettingsContext } from "./controls";
+import { sortableList } from "./listOrder";
+import { SmartListId } from "../types";
 
 /** Tab "Tasks": main switch, sidebar, completed tasks, defaults, lists. */
 export function tasksTab(ctx: SettingsContext, el: HTMLElement) {
@@ -53,18 +55,77 @@ export function tasksTab(ctx: SettingsContext, el: HTMLElement) {
 			})
 		);
 	new Setting(el)
-		.setName("Create note and subtask details")
-		.setDesc("“Create note” on tasks and subtasks, plus a short description and linked notes for each subtask. Turning it off only hides them; nothing is deleted.")
+		.setName("Create note for tasks")
+		.setDesc("“Create note” on tasks. Turning it off also turns off the notes and descriptions on subtasks below. It only hides them; nothing is deleted.")
 		.addToggle((t) =>
 			t.setValue(s.tasksNoteExtras).onChange(async (v) => {
 				s.tasksNoteExtras = v;
+				// Redraw: the subtask switch below appears / disappears.
+				await ctx.save(true);
+				store.trigger("changed");
+			})
+		);
+	if (s.tasksNoteExtras) {
+		new Setting(el)
+			.setName("Notes and descriptions on subtasks")
+			.setDesc("A short description, linked notes and “Create note” for each subtask. Off (the default) keeps subtasks simple; nothing is deleted.")
+			.setClass("ch-sub-setting")
+			.addToggle((t) =>
+				t.setValue(s.tasksSubtaskExtras).onChange(async (v) => {
+					s.tasksSubtaskExtras = v;
+					await ctx.save();
+					store.trigger("changed");
+				})
+			);
+	}
+	new Setting(el)
+		.setName("Tasks on events")
+		.setDesc("Events can have their own tasks: a Tasks section in the event, “Add task…” in its menu and the “2/5” progress. Turning it off only hides them; the tasks stay in your lists. “Track as task” isn't affected.")
+		.addToggle((t) =>
+			t.setValue(s.tasksOnEvents).onChange(async (v) => {
+				s.tasksOnEvents = v;
 				await ctx.save();
 				store.trigger("changed");
+				ctx.plugin.store.notify();
 			})
 		);
 	periodSetting(ctx, el, "Upcoming list", "How far ahead the “Upcoming” task list looks (today plus this many days). Later tasks are under “All”.",
 		s.tasksUpcomingDays, {},
 		1, 3650, (v) => { s.tasksUpcomingDays = v; store.trigger("changed"); });
+
+	new Setting(el).setName("Automatic lists").setHeading();
+	new Setting(el)
+		.setName("Customize automatic lists")
+		.setDesc("Put Today, Tomorrow, Upcoming, … in your own order and hide the ones you don't use. Off shows all of them in the usual order. Nothing changes on your tasks.")
+		.addToggle((t) =>
+			t.setValue(s.tasksCustomLists).onChange(async (v) => {
+				s.tasksCustomLists = v;
+				await ctx.save(true);
+				store.trigger("changed");
+			})
+		);
+	if (s.tasksCustomLists) {
+		const box = el.createDiv({ cls: "ch-list-order-setting" });
+		box.createDiv({ cls: "setting-item-description", text: "Drag a list by its handle to move it; the eye hides or shows it." });
+		sortableList(box, s.tasksListOrder.map((id) => {
+			const l = SMART_LISTS.find((x) => x.id === id) ?? SMART_LISTS[0];
+			return { id, name: l.name, icon: l.icon, hidden: s.tasksHiddenLists.includes(id) };
+		}), {
+			onReorder: async (ids) => {
+				s.tasksListOrder = ids as SmartListId[];
+				await ctx.save();
+				store.trigger("changed");
+			},
+			onToggle: async (id, hidden) => {
+				const set = new Set(s.tasksHiddenLists);
+				if (hidden) set.add(id as SmartListId);
+				else set.delete(id as SmartListId);
+				s.tasksHiddenLists = SMART_LISTS.map((x) => x.id).filter((x) => set.has(x));
+				await ctx.save(true);
+				store.trigger("changed");
+			},
+		});
+	}
 
 	new Setting(el).setName("In the calendar").setHeading();
 	new Setting(el)

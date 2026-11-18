@@ -75,11 +75,16 @@ export class Component {
 export class MarkdownRenderChild extends Component { constructor(public containerEl: HTMLElement) { super(); } }
 export class ItemView extends Component {
 	contentEl: HTMLElement;
+	/** Like Obsidian: the view's header (title line) and its content. */
+	containerEl: HTMLElement;
 	app: any;
 	constructor(public leaf: any) {
 		super();
-		this.contentEl = document.createElement("div");
-		this.contentEl.className = "view-content";
+		this.containerEl = document.createElement("div");
+		this.containerEl.className = "workspace-leaf-content";
+		const header = this.containerEl.createDiv({ cls: "view-header" });
+		header.createDiv({ cls: "view-header-title-container" }).createDiv({ cls: "view-header-title", text: "Calendar" });
+		this.contentEl = this.containerEl.createDiv({ cls: "view-content" });
 		this.app = leaf.app;
 	}
 	async setState() {}

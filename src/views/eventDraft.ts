@@ -24,35 +24,38 @@ export function draftExtras(plugin: OmniCalendarPlugin, container: HTMLElement, 
 			.setDesc("Show this event in your task lists, to tick it off when it's done.")
 			.setClass("ch-track-setting")
 			.addToggle((t) => t.setValue(draft.track).onChange((v) => (draft.track = v)));
-		const wrap = container.createDiv({ cls: "ch-event-tasks" });
-		wrap.createDiv({ cls: "ch-task-section-head" }).createSpan({ text: "Tasks" });
-		const list = wrap.createDiv({ cls: "ch-event-task-list" });
-		const add = wrap.createEl("input", { type: "text", cls: "ch-input ch-event-task-add", attr: { placeholder: "+ Add a task (Enter)" } });
-		const render = () => {
-			list.empty();
-			draft.tasks.forEach((title, i) => {
-				const row = list.createDiv({ cls: "ch-event-task ch-draft-task" });
-				row.createSpan({ cls: "ch-task-checkbox ch-small ch-draft-check", attr: { "aria-hidden": "true" } });
-				row.createSpan({ cls: "ch-event-task-title", text: title });
-				const del = row.createEl("button", { cls: "ch-icon-btn", attr: { "aria-label": "Remove task" } });
-				setIcon(del, "x");
-				del.onclick = (e) => {
-					e.stopPropagation();
-					draft.tasks.splice(i, 1);
-					render();
-				};
+		// The event's own tasks (setting "Tasks on events"; "Track as task" above stays either way).
+		if (plugin.settings.tasksOnEvents) {
+			const wrap = container.createDiv({ cls: "ch-event-tasks" });
+			wrap.createDiv({ cls: "ch-task-section-head" }).createSpan({ text: "Tasks" });
+			const list = wrap.createDiv({ cls: "ch-event-task-list" });
+			const add = wrap.createEl("input", { type: "text", cls: "ch-input ch-event-task-add", attr: { placeholder: "+ Add a task (Enter)" } });
+			const render = () => {
+				list.empty();
+				draft.tasks.forEach((title, i) => {
+					const row = list.createDiv({ cls: "ch-event-task ch-draft-task" });
+					row.createSpan({ cls: "ch-task-checkbox ch-small ch-draft-check", attr: { "aria-hidden": "true" } });
+					row.createSpan({ cls: "ch-event-task-title", text: title });
+					const del = row.createEl("button", { cls: "ch-icon-btn", attr: { "aria-label": "Remove task" } });
+					setIcon(del, "x");
+					del.onclick = (e) => {
+						e.stopPropagation();
+						draft.tasks.splice(i, 1);
+						render();
+					};
+				});
+			};
+			add.addEventListener("keydown", (e) => {
+				if (e.key !== "Enter") return;
+				e.preventDefault();
+				const title = add.value.trim();
+				if (!title) return;
+				draft.tasks.push(title);
+				add.value = "";
+				render();
 			});
-		};
-		add.addEventListener("keydown", (e) => {
-			if (e.key !== "Enter") return;
-			e.preventDefault();
-			const title = add.value.trim();
-			if (!title) return;
-			draft.tasks.push(title);
-			add.value = "";
 			render();
-		});
-		render();
+		}
 	}
 	linkedNotesBlock(plugin, container.createDiv({ cls: "ch-event-notes" }), {
 		get: () => draft.links,

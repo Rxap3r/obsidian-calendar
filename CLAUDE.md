@@ -74,6 +74,7 @@ Shared helpers live in one place. Before writing a small helper (error text, plu
 | --- | --- |
 | `main.ts` | Plugin entry: start-up, ribbon icon + calendar menu, opening pages (`openCalendar`, `openTasks`), `persist`, refresh timer, event notes |
 | `commands.ts` | All commands (`registerCommands`). The ids must stay stable |
+| `calendarLock.ts` | `CalendarLock` (`plugin.lock`): "Lock calendar", per device; checked wherever dragging / creating starts |
 | `sidebar.ts` | `SidebarManager` (`plugin.sidebar`): mini calendar, day planner and Tasks in the sidebar (`apply`, `applyTasks`, `toggle`, `expand`, `syncSetting`) |
 | `settingsData.ts` | `normalizePluginData`: loading and checking `data.json`, defaults, **migrations** |
 | `defaults.ts` | `DEFAULT_SETTINGS`, `PALETTE`, `nextColor` |
@@ -176,6 +177,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 | `leaf.updateHeader()` to refresh the tab title ("Calendar" ↔ "Day planner") | `CalendarView.updateLocationButton` | – |
 | `app.setting.open()` / `openTabById()` for the menu's "Settings" entry | `main.ts` `openSettings` | – |
 | `localStorage.getItem("language")` = Obsidian's app language (nothing stored = English), for *Language of dates* | `dateUtils.ts` `applyDateLanguage` | English |
+| `.view-header-title-container` / `.view-header-title` (Obsidian's view header DOM) for the lock icon right of the title | `CalendarView.updateLockIcon` | no icon; menu entry + command still lock |
 
 ## Sidebar behaviour (settings in Display)
 
@@ -298,10 +300,22 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Where we stopped (keep this section up to date at the end of a session)
 
-**State:** everything up to **1.9.2** is merged and released (tags 1.8.0 … 1.9.2, PRs #28–#36). **1.9.3** (details view
+**State:** everything up to **1.9.3** is merged and released (tags 1.8.0 … 1.9.3, PRs #28–#37). **1.9.3** (details view
 step c – "Create note" for tasks and subtasks, subtask notes and descriptions, `taskNoteTemplate`, switch `tasksNoteExtras`)
-is in a PR from `dev-branch`; once it is merged and tagged, the **next change needs 1.9.4** (or 1.10.0 for repeating
-tasks – the next roadmap step is a bigger feature, so 1.10.0 is likely).
+is merged and released (PR #37, tag 1.9.3). **1.9.4** is in a PR from `dev-branch` (once merged and tagged, the next
+change needs **1.9.5**, or **1.10.0** for repeating tasks). 1.9.4 contains: the step c switch split
+in two (`tasksNoteExtras` = main "Create note for tasks", `tasksSubtaskExtras` = "Notes and descriptions on subtasks");
+switch `tasksOnEvents` ("Tasks on events": event Tasks section, *Add task…*, "2/5", tracked-event progress and the
+"mark open tasks done?" question; off → untimed event tasks count in the day counter; check with `eventTasksOn(s)`);
+"Customize automatic lists" (`tasksCustomLists`, off by default; maintainer preferred one switch + a sortable list over
+a switch per list): `tasksListOrder` (all ids once) + `tasksHiddenLists`, edited with `settings/listOrder.ts`
+(`sortableList`: own pointer-event drag – works with touch – and an eye button); `visibleSmartLists(s)`; TasksView falls
+back to the first visible one, or the default list. *Track as task* stays always on (maintainer: "it's just one button").
+**Lock the calendar** (`calendarLock.ts`, `plugin.lock`): blocks only accidental changes – drag (events, tasks, month
+chips), resize edges, tap/drag/long-press to create on the grid, double-click to create; clicking still opens, *Edit* works.
+Stored per device (`app.saveLocalStorage("omni-calendar-locked")`, not data.json). **Not** a toolbar button (toolbar is
+full; maintainer wants to clean it up later): ribbon menu *Lock/Unlock calendar*, command `toggle-calendar-lock`, and a lock
+icon right of the view title (clear when locked, faint when not; click locks, unlocking from the icon asks first).
 
 **Next on the roadmap (agreed order):**
 1. **1.10** – repeating tasks, tasks on repeating events per repeat, *Track as task* for repeats.
@@ -334,8 +348,11 @@ events that continue from the previous day; *Language of dates* with Obsidian in
   covers subtasks (`linkOwners`). Task dialog: ≡ button per subtask (`ch-sub-extra-btn`) opens description + notes – this
   replaced the "add description" link of the design; its *Create note* saves the task first. Details view: grey
   description, chips, ⋯ menu (`views/tasks/subtaskNotes.ts`). Lists: ≡ and note icons only (`taskRow.ts`).
-  Switch `tasksNoteExtras` (Tasks tab, on by default; the maintainer asked for it because it may confuse some people)
-  hides all of step c incl. the Notes tab's task template; task-level linked notes (1.7) stay; nothing is deleted.
+  Switches (Tasks tab, both on by default; the maintainer asked for them because it may confuse some people):
+  `tasksNoteExtras` "Create note for tasks" = main switch, off hides all of step c incl. the Notes tab's task template;
+  `tasksSubtaskExtras` "Notes and descriptions on subtasks" (1.9.4, shown under it, **off by default** – maintainer's
+  choice; tests that use it switch it on) hides only the subtask part. Check
+  with `subtaskExtrasOn(settings)` (both on). Task-level linked notes (1.7) stay; nothing is deleted.
 - 1.9.1: setting `dateLanguage` (all date formatting via `formatDate` / `dateLang()` in `dateUtils.ts`, never
   `toLocaleDateString(undefined, …)`); Microsoft sign-in hint for which page opens; README *Troubleshooting sign-in*.
 

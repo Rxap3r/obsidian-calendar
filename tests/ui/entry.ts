@@ -91,7 +91,11 @@ function fakeWorkspace() {
 			listSecrets: () => Object.keys(secrets),
 		},
 		workspace: ws,
+		// Obsidian's per-device storage (window.deviceStorage in the tests).
+		loadLocalStorage: (k: string) => (window as any).deviceStorage[k] ?? null,
+		saveLocalStorage: (k: string, v: unknown) => { if (v === null) delete (window as any).deviceStorage[k]; else (window as any).deviceStorage[k] = v; },
 	};
+	(window as any).deviceStorage ??= {};
 	(window as any).ws = ws;
 	(window as any).secrets = secrets;
 

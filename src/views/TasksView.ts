@@ -1,6 +1,6 @@
 import { Menu, setIcon, ViewStateResult } from "obsidian";
 import { SmartListId, Task, TaskList } from "../types";
-import { DEFAULT_TASK_LIST, SMART_LISTS, TaskGroup } from "../tasks";
+import { DEFAULT_TASK_LIST, SMART_LISTS, TaskGroup, visibleSmartLists } from "../tasks";
 import { addDays, MS_MIN, toDateKey } from "../dateUtils";
 import { periodLabel } from "../periods";
 import { plural } from "../util";
@@ -97,7 +97,11 @@ export class TasksView extends OmniView {
 	render() {
 		if (!this.rootEl) return;
 		const store = this.plugin.tasks;
-		if (!this.isSmart(this.selected) && !store.lists.some((l) => l.id === this.selected)) this.selected = "today";
+		// A deleted list or a hidden automatic list: show the first visible automatic list (or the default list).
+		const hidden = this.isSmart(this.selected) && !visibleSmartLists(this.plugin.settings).some((l) => l.id === this.selected);
+		if (hidden || (!this.isSmart(this.selected) && !store.lists.some((l) => l.id === this.selected))) {
+			this.selected = visibleSmartLists(this.plugin.settings)[0]?.id ?? DEFAULT_TASK_LIST.id;
+		}
 		const scroll = this.rootEl.querySelector(".ch-tasks-main")?.scrollTop ?? 0;
 		this.rootEl.empty();
 		this.rootEl.toggleClass("ch-narrow", this.narrow);
@@ -135,7 +139,7 @@ export class TasksView extends OmniView {
 			el.onclick = () => this.select(id);
 			return el;
 		};
-		for (const s of SMART_LISTS) {
+		for (const s of visibleSmartLists(this.plugin.settings)) {
 			const n = store.count(s.id);
 			// The narrow bar only shows Overdue when there is something overdue.
 			if (this.narrow && s.id === "overdue" && !n && this.selected !== "overdue") continue;

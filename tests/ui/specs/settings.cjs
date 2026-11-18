@@ -185,7 +185,7 @@ test("commands keep their ids; 'Refresh' says when calendars failed", {}, async 
 	const ids = await page.evaluate(() => plugin.commands.map((c) => c.id).sort());
 	// Users' hotkeys are stored by these ids: never rename them.
 	eq(ids, ["calendar-menu", "export-ics", "new-event", "new-event-from-note", "new-task", "open-agenda", "open-calendar", "open-day", "open-month",
-		"open-sidebar", "open-tasks", "open-week", "refresh", "toggle-sidebar-full", "toggle-sidebar-mini", "toggle-tasks-sidebar"], "command ids");
+		"open-sidebar", "open-tasks", "open-week", "refresh", "toggle-calendar-lock", "toggle-sidebar-full", "toggle-sidebar-mini", "toggle-tasks-sidebar"], "command ids");
 	const r = await page.evaluate(async () => {
 		const run = async () => { notices.length = 0; await plugin.commands.find((c) => c.id === "refresh").callback(); await new Promise((res) => setTimeout(res, 300)); return notices.slice(); };
 		const bad = await run(); // the ICS fixture has no address, so its refresh fails

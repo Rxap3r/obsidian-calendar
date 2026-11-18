@@ -1,6 +1,6 @@
 import { Events } from "obsidian";
 import type OmniCalendarPlugin from "./main";
-import { SmartListId, Subtask, Task, TaskData, TaskEventLink, TaskList, TaskLogEntry, TaskPriority } from "./types";
+import { OmniCalendarSettings, SmartListId, Subtask, Task, TaskData, TaskEventLink, TaskList, TaskLogEntry, TaskPriority } from "./types";
 import type { EventNow } from "./store";
 import { addDays, dateLang, dayDiff, MS_DAY, parseLocal, startOfDay, timeKeyToMinutes, toDateKey, uid } from "./dateUtils";
 
@@ -25,6 +25,25 @@ export interface TaskGroup {
 	/** Shown collapsed (the Done section). */
 	collapsed?: boolean;
 	overdue?: boolean;
+}
+
+/** Tasks on events are shown (the event's Tasks section, "Add task…", "2/5"): Tasks on, and "Tasks on events" on. */
+export function eventTasksOn(s: OmniCalendarSettings): boolean {
+	return s.tasksEnabled && s.tasksOnEvents;
+}
+
+/** The automatic lists to show, in order: all in the usual order, or (when customizing) the user's order without hidden ones. */
+export function visibleSmartLists(s: OmniCalendarSettings): typeof SMART_LISTS {
+	if (!s.tasksCustomLists) return SMART_LISTS;
+	return s.tasksListOrder
+		.filter((id) => !s.tasksHiddenLists.includes(id))
+		.map((id) => SMART_LISTS.find((l) => l.id === id))
+		.filter((l): l is (typeof SMART_LISTS)[number] => !!l);
+}
+
+/** Subtask descriptions and notes are shown: their own switch, and the main "Create note for tasks" switch. */
+export function subtaskExtrasOn(s: OmniCalendarSettings): boolean {
+	return s.tasksNoteExtras && s.tasksSubtaskExtras;
 }
 
 /** Bring stored task data into a valid shape (missing fields, removed lists, …). */
@@ -258,14 +277,15 @@ export class TaskStore extends Events {
 
 	/**
 	 * Tasks shown in the calendar on one day (YYYY-MM-DD): the day's tasks, except completed ones when
-	 * the setting hides them. Tasks of an event are left out unless they have a time: the event shows them ("2/5").
+	 * the setting hides them. Tasks of an event are left out unless they have a time: the event shows them ("2/5") –
+	 * except when "Tasks on events" is off: then they count like any other task.
 	 */
 	forCalendarDay(date: string): Task[] {
 		const s = this.plugin.settings;
 		if (!s.tasksEnabled || !s.tasksInCalendar) return [];
 		return this.items
 			// The event of a "Track as task" entry is already in the calendar (with a tick circle).
-			.filter((t) => t.date === date && (s.tasksCalendarShowDone || !t.done) && (!t.event || (!!t.start && !t.event.self)))
+			.filter((t) => t.date === date && (s.tasksCalendarShowDone || !t.done) && (!t.event || (!t.event.self && (!!t.start || !s.tasksOnEvents))))
 			.sort((a, b) => Number(a.done) - Number(b.done) || compareTasks(a, b));
 	}
 

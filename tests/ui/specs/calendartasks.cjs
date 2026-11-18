@@ -41,6 +41,34 @@ test("desktop: event dialog – add tasks, tick off, '2/5' hint on the event, ta
 	eq(await page.inputValue(".ch-title-input"), "Design review", "opens the event dialog");
 });
 
+test("desktop: setting 'Tasks on events' off – no Tasks section, Add task… or 2/5; the tasks stay and count per day", {}, async ({ page }) => {
+	await page.evaluate(async () => {
+		const occ = plugin.store.getOccurrencesForDay(new Date(2026, 10, 14)).find((o) => o.title === "Design review");
+		const ev = { key: "local:" + occ.eventId, title: occ.title, date: "2026-11-14" };
+		await plugin.tasks.upsert(plugin.tasks.draft({ title: "Prepare slides", date: "2026-11-14", event: ev }));
+		await plugin.tasks.upsert(plugin.tasks.draft({ title: "Send summary", date: "2026-11-14", event: ev, done: true }));
+		plugin.settings.tasksOnEvents = false; plugin.tasks.trigger("changed"); plugin.store.notify();
+	});
+	await dayView(page);
+	const block = page.locator(".ch-tg-event", { hasText: "Design review" });
+	eq(await block.locator(".ch-task-hint").count(), 0, "no 2/5 on the event");
+	eq(await page.locator('.ch-tg-allday-cell .ch-day-tasks[data-date="2026-11-14"]').textContent(), "1", "the event's open task counts in the day counter");
+	await block.click({ button: "right" });
+	const items = await page.evaluate(() => window.lastMenu.items.map((i) => i.t));
+	expect(!items.includes("Add task…") && items.includes("Track as task"), `menu without Add task…, Track as task stays: ${items}`);
+	await block.click();
+	await settle(page);
+	eq([await page.locator(".ch-event-tasks").count(), await page.locator(".ch-track-setting").count()], [0, 1], "event dialog: no Tasks section, Track as task stays");
+	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).click();
+	await page.evaluate(() => new __eventMod.EventModal(plugin, { start: new Date(2026, 10, 20, 9) }).open());
+	await settle(page);
+	eq([await page.locator(".ch-event-tasks").count(), await page.locator(".ch-track-setting").count()], [0, 1], "new-event dialog: the same");
+	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).click();
+	eq(await page.evaluate(() => plugin.tasks.items.filter((t) => t.event).length), 2, "tasks kept");
+	await page.evaluate(() => { tab.constructor.tab = "tasks"; tab.display(); });
+	expect(await page.evaluate(() => [...tab.containerEl.querySelectorAll(".setting-item-name")].some((e) => e.textContent === "Tasks on events")), "switch in the Tasks tab");
+});
+
 test("desktop: tasks and notes on a Google event are kept in Obsidian only", {}, async ({ page }) => {
 	await page.evaluate(() => { window.updates = []; plugin.store.updateRemote = async (o, i) => window.updates.push(i); });
 	await dayView(page, 15);
