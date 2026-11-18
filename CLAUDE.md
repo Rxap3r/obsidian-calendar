@@ -74,6 +74,7 @@ Shared helpers live in one place. Before writing a small helper (error text, plu
 | --- | --- |
 | `main.ts` | Plugin entry: start-up, ribbon icon + calendar menu, opening pages (`openCalendar`, `openTasks`), `persist`, refresh timer, event notes |
 | `commands.ts` | All commands (`registerCommands`). The ids must stay stable |
+| `calendarLock.ts` | `CalendarLock` (`plugin.lock`): "Lock calendar", per device; checked wherever dragging / creating starts |
 | `sidebar.ts` | `SidebarManager` (`plugin.sidebar`): mini calendar, day planner and Tasks in the sidebar (`apply`, `applyTasks`, `toggle`, `expand`, `syncSetting`) |
 | `settingsData.ts` | `normalizePluginData`: loading and checking `data.json`, defaults, **migrations** |
 | `defaults.ts` | `DEFAULT_SETTINGS`, `PALETTE`, `nextColor` |
@@ -176,6 +177,7 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 | `leaf.updateHeader()` to refresh the tab title ("Calendar" ↔ "Day planner") | `CalendarView.updateLocationButton` | – |
 | `app.setting.open()` / `openTabById()` for the menu's "Settings" entry | `main.ts` `openSettings` | – |
 | `localStorage.getItem("language")` = Obsidian's app language (nothing stored = English), for *Language of dates* | `dateUtils.ts` `applyDateLanguage` | English |
+| `.view-header-title-container` / `.view-header-title` (Obsidian's view header DOM) for the lock icon right of the title | `CalendarView.updateLockIcon` | no icon; menu entry + command still lock |
 
 ## Sidebar behaviour (settings in Display)
 
@@ -308,13 +310,13 @@ switch `tasksOnEvents` ("Tasks on events": event Tasks section, *Add task…*, "
 a switch per list): `tasksListOrder` (all ids once) + `tasksHiddenLists`, edited with `settings/listOrder.ts`
 (`sortableList`: own pointer-event drag – works with touch – and an eye button); `visibleSmartLists(s)`; TasksView falls
 back to the first visible one, or the default list. *Track as task* stays always on (maintainer: "it's just one button").
+**Lock the calendar** (`calendarLock.ts`, `plugin.lock`): blocks only accidental changes – drag (events, tasks, month
+chips), resize edges, tap/drag/long-press to create on the grid, double-click to create; clicking still opens, *Edit* works.
+Stored per device (`app.saveLocalStorage("omni-calendar-locked")`, not data.json). **Not** a toolbar button (toolbar is
+full; maintainer wants to clean it up later): ribbon menu *Lock/Unlock calendar*, command `toggle-calendar-lock`, and a lock
+icon right of the view title (clear when locked, faint when not; click locks, unlocking from the icon asks first).
 
 **Next on the roadmap (agreed order):**
-0. **Lock the calendar ("view mode")** – agreed design, build next as its own step: blocks only accidental changes
-   (dragging, resizing, tap/drag to create on the grid); clicking still opens details, *Edit* still works. **Not** a toolbar
-   button (the toolbar is already full; the maintainer wants to clean it up later). Instead: an entry *Lock calendar /
-   Unlock calendar* in the ribbon's Omni Calendar menu, a command (hotkey), and a small state icon next to the view's
-   title (lock, or eye / pencil-book – ask which). Stored per device (not in the synced `data.json`).
 1. **1.10** – repeating tasks, tasks on repeating events per repeat, *Track as task* for repeats.
 2. Later: reminders and notifications (README roadmap), then the "Other ideas".
 3. Undecided: a progress log on events (see the roadmap note above; only if the maintainer asks).

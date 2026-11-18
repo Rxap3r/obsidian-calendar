@@ -22,6 +22,7 @@ export function registerCommands(plugin: OmniCalendarPlugin) {
 	for (const mode of ["month", "week", "day", "agenda"] as ViewMode[]) {
 		add(`open-${mode}`, `Open ${mode} view`, () => void plugin.openCalendar(new Date(), mode));
 	}
+	add("toggle-calendar-lock", "Lock or unlock the calendar (no dragging or creating by tapping)", () => void plugin.lock.toggle());
 	add("export-ics", "Export local events to .ics file", () => void exportLocalEvents(plugin));
 
 	// Tasks (hidden while tasks are turned off).

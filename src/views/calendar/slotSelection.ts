@@ -42,7 +42,7 @@ export class SlotSelection {
 
 		col.addEventListener("pointerdown", (down) => {
 			if (down.button !== 0 || !down.isPrimary) return;
-			if (this.active || EventModal.openCount > 0) return;
+			if (this.active || EventModal.openCount > 0 || this.plugin.lock.locked) return;
 			const touch = down.pointerType === "touch";
 			const startX = down.clientX;
 			const startY = down.clientY;

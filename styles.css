@@ -882,3 +882,12 @@
 .ch-sortable-icon svg, .ch-sortable-handle svg { width: 15px; height: 15px; }
 .ch-sortable-name { flex: 1; min-width: 0; }
 .ch-sortable-eye { background: transparent; box-shadow: none; color: var(--text-muted); }
+
+/* ---------------------------------------------------------------- lock icon next to the calendar's title (1.9.4) */
+.ch-lock-indicator {
+	display: inline-flex; align-items: center; padding: 2px 4px; margin-left: 4px; height: auto;
+	background: transparent; box-shadow: none; color: var(--text-faint); opacity: 0.5; flex: none;
+}
+.ch-lock-indicator:hover { opacity: 1; }
+.ch-lock-indicator.is-locked { color: var(--text-accent); opacity: 1; }
+.ch-lock-indicator svg { width: 14px; height: 14px; }

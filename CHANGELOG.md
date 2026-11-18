@@ -15,6 +15,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 - New *Settings → Omni Calendar → Tasks → Customize automatic lists*: drag the automatic lists (Today, Tomorrow,
   Upcoming, …) into your own order, e.g. *All* first, and hide the ones you don't use with the eye button. Works with a
   finger on the phone too. Off shows them all in the usual order. No tasks change.
+- **Lock the calendar** against accidental changes: with the lock icon right of the calendar's title, *Lock calendar* in
+  the ribbon menu, or a command. While locked, nothing can be dragged or resized and tapping the calendar creates no
+  events; clicking an event still opens it. Unlocking from the icon asks first. Remembered per device.
 
 ## Known bugs
 

@@ -154,7 +154,7 @@ export function createChip(
 		occurrenceMenu(plugin, occ, e);
 	});
 	chip.addEventListener("pointerdown", (e) => e.stopPropagation());
-	if (opts.draggable && canDrag(occ)) {
+	if (opts.draggable && canDrag(occ) && !plugin.lock.locked) {
 		chip.draggable = true;
 		chip.addEventListener("dragstart", (e) => {
 			e.dataTransfer?.setData(DRAG_MIME, occ.key);

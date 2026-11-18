@@ -408,4 +408,74 @@ test("mobile: drag an event's bottom edge with the finger", { mobile: true }, as
 	eq(await page.evaluate(() => [document.querySelectorAll(".modal").length, document.querySelectorAll(".ch-tg-selection").length]), [0, 0], "no dialog, no new-event selection");
 });
 
+
+test("desktop: lock the calendar – icon next to the title, no dragging / resizing / creating; unlocking asks; per device", {}, async ({ page }) => {
+	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "day"));
+	await settle(page);
+	const icon = () => page.evaluate(() => { const i = view.containerEl.querySelector(".view-header-title + .ch-lock-indicator"); return i ? [i.classList.contains("is-locked"), i.getAttribute("aria-label")] : null; });
+	const r0 = await icon();
+	expect(r0 && r0[0] === false, `faint open lock right of the title while unlocked: ${r0}`);
+	const parts = () => page.evaluate(() => [document.querySelectorAll('.ch-tg-event[draggable="true"]').length, document.querySelectorAll(".ch-tg-resize").length]);
+	const before = await parts();
+	expect(before[0] > 0 && before[1] > 0, `draggable events and resize edges while unlocked: ${before}`);
+	// Clicking the icon locks at once.
+	await page.evaluate(() => view.containerEl.querySelector(".ch-lock-indicator").click());
+	await settle(page);
+	eq([(await icon())[0], await page.evaluate(() => [plugin.lock.locked, window.deviceStorage["omni-calendar-locked"]])], [true, [true, "1"]], "locked, stored on this device");
+	eq(await parts(), [0, 0], "no dragging, no resize edges");
+	// Pressing on an empty slot creates nothing; clicking an event still opens it.
+	const col = await page.locator(".ch-tg-col").first().boundingBox();
+	await page.mouse.click(col.x + col.width / 2, col.y + 40);
+	await settle(page);
+	eq(await page.evaluate(() => __eventMod.EventModal.openCount), 0, "no new-event dialog");
+	await page.locator(".ch-tg-event", { hasText: "Design review" }).click();
+	await settle(page);
+	eq(await page.inputValue(".ch-title-input"), "Design review", "an event still opens (and can be edited on purpose)");
+	await page.locator(".ch-modal-buttons button", { hasText: "Cancel" }).click();
+	// Month: chips can't be dragged, double-click doesn't create.
+	await page.evaluate(() => view.goTo(new Date(2026, 10, 14), "month"));
+	await settle(page);
+	eq(await page.locator('.ch-chip[draggable="true"]').count(), 0, "month chips not draggable");
+	await page.locator(".ch-month-cell").nth(10).dblclick();
+	eq(await page.evaluate(() => __eventMod.EventModal.openCount), 0, "double-click creates nothing");
+	// Unlocking from the icon asks first; Cancel keeps it locked.
+	await page.evaluate(() => view.containerEl.querySelector(".ch-lock-indicator").click());
+	await settle(page);
+	expect((await page.locator(".modal").last().textContent()).includes("Unlock the calendar?"), "asks before unlocking");
+	await page.locator(".modal button", { hasText: "Cancel" }).last().click();
+	await settle(page);
+	eq(await page.evaluate(() => plugin.lock.locked), true, "Cancel keeps it locked");
+	await page.evaluate(() => view.containerEl.querySelector(".ch-lock-indicator").click());
+	await page.locator(".modal .mod-warning", { hasText: "Unlock" }).click();
+	await settle(page);
+	eq([await page.evaluate(() => [plugin.lock.locked, "omni-calendar-locked" in window.deviceStorage]), (await icon())[0]], [[false, false], false], "unlocked");
+	expect((await page.locator('.ch-chip[draggable="true"]').count()) > 0, "chips draggable again");
+	// Ribbon menu entry and command (no question there: the words say what happens).
+	const menu = () => page.evaluate(() => { window.__ts = 0; plugin.ribbonMenuShownAt = 0; plugin.showCalendarMenu({ x: 1, y: 1 }); return window.lastMenu.items.map((i) => i.t); });
+	expect((await menu()).includes("Lock calendar"), "menu: Lock calendar");
+	await page.evaluate(() => plugin.commands.find((c) => c.id === "toggle-calendar-lock").callback());
+	await settle(page);
+	expect((await menu()).includes("Unlock calendar"), "command locked it; menu: Unlock calendar");
+	// Read back on the next start (stored per device, not in data.json).
+	eq(await page.evaluate(() => [new plugin.lock.constructor(plugin).locked, JSON.stringify(plugin.data).includes("locked")]), [true, false], "remembered on this device only");
+});
+
+test("mobile: locked calendar – tapping and long-pressing the grid create nothing", { mobile: true }, async ({ page, ctx }) => {
+	await page.evaluate(() => { plugin.lock.set(true); view.goTo(new Date(2026, 10, 18), "day"); });
+	await page.waitForTimeout(250);
+	const cdp = await ctx.newCDPSession(page);
+	const touch = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+	const col = await page.locator(".ch-tg-col").first().boundingBox();
+	const x = col.x + col.width / 2, y = col.y + 60;
+	await touch("touchStart", x, y);
+	await touch("touchEnd");
+	await page.waitForTimeout(150);
+	await touch("touchStart", x, y);
+	await page.waitForTimeout(500); // long press
+	await touch("touchMove", x, y + 80);
+	await touch("touchEnd");
+	await page.waitForTimeout(150);
+	eq(await page.evaluate(() => __eventMod.EventModal.openCount), 0, "no dialog by tapping or long-pressing");
+});
+
 };

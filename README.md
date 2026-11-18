@@ -67,7 +67,7 @@ Download `main.js`, `manifest.json` and `styles.css` from the
 | How | What it opens |
 | --- | --- |
 | Ribbon icon 📅 "Omni Calendar" (left bar), **click** (desktop) | The calendar (full page) in the main area |
-| Ribbon icon 📅, **right-click** (desktop) or **tap** (mobile) | Menu: open calendar, show/hide the mini calendar or the day planner in the sidebar, new event, settings |
+| Ribbon icon 📅, **right-click** (desktop) or **tap** (mobile) | Menu: open calendar, show/hide the mini calendar or the day planner in the sidebar, new event, lock / unlock the calendar, settings |
 | Command **Calendar menu** | The same menu. Handy for the mobile toolbar (*Settings → Mobile → Manage toolbar options*) or a hotkey |
 | Command **Omni Calendar: Open calendar** | The calendar (full page) in the main area |
 | Command **Toggle mini calendar in sidebar** | Shows the mini calendar in the sidebar, or hides it if it's already there |
@@ -76,6 +76,16 @@ Download `main.js`, `manifest.json` and `styles.css` from the
 | Button ⤢ / ⇥ in the calendar's toolbar | In the day planner: **open the calendar** (full page). The sidebar then switches to the mini calendar, or, depending on *Settings → Omni Calendar → Display → When the day planner opens the calendar*, closes or keeps the Day planner. In the main area: **move this calendar to the sidebar** |
 
 You never have to drag anything. *Open calendar* always opens in the main area, even if a calendar already sits in a sidebar.
+
+**Lock the calendar** (new in **1.9.4**) against accidental changes, e.g. while scrolling on the phone:
+- **How:** the small **lock icon right of the title** ("Calendar 🔒"), *Lock calendar* in the ribbon menu, or the command
+  **Lock or unlock the calendar** (give it a hotkey if you like).
+- **Locked:** events can't be dragged or resized by their edges, and tapping, dragging or double-clicking on the calendar
+  doesn't create events. Clicking an event still opens it, and you can still change it on purpose with *Edit*. Tasks can't
+  be dragged in the calendar either.
+- **The icon:** a clear lock while locked, a faint open lock while not. Clicking it locks at once; unlocking asks first.
+- **Per device:** the lock is remembered on each device separately, so you can lock your phone and keep editing on your computer.
+- The day planner in the sidebar has no title line, so it shows no icon there, but the lock applies to it too.
 
 **Calendar in the sidebar:** in *Settings → Omni Calendar → **Display** → **Calendar in sidebar***, choose **Off / Mini calendar / Day planner** and the **side**
 (left or right). Changes apply **immediately** and are restored every time Obsidian starts. The toggle commands and the ribbon
@@ -644,6 +654,7 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 - Create event linked to current note
 - Refresh external calendars
 - Export local events to .ics file
+- Lock or unlock the calendar (no dragging or creating by tapping)
 - Open tasks / Toggle tasks in sidebar / Create new task (only while tasks are turned on)
 
 ## Where data is stored

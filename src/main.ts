@@ -7,6 +7,7 @@ import { TaskStore } from "./tasks";
 import { AccountManager } from "./sync/accounts";
 import { SidebarManager } from "./sidebar";
 import { registerCommands } from "./commands";
+import { CalendarLock } from "./calendarLock";
 import { CalendarView } from "./views/CalendarView";
 import { MiniCalendarView } from "./views/MiniCalendarView";
 import { TasksView } from "./views/TasksView";
@@ -29,6 +30,8 @@ export default class OmniCalendarPlugin extends Plugin {
 	private firstRun = false;
 	private sidebarViewUnset = false;
 	private ribbonMenuShownAt = 0;
+	/** "Lock calendar": no accidental changes by dragging or tapping (per device). */
+	lock!: CalendarLock;
 
 	async onload() {
 		await this.loadPluginData();
@@ -36,6 +39,7 @@ export default class OmniCalendarPlugin extends Plugin {
 		this.store = new CalendarStore(this);
 		this.tasks = new TaskStore(this);
 		this.sidebar = new SidebarManager(this);
+		this.lock = new CalendarLock(this);
 
 		this.registerView(VIEW_TYPE_CALENDAR, (leaf) => new CalendarView(leaf, this));
 		this.registerView(VIEW_TYPE_MINI, (leaf) => new MiniCalendarView(leaf, this));
@@ -176,6 +180,7 @@ export default class OmniCalendarPlugin extends Plugin {
 		}
 		menu.addSeparator();
 		item("New event", "plus", () => new EventModal(this, { start: startOfDay(new Date()) }).open());
+		item(this.lock.locked ? "Unlock calendar" : "Lock calendar", this.lock.locked ? "lock-open" : "lock", () => void this.lock.toggle());
 		if (s.tasksEnabled) item("New task", "check-square", () => new TaskModal(this).open());
 		menu.addSeparator();
 		item("Settings", "settings", () => this.openSettings());
