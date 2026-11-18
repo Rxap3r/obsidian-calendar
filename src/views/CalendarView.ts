@@ -204,7 +204,7 @@ export class CalendarView extends OmniView implements CalendarHost {
 			icon = container.createEl("button", { cls: "ch-lock-indicator clickable-icon" });
 			icon.addEventListener("click", (e) => {
 				e.stopPropagation();
-				void this.plugin.lock.toggle(true);
+				void this.plugin.lock.toggle();
 			});
 			// Right after the title text.
 			container.querySelector(".view-header-title")?.after(icon);

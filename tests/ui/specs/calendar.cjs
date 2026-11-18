@@ -462,7 +462,16 @@ test("desktop: lock the calendar – icon next to the title, no dragging / resiz
 	await page.locator(".modal .mod-warning", { hasText: "Unlock" }).click();
 	await settle(page);
 	eq(await page.evaluate(() => plugin.lock.locked), false, "unlocked from the menu after confirming");
-	await page.evaluate(() => plugin.lock.set(true));
+	// The command: locks at once, unlocking asks too.
+	await page.evaluate(() => plugin.commands.find((c) => c.id === "toggle-calendar-lock").callback());
+	await settle(page);
+	eq(await page.evaluate(() => plugin.lock.locked), true, "command locks at once");
+	await page.evaluate(() => plugin.commands.find((c) => c.id === "toggle-calendar-lock").callback());
+	await settle(page);
+	expect((await page.locator(".modal").last().textContent()).includes("Unlock the calendar?"), "command asks before unlocking");
+	await page.locator(".modal button", { hasText: "Cancel" }).last().click();
+	await settle(page);
+	eq(await page.evaluate(() => plugin.lock.locked), true, "Cancel keeps it locked");
 	// Read back on the next start (stored per device, not in data.json).
 	eq(await page.evaluate(() => [new plugin.lock.constructor(plugin).locked, JSON.stringify(plugin.data).includes("locked")]), [true, false], "remembered on this device only");
 });

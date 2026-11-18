@@ -6,7 +6,7 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 ## Not released yet (1.9.5)
 
-- *Unlock calendar* in the ribbon menu now asks first, like the lock icon next to the calendar's title.
+- Unlocking the calendar now always asks first: from the lock icon, *Unlock calendar* in the ribbon menu and the command.
 
 ## Known bugs
 
