@@ -32,7 +32,7 @@ export class CalendarLock {
 		this.plugin.store.notify();
 	}
 
-	/** Lock, or unlock. `ask`: unlocking asks first (the lock icon next to the view's title). */
+	/** Lock, or unlock. `ask`: unlocking asks first (the lock icon next to the view's title and the ribbon menu). */
 	async toggle(ask = false) {
 		if (this.value && ask) {
 			const ok = await confirmAction(this.plugin.app, "Unlock the calendar?",

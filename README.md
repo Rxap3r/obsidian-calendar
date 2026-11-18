@@ -83,7 +83,8 @@ You never have to drag anything. *Open calendar* always opens in the main area, 
 - **Locked:** events can't be dragged or resized by their edges, and tapping, dragging or double-clicking on the calendar
   doesn't create events. Clicking an event still opens it, and you can still change it on purpose with *Edit*. Tasks can't
   be dragged in the calendar either.
-- **The icon:** a clear lock while locked, a faint open lock while not. Clicking it locks at once; unlocking asks first.
+- **The icon:** a clear lock while locked, a faint open lock while not. Clicking it locks at once; unlocking asks first
+  (also *Unlock calendar* in the ribbon menu; the command switches without asking, for hotkeys).
 - **Per device:** the lock is remembered on each device separately, so you can lock your phone and keep editing on your computer.
 - The day planner in the sidebar has no title line, so it shows no icon there, but the lock applies to it too.
 

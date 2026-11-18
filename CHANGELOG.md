@@ -4,9 +4,9 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet
+## Not released yet (1.9.5)
 
-- *(nothing yet)*
+- *Unlock calendar* in the ribbon menu now asks first, like the lock icon next to the calendar's title.
 
 ## Known bugs
 
