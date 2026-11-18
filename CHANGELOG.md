@@ -12,8 +12,9 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
   see subtask descriptions and notes again (anything you already added is kept, nothing is deleted).
 - New switch *Settings → Omni Calendar → Tasks → Tasks on events*: turn it off if you don't want tasks inside events.
   The event's Tasks section, *Add task…* and the "2/5" progress disappear; the tasks stay in your lists. *Track as task* stays.
-- New *Settings → Omni Calendar → Tasks → Automatic lists*: hide the automatic lists you don't use (e.g. *Tomorrow* or
-  *No date*), so the list bar gets shorter. No tasks change.
+- New *Settings → Omni Calendar → Tasks → Customize automatic lists*: drag the automatic lists (Today, Tomorrow,
+  Upcoming, …) into your own order, e.g. *All* first, and hide the ones you don't use with the eye button. Works with a
+  finger on the phone too. Off shows them all in the usual order. No tasks change.
 
 ## Known bugs
 

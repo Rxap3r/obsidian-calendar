@@ -203,7 +203,10 @@ Tasks are a separate to-do system inside Omni Calendar (new in **1.7**). You cre
   - **All:** every open task, grouped by when it's due.
   - **Done.**
   - **My lists:** your own lists, e.g. *Work* or *Home*, each with a colour. "Tasks" is the default list. Click **+** next to *My lists* to add one; right-click a list (or use ⋯) to rename, recolour or delete it. Deleting a list moves its tasks to "Tasks".
-  - Don't use some of them? Hide them in *Settings → Omni Calendar → Tasks → Automatic lists* (new in **1.9.4**). No tasks change, and your own lists always show.
+  - **Your own order, fewer lists** (new in **1.9.4**): turn on *Settings → Omni Calendar → Tasks → Customize automatic lists*.
+    A list of the automatic lists appears: **drag** one by its handle (⋮⋮, also with a finger) to move it, e.g. *All* first,
+    and tap the **eye** to hide one you don't use. The Tasks page follows. Turning *Customize* off shows all of them in the
+    usual order again (your order is remembered). No tasks change, and your own lists always show.
 - **Sorting:** inside each group, **priority** first (high → low), then **time** (tasks with a time before tasks without).
 - **Quick add:** type into the field at the top and press **Enter**.
   - In *Today*, *Upcoming* and *Overdue* the task gets today's date; in *Tomorrow*, tomorrow's.
@@ -613,7 +616,7 @@ The settings are split into five tabs. Longer explanations sit in collapsible **
 | | Tasks in sidebar | Shows the Tasks page in the sidebar (same side as the calendar), independent of mini calendar / day planner |
 | | Done section in lists | Collapsed "Done" section in your lists and *All* |
 | | Tasks on events | Events can have their own tasks: Tasks section, *Add task…*, "2/5" (on by default). Off only hides them |
-| | Automatic lists | One switch per automatic list (Today, Tomorrow, Upcoming, Overdue, No date, All, Done) to hide it on the Tasks page |
+| | Customize automatic lists | Off by default. On: drag the automatic lists (Today, Tomorrow, Upcoming, …) into your own order and hide some with the eye |
 | | Progress log | Dated updates on a task in its details view, "📝 3" in the lists (on by default). Off only hides it |
 | | Create note for tasks | *Create note* on tasks (on by default). Off also turns off the subtask part below. Only hides, deletes nothing |
 | | Notes and descriptions on subtasks | Descriptions, linked notes and *Create note* on subtasks (**off** by default; shown while *Create note for tasks* is on) |

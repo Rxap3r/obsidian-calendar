@@ -3,6 +3,8 @@ import { nextColor } from "../defaults";
 import { DEFAULT_TASK_LIST, PRIORITY_NAMES, SMART_LISTS } from "../tasks";
 import { deleteTaskList } from "../modals/confirmations";
 import { periodSetting, SettingsContext } from "./controls";
+import { sortableList } from "./listOrder";
+import { SmartListId } from "../types";
 
 /** Tab "Tasks": main switch, sidebar, completed tasks, defaults, lists. */
 export function tasksTab(ctx: SettingsContext, el: HTMLElement) {
@@ -91,21 +93,38 @@ export function tasksTab(ctx: SettingsContext, el: HTMLElement) {
 		s.tasksUpcomingDays, {},
 		1, 3650, (v) => { s.tasksUpcomingDays = v; store.trigger("changed"); });
 
-	new Setting(el).setName("Automatic lists").setDesc("Which automatic lists the Tasks page shows. Hiding one changes no tasks; your own lists always show.").setHeading();
-	for (const l of SMART_LISTS) {
-		new Setting(el)
-			.setName(l.name)
-			.setClass("ch-smart-list-setting")
-			.addToggle((t) =>
-				t.setValue(!s.tasksHiddenLists.includes(l.id)).onChange(async (v) => {
-					const hidden = new Set(s.tasksHiddenLists);
-					if (v) hidden.delete(l.id);
-					else hidden.add(l.id);
-					s.tasksHiddenLists = SMART_LISTS.map((x) => x.id).filter((id) => hidden.has(id));
-					await ctx.save();
-					store.trigger("changed");
-				})
-			);
+	new Setting(el).setName("Automatic lists").setHeading();
+	new Setting(el)
+		.setName("Customize automatic lists")
+		.setDesc("Put Today, Tomorrow, Upcoming, … in your own order and hide the ones you don't use. Off shows all of them in the usual order. Nothing changes on your tasks.")
+		.addToggle((t) =>
+			t.setValue(s.tasksCustomLists).onChange(async (v) => {
+				s.tasksCustomLists = v;
+				await ctx.save(true);
+				store.trigger("changed");
+			})
+		);
+	if (s.tasksCustomLists) {
+		const box = el.createDiv({ cls: "ch-list-order-setting" });
+		box.createDiv({ cls: "setting-item-description", text: "Drag a list by its handle to move it; the eye hides or shows it." });
+		sortableList(box, s.tasksListOrder.map((id) => {
+			const l = SMART_LISTS.find((x) => x.id === id) ?? SMART_LISTS[0];
+			return { id, name: l.name, icon: l.icon, hidden: s.tasksHiddenLists.includes(id) };
+		}), {
+			onReorder: async (ids) => {
+				s.tasksListOrder = ids as SmartListId[];
+				await ctx.save();
+				store.trigger("changed");
+			},
+			onToggle: async (id, hidden) => {
+				const set = new Set(s.tasksHiddenLists);
+				if (hidden) set.add(id as SmartListId);
+				else set.delete(id as SmartListId);
+				s.tasksHiddenLists = SMART_LISTS.map((x) => x.id).filter((x) => set.has(x));
+				await ctx.save(true);
+				store.trigger("changed");
+			},
+		});
 	}
 
 	new Setting(el).setName("In the calendar").setHeading();

@@ -304,8 +304,10 @@ is merged and released (PR #37, tag 1.9.3). `dev-branch` carries **1.9.4** (not 
 in two (`tasksNoteExtras` = main "Create note for tasks", `tasksSubtaskExtras` = "Notes and descriptions on subtasks");
 switch `tasksOnEvents` ("Tasks on events": event Tasks section, *Add task…*, "2/5", tracked-event progress and the
 "mark open tasks done?" question; off → untimed event tasks count in the day counter; check with `eventTasksOn(s)`);
-`tasksHiddenLists` (hidden automatic lists, stored as the hidden ones; `visibleSmartLists(s)`; TasksView falls back to the
-first visible one, or the default list). *Track as task* stays always on (maintainer: "it's just one button").
+"Customize automatic lists" (`tasksCustomLists`, off by default; maintainer preferred one switch + a sortable list over
+a switch per list): `tasksListOrder` (all ids once) + `tasksHiddenLists`, edited with `settings/listOrder.ts`
+(`sortableList`: own pointer-event drag – works with touch – and an eye button); `visibleSmartLists(s)`; TasksView falls
+back to the first visible one, or the default list. *Track as task* stays always on (maintainer: "it's just one button").
 
 **Next on the roadmap (agreed order):**
 0. **Lock the calendar ("view mode")** – agreed design, build next as its own step: blocks only accidental changes

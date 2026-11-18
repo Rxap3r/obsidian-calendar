@@ -32,9 +32,13 @@ export function eventTasksOn(s: OmniCalendarSettings): boolean {
 	return s.tasksEnabled && s.tasksOnEvents;
 }
 
-/** The automatic lists the user hasn't hidden, in their usual order. */
+/** The automatic lists to show, in order: all in the usual order, or (when customizing) the user's order without hidden ones. */
 export function visibleSmartLists(s: OmniCalendarSettings): typeof SMART_LISTS {
-	return SMART_LISTS.filter((l) => !s.tasksHiddenLists.includes(l.id));
+	if (!s.tasksCustomLists) return SMART_LISTS;
+	return s.tasksListOrder
+		.filter((id) => !s.tasksHiddenLists.includes(id))
+		.map((id) => SMART_LISTS.find((l) => l.id === id))
+		.filter((l): l is (typeof SMART_LISTS)[number] => !!l);
 }
 
 /** Subtask descriptions and notes are shown: their own switch, and the main "Create note for tasks" switch. */

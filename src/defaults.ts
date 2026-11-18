@@ -43,6 +43,8 @@ export const DEFAULT_SETTINGS: OmniCalendarSettings = {
 	tasksNoteExtras: true,
 	tasksSubtaskExtras: false,
 	tasksOnEvents: true,
+	tasksCustomLists: false,
+	tasksListOrder: ["today", "tomorrow", "upcoming", "overdue", "nodate", "all", "done"],
 	tasksHiddenLists: [],
 	notesFolder: "Calendar",
 	noteTemplate: DEFAULT_NOTE_TEMPLATE,

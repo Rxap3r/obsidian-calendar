@@ -180,23 +180,67 @@ test("tasks: completed tasks – recent only, show older, clear, automatic clean
 	eq(k, [0, 1], "done task without completion time not deleted at once");
 });
 
-test("tasks: hidden automatic lists – not in the list bar, the page falls back to a visible list", {}, async ({ page }) => {
+test("desktop: customize automatic lists – drag to reorder, eye to hide, the Tasks page follows; off = usual order", {}, async ({ page }) => {
 	await seedTasks()(page);
-	await page.evaluate(async () => {
-		plugin.settings.tasksHiddenLists = ["today", "tomorrow", "nodate"];
-		await mountTasks();
-		tasksView.select("today");
-	});
+	const showSettings = () => page.evaluate(() => { tab.constructor.tab = "tasks"; const m = document.getElementById("main"); m.innerHTML = ""; tab.display(); m.appendChild(tab.containerEl); });
+	await showSettings();
+	eq(await page.locator(".ch-sortable").count(), 0, "no list editor while customizing is off");
+	await page.locator(".setting-item", { hasText: "Customize automatic lists" }).locator(".checkbox-container").click();
 	await settle(page);
-	eq(await page.locator(".ch-tasks-nav-item[data-list]").evaluateAll((els) => els.map((e) => e.dataset.list).filter((id) => !id.includes("-"))).then((ids) => ids.filter((id) => ["today", "tomorrow", "upcoming", "overdue", "nodate", "all", "done"].includes(id))),
-		["upcoming", "overdue", "all", "done"], "only the visible automatic lists");
-	expect((await page.textContent(".ch-tasks-title")).startsWith("Upcoming"), "a hidden list falls back to the first visible one");
-	await page.evaluate(() => { tab.constructor.tab = "tasks"; tab.display(); });
-	const toggles = await page.evaluate(() => [...tab.containerEl.querySelectorAll(".ch-smart-list-setting")].map((e) => [e.querySelector(".setting-item-name").textContent, e.querySelector(".checkbox-container, input")?.classList.contains("is-enabled") ?? null]));
-	eq(toggles.map((t) => t[0]), ["Today", "Tomorrow", "Upcoming", "Overdue", "No date", "All", "Done"], "one switch per automatic list");
-	// All hidden: the default list "Tasks" is shown.
-	await page.evaluate(() => { plugin.settings.tasksHiddenLists = ["today", "tomorrow", "upcoming", "overdue", "nodate", "all", "done"]; tasksView.render(); });
+	const names = () => page.locator(".ch-sortable-row .ch-sortable-name").allTextContents();
+	eq(await names(), ["Today", "Tomorrow", "Upcoming", "Overdue", "No date", "All", "Done"], "usual order to start with");
+	// Drag "All" by its handle above "Today".
+	const handle = await page.locator(".ch-sortable-row", { hasText: "All" }).locator(".ch-sortable-handle").boundingBox();
+	const first = await page.locator(".ch-sortable-row").first().boundingBox();
+	await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+	await page.mouse.down();
+	for (let y = handle.y; y > first.y; y -= 12) await page.mouse.move(handle.x + 4, y);
+	await page.mouse.move(handle.x + 4, first.y + 3);
+	await page.mouse.up();
+	await settle(page);
+	eq(await names(), ["All", "Today", "Tomorrow", "Upcoming", "Overdue", "No date", "Done"], "All moved to the top");
+	// The eye hides "Tomorrow" (still in the editor, shown as hidden).
+	await page.locator(".ch-sortable-row", { hasText: "Tomorrow" }).locator(".ch-sortable-eye").click();
+	await settle(page);
+	eq(await page.locator(".ch-sortable-row.is-hidden .ch-sortable-name").allTextContents(), ["Tomorrow"], "shown as hidden");
+	await shot(page, "settings-list-order");
+	eq(await page.evaluate(() => [plugin.settings.tasksListOrder, plugin.settings.tasksHiddenLists]), [["all", "today", "tomorrow", "upcoming", "overdue", "nodate", "done"], ["tomorrow"]], "saved");
+	// The Tasks page: that order, without Tomorrow; an open hidden list falls back to the first visible one.
+	const smart = ["today", "tomorrow", "upcoming", "overdue", "nodate", "all", "done"];
+	const nav = () => page.locator(".ch-tasks-nav-item[data-list]").evaluateAll((els, smart) => els.map((e) => e.dataset.list).filter((id) => smart.includes(id)), smart);
+	await page.evaluate(async () => { await mountTasks(); tasksView.select("tomorrow"); });
+	await settle(page);
+	eq(await nav(), ["all", "today", "upcoming", "overdue", "nodate", "done"], "page follows the order, Tomorrow hidden");
+	expect((await page.textContent(".ch-tasks-title")).startsWith("All"), "hidden list → the first visible one");
+	// Customizing off: usual order, everything shown – the custom order is kept for later.
+	await page.evaluate(() => { plugin.settings.tasksCustomLists = false; plugin.tasks.trigger("changed"); });
+	await settle(page);
+	eq(await nav(), smart, "off: usual order, all shown");
+	eq(await page.evaluate(() => plugin.settings.tasksListOrder[0]), "all", "custom order kept");
+	// Everything hidden: the default list "Tasks".
+	await page.evaluate(() => { plugin.settings.tasksCustomLists = true; plugin.settings.tasksHiddenLists = ["today", "tomorrow", "upcoming", "overdue", "nodate", "all", "done"]; tasksView.render(); });
 	eq(await page.textContent(".ch-tasks-title"), "Tasks", "all hidden → the default list");
+});
+
+test("mobile: automatic lists can be dragged with a finger", { mobile: true }, async ({ page, ctx }) => {
+	await page.evaluate(() => { plugin.settings.tasksCustomLists = true; tab.constructor.tab = "tasks"; const m = document.getElementById("main"); m.innerHTML = ""; tab.display(); m.appendChild(tab.containerEl); });
+	await settle(page);
+	// In the middle of the screen (the test page has a small ribbon stand-in in the bottom-left corner).
+	await page.evaluate(() => document.querySelector(".ch-sortable").scrollIntoView({ block: "center" }));
+	const cdp = await ctx.newCDPSession(page);
+	const touch = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+	const h = await page.locator(".ch-sortable-row", { hasText: "Done" }).locator(".ch-sortable-handle").boundingBox();
+	const top = await page.locator(".ch-sortable-row").nth(1).boundingBox();
+	const x = h.x + h.width / 2;
+	await touch("touchStart", x, h.y + h.height / 2);
+	for (let y = h.y; y > top.y; y -= 10) await touch("touchMove", x, y);
+	await touch("touchMove", x, top.y + 3);
+	await touch("touchEnd");
+	await settle(page);
+	eq(await page.locator(".ch-sortable-row .ch-sortable-name").allTextContents(), ["Today", "Done", "Tomorrow", "Upcoming", "Overdue", "No date", "All"], "Done moved up by finger");
+	const w = await page.evaluate(() => document.documentElement.scrollWidth);
+	expect(w <= 390, `fits the phone: ${w}`);
+	await page.screenshot({ path: path.join(SHOTS, "settings-list-order-mobile.png") });
 });
 
 test("desktop: task lists – create, add into list, delete moves tasks", {}, async ({ page }) => {

@@ -83,8 +83,9 @@ test("data: settings are checked and migrated on load", {}, async ({ page }) => 
 		// Saved by ≤ 1.5.1: "sidebarOnStartup" becomes "sidebarView".
 		let s = await load({ sidebarOnStartup: "full" });
 		out.migrated = [s.sidebarView, "sidebarOnStartup" in s];
-		s = await load({ tasksHiddenLists: ["done", "bogus", "today", 3] });
+		s = await load({ tasksHiddenLists: ["done", "bogus", "today", 3], tasksListOrder: ["all", "x", "all", "today"] });
 		out.hidden = s.tasksHiddenLists;
+		out.order = s.tasksListOrder;
 		s = await load({ tasksHiddenLists: "today" });
 		out.hiddenBad = s.tasksHiddenLists;
 		// Broken or out-of-range values fall back to something valid.
@@ -103,6 +104,7 @@ test("data: settings are checked and migrated on load", {}, async ({ page }) => 
 	});
 	eq(r.migrated, ["full", false], "sidebarOnStartup → sidebarView");
 	eq([r.hidden, r.hiddenBad], [["today", "done"], []], "hidden automatic lists: unknown ones dropped, usual order");
+	eq(r.order, ["all", "today", "tomorrow", "upcoming", "overdue", "nodate", "done"], "list order: unknown and repeated dropped, missing added");
 	eq(r.fixed, ["day", "mini", "", 365, 0, 1, 30, 0, "tasks", "a", ["a"], ["a"]], "invalid values repaired, calendar without account dropped");
 	eq(r.special, [-1, -1, 90], "special values kept");
 	eq(r.fresh, ["month", ["personal"], ["personal"], ["tasks"]], "first start");
@@ -121,12 +123,12 @@ test("data: event notes are migrated, event links and task events checked on loa
 		await plugin.loadPluginData();
 		const d = plugin.data;
 		return { events: d.events.map((e) => [e.links, "notePath" in e]), links: d.eventLinks, tasks: d.tasks.items.map((t) => t.event ?? null),
-			fresh: (plugin._data = null, await plugin.loadPluginData(), [plugin.data.eventLinks, plugin.settings.tasksInCalendar, plugin.settings.tasksCalendarShowDone, plugin.settings.tasksInMiniCalendar, plugin.settings.tasksProgressLog, plugin.settings.tasksNoteExtras, plugin.settings.tasksSubtaskExtras, plugin.settings.tasksOnEvents, plugin.settings.tasksHiddenLists]) };
+			fresh: (plugin._data = null, await plugin.loadPluginData(), [plugin.data.eventLinks, plugin.settings.tasksInCalendar, plugin.settings.tasksCalendarShowDone, plugin.settings.tasksInMiniCalendar, plugin.settings.tasksProgressLog, plugin.settings.tasksNoteExtras, plugin.settings.tasksSubtaskExtras, plugin.settings.tasksOnEvents, plugin.settings.tasksCustomLists, plugin.settings.tasksHiddenLists]) };
 	});
 	eq(r.events, [[["Inbox.md"], false], [["A.md", "B.md"], false]], "notePath → links (≤ 1.7)");
 	eq(r.links, { "gcal:g1": ["Inbox.md"] }, "event links: duplicates, empty and broken entries dropped");
 	eq(r.tasks, [{ key: "local:e1", title: "Old", date: "2026-11-14" }, null], "task event links checked");
-	eq(r.fresh, [{}, true, true, true, true, true, false, true, []], "defaults (subtask notes and descriptions off)");
+	eq(r.fresh, [{}, true, true, true, true, true, false, true, false, []], "defaults (subtask notes and descriptions off)");
 });
 
 };

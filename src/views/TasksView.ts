@@ -98,7 +98,7 @@ export class TasksView extends OmniView {
 		if (!this.rootEl) return;
 		const store = this.plugin.tasks;
 		// A deleted list or a hidden automatic list: show the first visible automatic list (or the default list).
-		const hidden = this.isSmart(this.selected) && this.plugin.settings.tasksHiddenLists.includes(this.selected);
+		const hidden = this.isSmart(this.selected) && !visibleSmartLists(this.plugin.settings).some((l) => l.id === this.selected);
 		if (hidden || (!this.isSmart(this.selected) && !store.lists.some((l) => l.id === this.selected))) {
 			this.selected = visibleSmartLists(this.plugin.settings)[0]?.id ?? DEFAULT_TASK_LIST.id;
 		}

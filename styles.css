@@ -865,3 +865,20 @@
 .ch-task-sub-extra { margin: 4px 0 6px 26px; padding-left: 8px; border-left: 2px solid var(--background-modifier-border); }
 .ch-task-modal .ch-sub-desc { display: block; width: 100%; max-width: none; box-sizing: border-box; resize: vertical; font: inherit; font-size: 0.9em; }
 .ch-task-sub-extra .ch-task-section-head { border-top: none; margin-top: 2px; padding: 4px 0 2px; font-weight: normal; font-size: 0.85em; color: var(--text-muted); }
+
+/* ---------------------------------------------------------------- settings: automatic lists in order (1.9.4) */
+.ch-list-order-setting { padding: 4px 0 12px; }
+.ch-sortable { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; max-width: 360px; }
+.ch-sortable-row {
+	display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--radius-s);
+	background: var(--background-secondary); border: 1px solid var(--background-modifier-border); user-select: none;
+}
+.ch-sortable-row.is-hidden .ch-sortable-name, .ch-sortable-row.is-hidden .ch-sortable-icon { opacity: 0.45; text-decoration: line-through; }
+.ch-sortable-row.is-dragging { box-shadow: var(--shadow-s); background: var(--background-modifier-hover); }
+/* The handle takes touch gestures itself (no page scroll while dragging). */
+.ch-sortable-handle { display: inline-flex; color: var(--text-faint); cursor: grab; touch-action: none; padding: 4px 2px; }
+.ch-sortable-row.is-dragging .ch-sortable-handle { cursor: grabbing; }
+.ch-sortable-icon { display: inline-flex; color: var(--text-muted); }
+.ch-sortable-icon svg, .ch-sortable-handle svg { width: 15px; height: 15px; }
+.ch-sortable-name { flex: 1; min-width: 0; }
+.ch-sortable-eye { background: transparent; box-shadow: none; color: var(--text-muted); }
