@@ -16,6 +16,7 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.9.5** – Unlocking the calendar always asks first (lock icon, ribbon menu and command).
 - **1.9.4** – More things you can turn off: *Create note for tasks* and *Notes and descriptions on subtasks* (separate,
   the subtask part off by default), *Tasks on events*, and *Customize automatic lists* (own order by dragging, hide with
   the eye). **Lock the calendar** against accidental dragging and creating (icon right of the title, ribbon menu, command;

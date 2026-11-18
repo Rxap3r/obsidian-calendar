@@ -450,12 +450,28 @@ test("desktop: lock the calendar – icon next to the title, no dragging / resiz
 	await settle(page);
 	eq([await page.evaluate(() => [plugin.lock.locked, "omni-calendar-locked" in window.deviceStorage]), (await icon())[0]], [[false, false], false], "unlocked");
 	expect((await page.locator('.ch-chip[draggable="true"]').count()) > 0, "chips draggable again");
-	// Ribbon menu entry and command (no question there: the words say what happens).
+	// Ribbon menu entry and command. Unlocking from the menu asks first too.
 	const menu = () => page.evaluate(() => { window.__ts = 0; plugin.ribbonMenuShownAt = 0; plugin.showCalendarMenu({ x: 1, y: 1 }); return window.lastMenu.items.map((i) => i.t); });
 	expect((await menu()).includes("Lock calendar"), "menu: Lock calendar");
 	await page.evaluate(() => plugin.commands.find((c) => c.id === "toggle-calendar-lock").callback());
 	await settle(page);
 	expect((await menu()).includes("Unlock calendar"), "command locked it; menu: Unlock calendar");
+	await page.evaluate(() => window.lastMenu.items.find((i) => i.t === "Unlock calendar").fn());
+	await settle(page);
+	expect((await page.locator(".modal").last().textContent()).includes("Unlock the calendar?"), "menu asks before unlocking");
+	await page.locator(".modal .mod-warning", { hasText: "Unlock" }).click();
+	await settle(page);
+	eq(await page.evaluate(() => plugin.lock.locked), false, "unlocked from the menu after confirming");
+	// The command: locks at once, unlocking asks too.
+	await page.evaluate(() => plugin.commands.find((c) => c.id === "toggle-calendar-lock").callback());
+	await settle(page);
+	eq(await page.evaluate(() => plugin.lock.locked), true, "command locks at once");
+	await page.evaluate(() => plugin.commands.find((c) => c.id === "toggle-calendar-lock").callback());
+	await settle(page);
+	expect((await page.locator(".modal").last().textContent()).includes("Unlock the calendar?"), "command asks before unlocking");
+	await page.locator(".modal button", { hasText: "Cancel" }).last().click();
+	await settle(page);
+	eq(await page.evaluate(() => plugin.lock.locked), true, "Cancel keeps it locked");
 	// Read back on the next start (stored per device, not in data.json).
 	eq(await page.evaluate(() => [new plugin.lock.constructor(plugin).locked, JSON.stringify(plugin.data).includes("locked")]), [true, false], "remembered on this device only");
 });

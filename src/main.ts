@@ -180,6 +180,7 @@ export default class OmniCalendarPlugin extends Plugin {
 		}
 		menu.addSeparator();
 		item("New event", "plus", () => new EventModal(this, { start: startOfDay(new Date()) }).open());
+		// Unlocking asks first (everywhere).
 		item(this.lock.locked ? "Unlock calendar" : "Lock calendar", this.lock.locked ? "lock-open" : "lock", () => void this.lock.toggle());
 		if (s.tasksEnabled) item("New task", "check-square", () => new TaskModal(this).open());
 		menu.addSeparator();
