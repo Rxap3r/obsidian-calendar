@@ -4,9 +4,9 @@ Fixes and small changes are made on `dev-branch` right away and listed under **N
 They are released together when the maintainer asks for a release. At that point the section becomes the new version.
 Bugs that are known but not fixed yet are listed under **Known bugs**, so nothing gets lost between sessions.
 
-## Not released yet (1.9.5)
+## Not released yet
 
-- Unlocking the calendar now always asks first: from the lock icon, *Unlock calendar* in the ribbon menu and the command.
+- *(nothing yet)*
 
 ## Known bugs
 
@@ -16,6 +16,7 @@ Bugs that are known but not fixed yet are listed under **Known bugs**, so nothin
 
 Details of earlier versions are in the GitHub releases and pull requests. Recent highlights:
 
+- **1.9.5** – Unlocking the calendar always asks first (lock icon, ribbon menu and command).
 - **1.9.4** – More things you can turn off: *Create note for tasks* and *Notes and descriptions on subtasks* (separate,
   the subtask part off by default), *Tasks on events*, and *Customize automatic lists* (own order by dragging, hide with
   the eye). **Lock the calendar** against accidental dragging and creating (icon right of the title, ribbon menu, command;

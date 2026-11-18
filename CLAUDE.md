@@ -300,8 +300,9 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 ## Where we stopped (keep this section up to date at the end of a session)
 
-**State:** everything up to **1.9.4** is merged and released (tags 1.8.0 … 1.9.4, PRs #28–#38). `dev-branch` carries
-**1.9.5** (not released yet): unlocking the calendar always asks first (icon, ribbon menu, command). 1.9.4 contains: the step c switch split
+**State:** everything up to **1.9.4** is merged and released (tags 1.8.0 … 1.9.4, PRs #28–#38). **1.9.5** (unlocking the
+calendar always asks first: icon, ribbon menu, command) is in a PR from `dev-branch`; once merged and tagged, the next
+change needs **1.9.6**, or **1.10.0** for repeating tasks. 1.9.4 contains: the step c switch split
 in two (`tasksNoteExtras` = main "Create note for tasks", `tasksSubtaskExtras` = "Notes and descriptions on subtasks");
 switch `tasksOnEvents` ("Tasks on events": event Tasks section, *Add task…*, "2/5", tracked-event progress and the
 "mark open tasks done?" question; off → untimed event tasks count in the day counter; check with `eventTasksOn(s)`);
