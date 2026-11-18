@@ -302,7 +302,8 @@ CSS is in `styles.css`. Every class is prefixed `ch-`, and it uses Obsidian CSS 
 
 **State:** everything up to **1.9.3** is merged and released (tags 1.8.0 … 1.9.3, PRs #28–#37). **1.9.3** (details view
 step c – "Create note" for tasks and subtasks, subtask notes and descriptions, `taskNoteTemplate`, switch `tasksNoteExtras`)
-is merged and released (PR #37, tag 1.9.3). `dev-branch` carries **1.9.4** (not released yet): the step c switch split
+is merged and released (PR #37, tag 1.9.3). **1.9.4** is in a PR from `dev-branch` (once merged and tagged, the next
+change needs **1.9.5**, or **1.10.0** for repeating tasks). 1.9.4 contains: the step c switch split
 in two (`tasksNoteExtras` = main "Create note for tasks", `tasksSubtaskExtras` = "Notes and descriptions on subtasks");
 switch `tasksOnEvents` ("Tasks on events": event Tasks section, *Add task…*, "2/5", tracked-event progress and the
 "mark open tasks done?" question; off → untimed event tasks count in the day counter; check with `eventTasksOn(s)`);
